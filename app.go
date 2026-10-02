@@ -64,22 +64,26 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 }
 
-// Protocol returns "ssh" for port 22, otherwise "telnet".
+// Protocol returns "ssh" for port 22, "ftp" for port 21, otherwise "telnet".
 func Protocol(port int) string {
-	if port == 22 {
+	switch port {
+	case 22:
 		return "ssh"
+	case 21:
+		return "ftp"
 	}
 	return "telnet"
 }
 
-// Connect opens a session. Port 22 uses SSH, any other port uses Telnet.
-func (a *App) Connect(req ConnectRequest) error {
+// Connect opens a session and returns the protocol used.
+// Port 22 uses SSH, port 21 FTP (file window only), any other port Telnet.
+func (a *App) Connect(req ConnectRequest) (string, error) {
 	req.Host = strings.TrimSpace(req.Host)
 	if req.Host == "" {
-		return errors.New("Host를 입력하세요")
+		return "", errors.New("Host를 입력하세요")
 	}
 	if req.Port <= 0 || req.Port > 65535 {
-		return errors.New("Port가 올바르지 않습니다")
+		return "", errors.New("Port가 올바르지 않습니다")
 	}
 	if req.Cols <= 0 || req.Rows <= 0 {
 		req.Cols, req.Rows = 80, 24
@@ -87,17 +91,35 @@ func (a *App) Connect(req ConnectRequest) error {
 
 	a.Disconnect()
 
+	proto := Protocol(req.Port)
+	if proto == "ftp" {
+		fs, err := dialFTP(req)
+		if err != nil {
+			return "", err
+		}
+		a.files.mu.Lock()
+		a.files.fs = fs
+		a.files.mu.Unlock()
+		enc := a.codec.Set(req.Encoding)
+		a.mu.Lock()
+		a.title = fmt.Sprintf("choboterm - ftp://%s:%d", req.Host, req.Port)
+		a.mu.Unlock()
+		_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc})
+		a.updateTitle()
+		return proto, nil
+	}
+
 	var (
 		sess Session
 		err  error
 	)
-	if Protocol(req.Port) == "ssh" {
+	if proto == "ssh" {
 		sess, err = dialSSH(req, a.confirmHostKey)
 	} else {
 		sess, err = dialTelnet(req)
 	}
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	enc := a.codec.Set(req.Encoding)
@@ -109,7 +131,7 @@ func (a *App) Connect(req ConnectRequest) error {
 	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc})
 	a.updateTitle()
 	go a.pump(sess)
-	return nil
+	return proto, nil
 }
 
 // pump reads session output and emits it to the frontend in batches,
@@ -219,11 +241,14 @@ func (a *App) Disconnect() {
 	a.FileClose()
 	a.mu.Lock()
 	sess := a.sess
+	hadTitle := a.title != ""
 	a.sess = nil
 	a.title = ""
 	a.mu.Unlock()
 	if sess != nil {
 		_ = sess.Close()
+	}
+	if hadTitle {
 		a.updateTitle()
 	}
 }

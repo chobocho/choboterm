@@ -1,4 +1,4 @@
-import {FileCancel, FileClose, FileDownload, FileList, FileOpen, FileUpload} from '../wailsjs/go/main/App';
+import {Disconnect, FileCancel, FileDownload, FileList, FileOpen, FileUpload} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 
@@ -157,7 +157,7 @@ export function closeFiles() {
     if (overlay.hidden) return;
     if (busy) FileCancel();
     overlay.hidden = true;
-    if (closeConnection) FileClose();
+    if (closeConnection) Disconnect();
     onClosed?.();
 }
 

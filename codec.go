@@ -96,3 +96,23 @@ func (c *codec) Encode(s string) []byte {
 	}
 	return out
 }
+
+// DecodeString converts a complete remote string (e.g. a file name) to UTF-8.
+func (c *codec) DecodeString(s string) string {
+	c.mu.Lock()
+	euckr := c.name == EncodingEUCKR
+	c.mu.Unlock()
+	if !euckr {
+		return s
+	}
+	out, err := korean.EUCKR.NewDecoder().String(s)
+	if err != nil {
+		return s
+	}
+	return out
+}
+
+// EncodeString converts a complete UTF-8 string (e.g. a file path) to the remote set.
+func (c *codec) EncodeString(s string) string {
+	return string(c.Encode(s))
+}

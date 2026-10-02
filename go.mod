@@ -3,6 +3,7 @@ module choboterm
 go 1.26.0
 
 require (
+	github.com/jlaffaye/ftp v0.2.4
 	github.com/pkg/sftp v1.13.11
 	github.com/wailsapp/wails/v2 v2.11.0
 	golang.org/x/crypto v0.57.0

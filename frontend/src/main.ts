@@ -81,7 +81,8 @@ let history: main.HostEntry[] = [];
 let activeIndex = -1;
 
 function updateProto() {
-    proto.textContent = Number(port.value) === 22 ? 'SSH' : 'Telnet';
+    const p = Number(port.value);
+    proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : 'Telnet';
 }
 
 async function openDialog() {
@@ -171,7 +172,7 @@ async function doConnect() {
     ok.disabled = cancel.disabled = true;
     ok.textContent = '접속 중...';
     try {
-        await Connect(main.ConnectRequest.createFrom({
+        const protocol = await Connect(main.ConnectRequest.createFrom({
             host: host.value.trim(),
             port: Number(port.value),
             login: login.value,
@@ -180,8 +181,21 @@ async function doConnect() {
             cols: term.cols,
             rows: term.rows,
         }));
-        connected = true;
         pass.value = '';
+        if (protocol === 'ftp') {
+            // FTP has no terminal: go straight to the file window; closing it disconnects.
+            connected = false;
+            closeDialog();
+            try {
+                await openFiles(`파일 전송 (FTP) - ${host.value.trim()}`, {closeConnection: true, onClose: () => openDialog()});
+            } catch (e) {
+                Disconnect();
+                await openDialog();
+                error.textContent = String(e);
+            }
+            return;
+        }
+        connected = true;
         term.reset();
         applyEncoding(encoding.value);
         closeDialog();

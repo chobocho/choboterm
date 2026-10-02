@@ -65,5 +65,15 @@
   <li>수정: main.ts 안내 문구에 줄바꿈/ESC가 이스케이프 대신 실제 제어문자로 들어가 있던 것 복구</li>
   <li>검증: 프로세스 내 SSH+SFTP 서버로 목록/다운로드/1MB 업로드 테스트 통과, 화면 레이아웃 확인(임시 데이터). 실제 서버에서 GUI 조작은 미확인</li>
 </ul>
+
+<h2>2026-10-03 — 2단계: FTP</h2>
+<ul>
+  <li>Port 21 → FTP (접속 창 Port 칸에 FTP 표시). 터미널 없이 바로 파일 전송 창이 열리고, 창을 닫으면 연결을 끊고 접속 창으로 돌아감</li>
+  <li>ftp.go: jlaffaye/ftp 사용, Login이 비면 anonymous 로그인, 60초마다 NOOP으로 연결 유지(전송 중엔 생략)</li>
+  <li>Code가 EUC-KR이면 파일/폴더 이름을 CP949로 변환해서 송수신 (codec.DecodeString / EncodeString)</li>
+  <li>Connect가 사용한 프로토콜을 반환하도록 변경, FTP 접속 시 창 제목 ftp://host:port</li>
+  <li>검증: pyftpdlib(CP949 모드) 로컬 서버로 한글 이름 목록/다운로드/900KB 업로드·재다운로드 테스트 통과 (ftp_test.go, CHOBOTERM_FTP_TEST 환경변수 있을 때만 실행)</li>
+  <li>미지원: FTPS(TLS), 이어받기</li>
+</ul>
 </body>
 </html>
