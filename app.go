@@ -26,21 +26,24 @@ type ConnectRequest struct {
 	Host  string `json:"host"`
 	Port  int    `json:"port"`
 	Login string `json:"login"`
-	Pass  string `json:"pass"`
-	Cols  int    `json:"cols"`
-	Rows  int    `json:"rows"`
+	Pass     string `json:"pass"`
+	Encoding string `json:"encoding"`
+	Cols     int    `json:"cols"`
+	Rows     int    `json:"rows"`
 }
 
 // App struct
 type App struct {
-	ctx  context.Context
-	mu   sync.Mutex
-	sess Session
+	ctx   context.Context
+	mu    sync.Mutex
+	sess  Session
+	codec *codec
+	title string
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{}
+	return &App{codec: newCodec(EncodingUTF8)}
 }
 
 // startup is called when the app starts. The context is saved
@@ -50,7 +53,13 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) shutdown(ctx context.Context) {
-	a.Disconnect()
+	a.mu.Lock()
+	sess := a.sess
+	a.sess = nil
+	a.mu.Unlock()
+	if sess != nil {
+		_ = sess.Close()
+	}
 }
 
 // Protocol returns "ssh" for port 22, otherwise "telnet".
@@ -89,12 +98,14 @@ func (a *App) Connect(req ConnectRequest) error {
 		return err
 	}
 
+	enc := a.codec.Set(req.Encoding)
 	a.mu.Lock()
 	a.sess = sess
+	a.title = fmt.Sprintf("choboterm - %s:%d", req.Host, req.Port)
 	a.mu.Unlock()
 
-	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login})
-	runtime.WindowSetTitle(a.ctx, fmt.Sprintf("choboterm - %s:%d", req.Host, req.Port))
+	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc})
+	a.updateTitle()
 	go a.pump(sess)
 	return nil
 }
@@ -139,6 +150,7 @@ func (a *App) pump(sess Session) {
 				current := a.sess == sess
 				if current {
 					a.sess = nil
+					a.title = ""
 				}
 				a.mu.Unlock()
 				if current {
@@ -146,12 +158,12 @@ func (a *App) pump(sess Session) {
 					if err != nil && !errors.Is(err, io.EOF) {
 						msg += ": " + err.Error()
 					}
-					runtime.WindowSetTitle(a.ctx, "choboterm")
+					a.updateTitle()
 					runtime.EventsEmit(a.ctx, "term:closed", msg)
 				}
 				return
 			}
-			pending = append(pending, c...)
+			pending = append(pending, a.codec.Decode(c)...)
 			if len(pending) >= maxBatch {
 				flush()
 			}
@@ -167,8 +179,26 @@ func (a *App) Send(data string) {
 	sess := a.sess
 	a.mu.Unlock()
 	if sess != nil {
-		_, _ = sess.Write([]byte(data))
+		_, _ = sess.Write(a.codec.Encode(data))
 	}
+}
+
+// SetEncoding switches the character set of the current connection
+// ("UTF-8" or "EUC-KR") and returns the normalized name.
+func (a *App) SetEncoding(name string) string {
+	name = a.codec.Set(name)
+	a.updateTitle()
+	return name
+}
+
+func (a *App) updateTitle() {
+	a.mu.Lock()
+	title := a.title
+	a.mu.Unlock()
+	if title == "" {
+		title = "choboterm"
+	}
+	runtime.WindowSetTitle(a.ctx, title+" ["+a.codec.Name()+"]")
 }
 
 // Resize propagates the terminal size to the remote side.
@@ -186,9 +216,11 @@ func (a *App) Disconnect() {
 	a.mu.Lock()
 	sess := a.sess
 	a.sess = nil
+	a.title = ""
 	a.mu.Unlock()
 	if sess != nil {
 		_ = sess.Close()
+		a.updateTitle()
 	}
 }
 

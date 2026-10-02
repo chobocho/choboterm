@@ -5,6 +5,7 @@ export namespace main {
 	    port: number;
 	    login: string;
 	    pass: string;
+	    encoding: string;
 	    cols: number;
 	    rows: number;
 	
@@ -18,6 +19,7 @@ export namespace main {
 	        this.port = source["port"];
 	        this.login = source["login"];
 	        this.pass = source["pass"];
+	        this.encoding = source["encoding"];
 	        this.cols = source["cols"];
 	        this.rows = source["rows"];
 	    }
@@ -26,6 +28,7 @@ export namespace main {
 	    host: string;
 	    port: number;
 	    login: string;
+	    encoding: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new HostEntry(source);
@@ -36,6 +39,7 @@ export namespace main {
 	        this.host = source["host"];
 	        this.port = source["port"];
 	        this.login = source["login"];
+	        this.encoding = source["encoding"];
 	    }
 	}
 

@@ -31,6 +31,27 @@
   <li>출력은 16ms 단위로 묶어 base64 이벤트로 전달 (app.go pump)</li>
   <li>단축키: Ctrl+Shift+N 접속 창, Ctrl+Shift+D 연결 끊기, 연결이 끊긴 상태에서 Enter 누르면 다시 접속</li>
   <li>검증: go vet / go test(Telnet 협상·이스케이프·자동 로그인) 통과, wails build 성공, 실행 화면 확인. 실제 서버 접속 테스트는 미실시</li>
+  <li>커밋 d6df82d (main). .gitignore에 /choboterm.exe, .idea/ 추가</li>
+</ul>
+
+<h2>2026-10-02 — EUC-KR(CP949) 인코딩 지원</h2>
+<ul>
+  <li>문제: EUC-KR 서버 접속 시 한글 깨짐 (xterm.js는 UTF-8만 해석)</li>
+  <li>codec.go: 수신 CP949→UTF-8 변환(청크 경계에서 잘린 2바이트 문자 보존), 송신 UTF-8→CP949 변환</li>
+  <li>CP949에 없는 문자는 '?'로 전송 (x/text의 ReplaceUnsupported는 0x1A=Ctrl+Z를 보내므로 사용 안 함)</li>
+  <li>접속 창에 Code(UTF-8 / EUC-KR) 항목 추가, 접속 기록에 인코딩도 저장, 창 제목에 [인코딩] 표시</li>
+  <li>Ctrl+Shift+E: 접속 중 UTF-8 ↔ EUC-KR 즉시 전환</li>
+  <li>cjkwidth.ts: EUC-KR 모드에서 모호폭 문자(─│■○※ 등)를 2칸으로 그리는 xterm.js 유니코드 제공자(11-cjk) 추가 → BBS 박스 그림 정렬</li>
+  <li>검증: codec 단위 테스트(분할 수신, CP949 확장 문자 '똠', 인코딩, UTF-8 통과) 통과, wails build 성공, 접속 창 확인. 실제 EUC-KR 서버 접속은 미확인</li>
+</ul>
+
+<h2>2026-10-02 — "unknown Unicode version 11-cjk" 오류 수정</h2>
+<ul>
+  <li>증상: EUC-KR로 접속은 되지만 접속 창에 오류가 뜨고 창이 닫히지 않음</li>
+  <li>원인: xterm.js의 term.unicode는 접근할 때마다 새 객체를 반환 → 인스턴스의 register를 가로채도 애드온은 다른 객체를 써서 Unicode 11 제공자를 못 잡음 → 11-cjk 미등록</li>
+  <li>수정: 공유 프로토타입의 register를 가로채도록 변경(cjkwidth.ts). 등록에 실패해도 접속은 막히지 않도록 applyEncoding에서 등록 여부 확인</li>
+  <li>검증: 실행 화면에서 versions=6,11,11-cjk 확인, WIDE 모드에서 ─│■○※가 2칸 폭으로 배치되는 것 확인(임시 디버그 코드는 제거)</li>
+  <li>남은 문제: 2칸 폭 셀 안에서 ─ 같은 선 문자가 1칸 길이로 그려져 가로선이 끊겨 보일 수 있음</li>
 </ul>
 </body>
 </html>

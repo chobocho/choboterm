@@ -21,3 +21,7 @@ export function Resize(arg1, arg2) {
 export function Send(arg1) {
   return window['go']['main']['App']['Send'](arg1);
 }
+
+export function SetEncoding(arg1) {
+  return window['go']['main']['App']['SetEncoding'](arg1);
+}

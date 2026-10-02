@@ -9,9 +9,10 @@ import (
 
 // HostEntry is one remembered connection. Passwords are never stored.
 type HostEntry struct {
-	Host  string `json:"host"`
-	Port  int    `json:"port"`
-	Login string `json:"login"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Login    string `json:"login"`
+	Encoding string `json:"encoding"`
 }
 
 const maxHistory = 20

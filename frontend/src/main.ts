@@ -3,9 +3,9 @@ import './style.css';
 
 import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
-import {Unicode11Addon} from '@xterm/addon-unicode11';
+import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 
-import {Connect, Disconnect, GetHistory, Resize, Send} from '../wailsjs/go/main/App';
+import {Connect, Disconnect, GetHistory, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 
@@ -21,12 +21,19 @@ const term = new Terminal({
 });
 const fit = new FitAddon();
 term.loadAddon(fit);
-term.loadAddon(new Unicode11Addon());
-term.unicode.activeVersion = '11';
+loadUnicodeWidths(term);
+term.unicode.activeVersion = NARROW;
 term.open(document.getElementById('terminal')!);
 fit.fit();
 
 let connected = false;
+
+// EUC-KR screens assume ambiguous-width symbols (─│■○ etc.) take 2 columns.
+function applyEncoding(name: string) {
+    const wanted = name === 'EUC-KR' ? WIDE : NARROW;
+    // Never let a missing width provider break connecting.
+    if (term.unicode.versions.includes(wanted)) term.unicode.activeVersion = wanted;
+}
 
 term.onData(data => {
     if (connected) {
@@ -61,6 +68,7 @@ const host = $<HTMLInputElement>('host');
 const port = $<HTMLInputElement>('port');
 const login = $<HTMLInputElement>('login');
 const pass = $<HTMLInputElement>('pass');
+const encoding = $<HTMLSelectElement>('encoding');
 const proto = $<HTMLSpanElement>('proto');
 const error = $<HTMLDivElement>('error');
 const ok = $<HTMLButtonElement>('ok');
@@ -96,6 +104,7 @@ function applyEntry(e: main.HostEntry) {
     host.value = e.host;
     port.value = String(e.port);
     login.value = e.login;
+    encoding.value = e.encoding || 'UTF-8';
     updateProto();
 }
 
@@ -166,12 +175,14 @@ async function doConnect() {
             port: Number(port.value),
             login: login.value,
             pass: pass.value,
+            encoding: encoding.value,
             cols: term.cols,
             rows: term.rows,
         }));
         connected = true;
         pass.value = '';
         term.reset();
+        applyEncoding(encoding.value);
         closeDialog();
     } catch (e) {
         error.textContent = String(e);
@@ -210,6 +221,19 @@ window.addEventListener('keydown', ev => {
     }
 }, true);
 
+// Ctrl+Shift+E: toggle UTF-8 / EUC-KR on the current connection.
+window.addEventListener('keydown', async ev => {
+    if (ev.ctrlKey && ev.shiftKey && (ev.key === 'E' || ev.key === 'e')) {
+        ev.preventDefault();
+        const next = encoding.value === 'EUC-KR' ? 'UTF-8' : 'EUC-KR';
+        encoding.value = await SetEncoding(next);
+        applyEncoding(encoding.value);
+        term.write(`
+[33m[인코딩: ${encoding.value}][0m
+`);
+    }
+}, true);
+
 // Ctrl+Shift+D: disconnect.
 window.addEventListener('keydown', ev => {
     if (ev.ctrlKey && ev.shiftKey && (ev.key === 'D' || ev.key === 'd') && connected) {
@@ -220,5 +244,5 @@ window.addEventListener('keydown', ev => {
     }
 }, true);
 
-term.write('choboterm\r\n\x1b[90mEnter 또는 Ctrl+Shift+N: 접속 창 열기\x1b[0m\r\n');
+term.write('choboterm\r\n\x1b[90mEnter 또는 Ctrl+Shift+N: 접속 창 열기 / Ctrl+Shift+E: UTF-8 ↔ EUC-KR\x1b[0m\r\n');
 openDialog();
