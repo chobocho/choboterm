@@ -40,6 +40,14 @@ type App struct {
 	codec *codec
 	title string
 	files fileState
+	zm    zmodemState
+	hooks testHooks
+}
+
+// testHooks lets tests run the app without a Wails window.
+type testHooks struct {
+	emit        func(name string, data ...interface{})
+	downloadDir string
 }
 
 // NewApp creates a new App application struct
@@ -157,17 +165,51 @@ func (a *App) pump(sess Session) {
 	const maxBatch = 256 * 1024
 	ticker := time.NewTicker(16 * time.Millisecond)
 	defer ticker.Stop()
-	var pending []byte
+	var (
+		pending []byte
+		held    []byte      // possible start of a ZMODEM sequence split across reads
+		zmIn    chan []byte // non-nil while a ZMODEM transfer owns the stream
+		zmDone  chan []byte // receives unconsumed bytes when the transfer ends
+	)
 	flush := func() {
 		if len(pending) > 0 {
-			runtime.EventsEmit(a.ctx, "term:data", base64.StdEncoding.EncodeToString(pending))
+			a.emit("term:data", base64.StdEncoding.EncodeToString(pending))
 			pending = pending[:0]
 		}
 	}
+	handle := func(data []byte) {
+		if zmIn != nil {
+			select {
+			case zmIn <- data:
+				return
+			case left := <-zmDone:
+				zmIn, zmDone = nil, nil
+				data = append(left, data...)
+			}
+		}
+		data = append(held, data...)
+		held = nil
+		if i, receive := findZmodemStart(data); i >= 0 {
+			pending = append(pending, a.codec.Decode(data[:i])...)
+			flush()
+			zmIn, zmDone = make(chan []byte, 1024), make(chan []byte, 1)
+			zmIn <- data[i:]
+			go a.runZmodem(sess, receive, zmIn, zmDone)
+			return
+		}
+		k := partialSigSuffix(data)
+		held = append([]byte(nil), data[len(data)-k:]...)
+		pending = append(pending, a.codec.Decode(data[:len(data)-k])...)
+	}
+
 	for {
 		select {
 		case c, ok := <-chunks:
 			if !ok {
+				if zmIn != nil {
+					close(zmIn) // the transfer sees EOF and stops
+				}
+				pending = append(pending, a.codec.Decode(held)...)
 				flush()
 				err := <-readErr
 				a.mu.Lock()
@@ -184,15 +226,24 @@ func (a *App) pump(sess Session) {
 						msg += ": " + err.Error()
 					}
 					a.updateTitle()
-					runtime.EventsEmit(a.ctx, "term:closed", msg)
+					a.emit("term:closed", msg)
 				}
 				return
 			}
-			pending = append(pending, a.codec.Decode(c)...)
+			handle(c)
 			if len(pending) >= maxBatch {
 				flush()
 			}
+		case left := <-zmDone: // nil channel (never ready) unless a transfer is running
+			zmIn, zmDone = nil, nil
+			if len(left) > 0 {
+				handle(left)
+			}
 		case <-ticker.C:
+			if len(held) > 0 && zmIn == nil {
+				pending = append(pending, a.codec.Decode(held)...)
+				held = nil
+			}
 			flush()
 		}
 	}
@@ -203,9 +254,17 @@ func (a *App) Send(data string) {
 	a.mu.Lock()
 	sess := a.sess
 	a.mu.Unlock()
-	if sess != nil {
-		_, _ = sess.Write(a.codec.Encode(data))
+	if sess == nil {
+		return
 	}
+	if a.zmodemActive() {
+		// Keyboard input is not sent during a transfer; Ctrl+C / Ctrl+X cancel it.
+		if strings.ContainsAny(data, "\x03\x18") {
+			a.cancelZmodem()
+		}
+		return
+	}
+	_, _ = sess.Write(a.codec.Encode(data))
 }
 
 // SetEncoding switches the character set of the current connection
@@ -223,7 +282,7 @@ func (a *App) updateTitle() {
 	if title == "" {
 		title = "choboterm"
 	}
-	runtime.WindowSetTitle(a.ctx, title+" ["+a.codec.Name()+"]")
+	a.setTitle(title + " [" + a.codec.Name() + "]")
 }
 
 // Resize propagates the terminal size to the remote side.

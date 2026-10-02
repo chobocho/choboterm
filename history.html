@@ -75,5 +75,18 @@
   <li>검증: pyftpdlib(CP949 모드) 로컬 서버로 한글 이름 목록/다운로드/900KB 업로드·재다운로드 테스트 통과 (ftp_test.go, CHOBOTERM_FTP_TEST 환경변수 있을 때만 실행)</li>
   <li>미지원: FTPS(TLS), 이어받기</li>
 </ul>
+
+<h2>2026-10-03 — 3단계: Zmodem (sz / rz)</h2>
+<ul>
+  <li>zmodem.go: ZMODEM 직접 구현 — hex/bin16/bin32 헤더, ZDLE 이스케이프, CRC16/CRC32 데이터 패킷, 받기(원격 sz)·보내기(원격 rz), 64KB 창 단위 ZCRCW/ZACK 흐름 제어, ZRPOS 재전송, 원격 취소(CAN×5) 감지</li>
+  <li>터미널 출력에서 시작 신호(**^XB00 = sz, **^XB01 = rz) 자동 감지. 읽기 경계에서 신호가 잘려도 처리, 끝나면 남은 바이트를 터미널로 돌려줌</li>
+  <li>받은 파일은 ~/Downloads에 저장(같은 이름이면 " (1)" 붙임), 파일명은 경로 제거·Windows 금지문자 치환, EUC-KR 이름 변환</li>
+  <li>rz 감지 시 파일 선택 창 → 선택 취소하면 원격 rz도 취소</li>
+  <li>Telnet 접속에서는 모든 제어문자 이스케이프(ESCCTL) 요청/사용 → CR NUL 변환 등에 안전</li>
+  <li>전송 중 키 입력 차단, Ctrl+C/Ctrl+X 또는 진행률 상자의 취소 버튼으로 중단, 실패·취소 시 받다 만 파일 삭제</li>
+  <li>테스트를 위해 이벤트 전송/창 제목/다운로드 폴더를 testHooks로 교체 가능하게 함</li>
+  <li>검증: Go 송수신 루프백, 실제 lrzsz 0.12.21rc(WSL, 설치 없이 dpkg -x로 임시 추출)와 양방향(일반·전체 이스케이프), 출력 감지→수신→터미널 복귀 E2E, Ctrl+C 취소 E2E 모두 통과 (CHOBOTERM_LRZSZ 환경변수 있을 때만 실행)</li>
+  <li>수정: 취소 시 받다 만 파일이 남던 문제(이름 있는 반환값이 정리 전에 덮어써짐)</li>
+</ul>
 </body>
 </html>

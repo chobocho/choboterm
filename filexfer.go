@@ -247,7 +247,7 @@ func (a *App) transfer(name string, size int64, upload bool, run func(RemoteFS, 
 
 	p := &progress{
 		ctx:  ctx,
-		emit: func(x XferProgress) { runtime.EventsEmit(a.ctx, "xfer:progress", x) },
+		emit: func(x XferProgress) { a.emit("xfer:progress", x) },
 		info: XferProgress{Name: name, Total: size, Upload: upload},
 	}
 	p.emit(p.info)
@@ -259,12 +259,13 @@ func (a *App) transfer(name string, size int64, upload bool, run func(RemoteFS, 
 	if err != nil {
 		end.Message = err.Error()
 	}
-	runtime.EventsEmit(a.ctx, "xfer:end", end)
+	a.emit("xfer:end", end)
 	return err
 }
 
-// FileCancel aborts the running transfer.
+// FileCancel aborts the running transfer (SFTP/FTP or Zmodem).
 func (a *App) FileCancel() {
+	a.cancelZmodem()
 	a.files.cmu.Lock()
 	c := a.files.cancel
 	a.files.cmu.Unlock()
