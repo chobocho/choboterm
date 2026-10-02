@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -21,7 +22,7 @@ type RemoteFS interface {
 	Getwd() (string, error)
 	List(dir string) ([]FileEntry, error)
 	Download(remotePath string, w io.Writer) error
-	Upload(remotePath string, r io.Reader) error
+	Upload(remotePath string, r io.Reader, size int64) error
 	Close() error
 }
 
@@ -53,6 +54,7 @@ var errCancelled = errors.New("전송이 취소되었습니다")
 type fileState struct {
 	mu     sync.Mutex // serializes remote operations (FTP allows only one at a time)
 	fs     RemoteFS
+	proto  string     // "SFTP", "SCP" or "FTP", shown in the file window title
 	cmu    sync.Mutex // guards cancel, which must be reachable while mu is held
 	cancel context.CancelFunc
 }
@@ -131,9 +133,15 @@ func downloadsDir() string {
 
 // ---- App bindings ----
 
-// FileOpen prepares remote file access for the current connection and
-// returns the initial directory. SSH connections use SFTP.
-func (a *App) FileOpen() (string, error) {
+// FileOpenResult tells the file window where to start and which protocol is used.
+type FileOpenResult struct {
+	Home     string `json:"home"`
+	Protocol string `json:"protocol"`
+}
+
+// FileOpen prepares remote file access for the current connection.
+// SSH connections use SFTP, or SCP when the server has no SFTP subsystem.
+func (a *App) FileOpen() (FileOpenResult, error) {
 	a.files.mu.Lock()
 	defer a.files.mu.Unlock()
 
@@ -142,15 +150,20 @@ func (a *App) FileOpen() (string, error) {
 		sess, _ := a.sess.(*sshSession)
 		a.mu.Unlock()
 		if sess == nil {
-			return "", errors.New("파일 전송은 SSH(SFTP) 또는 FTP 접속에서 사용할 수 있습니다.\nTelnet에서는 sz / rz (Zmodem)를 사용하세요.")
+			return FileOpenResult{}, errors.New("파일 전송은 SSH(SFTP/SCP) 또는 FTP 접속에서 사용할 수 있습니다.\nTelnet에서는 sz / rz (Zmodem)를 사용하세요.")
 		}
-		fs, err := newSFTP(sess.client)
-		if err != nil {
-			return "", err
+		if fs, err := newSFTP(sess.client); err == nil {
+			a.files.fs, a.files.proto = fs, "SFTP"
+		} else {
+			scp, serr := newSCP(sess.client, a.codec)
+			if serr != nil {
+				return FileOpenResult{}, fmt.Errorf("SFTP를 열 수 없고 (%v), SCP도 사용할 수 없습니다 (%v)", err, serr)
+			}
+			a.files.fs, a.files.proto = scp, "SCP"
 		}
-		a.files.fs = fs
 	}
-	return a.files.fs.Getwd()
+	home, err := a.files.fs.Getwd()
+	return FileOpenResult{Home: home, Protocol: a.files.proto}, err
 }
 
 // FileList lists a remote directory, folders first.
@@ -219,7 +232,7 @@ func (a *App) FileUpload(remoteDir string) (int, error) {
 			size = st.Size()
 		}
 		err = a.transfer(name, size, true, func(fs RemoteFS, p *progress) error {
-			return fs.Upload(path.Join(remoteDir, name), progressReader{f, p})
+			return fs.Upload(path.Join(remoteDir, name), progressReader{f, p}, size)
 		})
 		f.Close()
 		if err != nil {
@@ -279,7 +292,7 @@ func (a *App) FileClose() {
 	a.FileCancel()
 	a.files.mu.Lock()
 	fs := a.files.fs
-	a.files.fs = nil
+	a.files.fs, a.files.proto = nil, ""
 	a.files.mu.Unlock()
 	if fs != nil {
 		_ = fs.Close()

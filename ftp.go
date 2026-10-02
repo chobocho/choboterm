@@ -104,7 +104,7 @@ func (f *ftpFS) Download(remotePath string, w io.Writer) error {
 	return err
 }
 
-func (f *ftpFS) Upload(remotePath string, r io.Reader) error {
+func (f *ftpFS) Upload(remotePath string, r io.Reader, _ int64) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.c.Stor(f.names.EncodeString(remotePath), r)

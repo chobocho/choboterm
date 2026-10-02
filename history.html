@@ -108,5 +108,16 @@
   <li>접속 창과 파일 전송 창 제목 표시줄에도 16px 아이콘 표시 (frontend/src/assets/icon.png)</li>
   <li>검증: 밝은/어두운 배경 미리보기, 16·24·32px 확대 확인, 빌드 후 창 제목 표시줄과 접속 창 아이콘 확인</li>
 </ul>
+
+<h2>2026-10-03 — V0.1.0 표시, Telnet 비밀번호 기억, SCP 자동 전환</h2>
+<ul>
+  <li>(이전 기록 보충) 앱 아이콘 커밋 d95b2d8, Python 캐시 정리 681f5e9 푸시 완료</li>
+  <li>버전(d7a99bd): main.go에 AppVersion=0.1.0, 창 제목 "choboterm V0.1.0 - host:port [인코딩]", 시작 화면에도 표시, wails.json에 제품 정보 추가. exe 속성 창의 버전 정보는 Wails 템플릿 언어 코드(0000) 문제로 표시되지 않음(이번 범위 밖)</li>
+  <li>Telnet 비밀번호(752b5da): 접속 시 Windows DPAPI(CryptProtectData, 현재 사용자)로 암호화해 hosts.json의 passEnc에 저장. Host 선택/입력 시 Pass 자동 채움 → Telnet 자동 로그인에 사용. Pass를 비우고 접속하면 삭제. SSH/FTP는 저장하지 않음. Windows 외에서는 저장 안 함</li>
+  <li>SCP: SFTP 서브시스템이 없으면 자동으로 SCP 사용. 목록은 LC_ALL=C ls -laL 결과 파싱(GNU/BusyBox), 다운로드 scp -f, 업로드 scp -t, 경로는 작은따옴표로 셸 이스케이프, EUC-KR 이름 변환. 파일 창 제목에 실제 프로토콜(SFTP/SCP/FTP) 표시</li>
+  <li>RemoteFS.Upload에 size 인자 추가(SCP는 크기를 먼저 보내야 함), FileOpen이 {home, protocol}을 반환</li>
+  <li>작업 중 발견: 셸 heredoc으로 넘긴 Python 스크립트에서 \\ 이스케이프가 바뀌는 문제 → 백슬래시가 들어가는 패치는 파일로 작성해서 실행</li>
+  <li>검증: 비밀번호 저장 테스트(파일에 평문 없음, 복원, 유지, 삭제), ls 파서 테스트, SFTP 없는 테스트 SSH 서버(명령은 WSL에서 실행)로 SCP 전환·한글/공백 목록·다운로드·공백과 따옴표가 든 경로 업로드·없는 파일 오류 테스트 통과, Windows/Linux go vet, wails build, 창 제목 확인</li>
+</ul>
 </body>
 </html>

@@ -60,7 +60,7 @@ func TestFTPRoundTrip(t *testing.T) {
 	}
 
 	payload := bytes.Repeat([]byte("abc"), 300_000)
-	if err := fs.Upload(wd+"/sub/올림.bin", bytes.NewReader(payload)); err != nil {
+	if err := fs.Upload(wd+"/sub/올림.bin", bytes.NewReader(payload), int64(len(payload))); err != nil {
 		t.Fatal(err)
 	}
 	sub, err := fs.List(wd + "/sub")

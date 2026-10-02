@@ -196,7 +196,7 @@ async function doConnect() {
             connected = false;
             closeDialog();
             try {
-                await openFiles(`파일 전송 (FTP) - ${host.value.trim()}`, {closeConnection: true, onClose: () => openDialog()});
+                await openFiles(host.value.trim(), {closeConnection: true, onClose: () => openDialog()});
             } catch (e) {
                 Disconnect();
                 await openDialog();
@@ -246,13 +246,13 @@ window.addEventListener('keydown', ev => {
     }
 }, true);
 
-// Ctrl+Shift+F: file transfer window (SFTP on SSH connections).
+// Ctrl+Shift+F: file transfer window (SFTP, or SCP fallback, on SSH connections).
 window.addEventListener('keydown', async ev => {
     if (ev.ctrlKey && ev.shiftKey && (ev.key === 'F' || ev.key === 'f')) {
         ev.preventDefault();
         if (!connected || filesOpen() || !overlay.hidden) return;
         try {
-            await openFiles(`파일 전송 (SFTP) - ${host.value.trim()}`, {onClose: () => term.focus()});
+            await openFiles(host.value.trim(), {onClose: () => term.focus()});
         } catch (e) {
             term.write(`\r\n\x1b[33m[${String(e).replace(/\n/g, '\r\n')}]\x1b[0m\r\n`);
         }

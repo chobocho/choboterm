@@ -1,4 +1,4 @@
-# choboterm
+# choboterm V0.1.0
 
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows용 SSH / Telnet / FTP 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다.
@@ -19,13 +19,15 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 - **SSH** (포트 22): 비밀번호, keyboard-interactive, `~/.ssh` 개인키(id_ed25519 / id_ecdsa / id_rsa, 암호 없는 키) 인증
   - `~/.ssh/known_hosts`로 호스트 키 확인. 처음 접속하는 호스트는 지문을 보여 주고 신뢰할지 묻고, 키가 바뀐 호스트는 차단합니다.
 - **Telnet** (22, 21 외의 포트): NAWS / TTYPE / ECHO / SGA / BINARY 협상, `login:` / `password:` 프롬프트 자동 로그인
+  - 비밀번호를 기억해 두었다가 Host를 고르면 자동으로 채웁니다. Windows DPAPI로 암호화해 저장하므로 현재 Windows 사용자만 풀 수 있습니다. Pass를 비우고 접속하면 저장된 비밀번호를 지웁니다.
 - **FTP** (포트 21): 터미널 없이 파일 전송 창이 바로 열립니다. Login을 비워 두면 anonymous로 로그인합니다.
-- **SFTP**: SSH 접속 중 `Ctrl+Shift+F`로 파일 전송 창을 엽니다. 다시 로그인할 필요가 없습니다.
+- **SFTP / SCP**: SSH 접속 중 `Ctrl+Shift+F`로 파일 전송 창을 엽니다. 다시 로그인할 필요가 없습니다.
+  - 서버에 SFTP가 없으면(Dropbear, 공유기, 임베디드 장비 등) 자동으로 SCP로 바꿔 씁니다. 이때 폴더 목록은 `ls`로 가져옵니다.
 - **Zmodem**: 터미널에서 `sz 파일` / `rz`를 실행하면 자동으로 전송합니다. 원격 서버에 lrzsz가 설치되어 있어야 합니다.
 - **EUC-KR (CP949)**: 접속 창의 Code에서 선택하거나 접속 중 `Ctrl+Shift+E`로 전환합니다.
   - EUC-KR 모드에서는 `─ │ ■ ○ ※` 같은 특수문자를 옛 터미널처럼 2칸 폭으로 그립니다.
   - FTP 파일 이름과 Zmodem 파일 이름에도 같은 인코딩을 적용합니다.
-- **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 저장하지 않습니다.
+- **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 Telnet만, 암호화해서 저장합니다.
 
 X11 포워딩은 지원하지 않습니다.
 
@@ -37,16 +39,16 @@ X11 포워딩은 지원하지 않습니다.
 | `Alt+C` / `Alt+A` / `Esc` | 접속 창에서 Connect / Cancel / 닫기 |
 | `Ctrl+Shift+D` | 연결 끊기 |
 | `Ctrl+Shift+E` | UTF-8 ↔ EUC-KR 전환 |
-| `Ctrl+Shift+F` | 파일 전송 창 (SFTP) |
+| `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP) |
 | `Ctrl+C` / `Ctrl+X` (Zmodem 전송 중) | 전송 취소 |
 
 파일 전송 창: `↑` `↓` `Home` `End`로 선택, `Enter`/더블클릭으로 폴더 열기·다운로드, `Backspace`로 상위 폴더, `F5`로 새로 고침, `Esc`로 닫기
 
 ## 파일 저장 위치
 
-- 다운로드(SFTP / FTP): 저장 창에서 선택합니다. 기본 위치는 `~/Downloads`입니다.
+- 다운로드(SFTP / SCP / FTP): 저장 창에서 선택합니다. 기본 위치는 `~/Downloads`입니다.
 - Zmodem 수신: `~/Downloads`에 저장합니다. 같은 이름이 있으면 `이름 (1).확장자`로 저장합니다.
-- 접속 기록: `%AppData%\choboterm\hosts.json`
+- 접속 기록: `%AppData%\choboterm\hosts.json` (Telnet 비밀번호는 DPAPI로 암호화된 값만 저장)
 
 ## 빌드
 
@@ -82,16 +84,23 @@ go test ./...
 
   Git Bash에서는 `/tmp` 경로가 바뀌지 않도록 `MSYS2_ENV_CONV_EXCL=CHOBOTERM_LRZSZ`도 함께 설정하세요.
 
+- SCP 자동 전환: SFTP 없이 명령만 실행하는 테스트 SSH 서버를 띄우고, 명령은 WSL에서 실행합니다(WSL에 `scp`, `ls` 필요).
+
+  ```sh
+  CHOBOTERM_WSL=1 go test -run SCPFallback -v
+  ```
+
 ## 소스 구성
 
 | 파일 | 내용 |
 |---|---|
 | `app.go` | 접속, 키 입력 전달, 출력 묶음 전송, Zmodem 감지 |
-| `ssh.go` / `telnet.go` / `ftp.go` / `sftp.go` | 프로토콜 |
+| `ssh.go` / `telnet.go` / `ftp.go` / `sftp.go` / `scp.go` | 프로토콜 |
 | `filexfer.go` | 파일 전송 공통 계층(RemoteFS), 진행률, 취소 |
 | `zmodem.go` / `zmodem_app.go` | Zmodem 프로토콜과 앱 연결 |
 | `codec.go` | UTF-8 ↔ CP949 변환 |
 | `history_store.go` | 최근 접속 기록 |
+| `secret_windows.go` | 비밀번호 암호화 (Windows DPAPI) |
 | `frontend/src/main.ts` | 터미널, 접속 창, 단축키 |
 | `frontend/src/files.ts` | 파일 전송 창, 진행률 상자 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |

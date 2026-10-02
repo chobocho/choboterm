@@ -42,6 +42,20 @@ export namespace main {
 	        this.modTime = source["modTime"];
 	    }
 	}
+	export class FileOpenResult {
+	    home: string;
+	    protocol: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileOpenResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.home = source["home"];
+	        this.protocol = source["protocol"];
+	    }
+	}
 	export class HostEntry {
 	    host: string;
 	    port: number;

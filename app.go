@@ -106,7 +106,7 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 			return "", err
 		}
 		a.files.mu.Lock()
-		a.files.fs = fs
+		a.files.fs, a.files.proto = fs, "FTP"
 		a.files.mu.Unlock()
 		enc := a.codec.Set(req.Encoding)
 		a.mu.Lock()

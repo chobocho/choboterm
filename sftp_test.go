@@ -115,7 +115,7 @@ func TestSFTPRoundTrip(t *testing.T) {
 	}
 
 	payload := bytes.Repeat([]byte("0123456789"), 100_000) // 1MB, several SFTP packets
-	if err := fs.Upload(wd+"/sub/up.bin", bytes.NewReader(payload)); err != nil {
+	if err := fs.Upload(wd+"/sub/up.bin", bytes.NewReader(payload), int64(len(payload))); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(filepath.Join(root, "sub", "up.bin"))

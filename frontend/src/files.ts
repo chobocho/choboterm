@@ -143,14 +143,14 @@ async function upload() {
  * Opens the file transfer window for the current connection.
  * Throws if the connection doesn't support file access (e.g. Telnet).
  */
-export async function openFiles(heading: string, opts: {closeConnection?: boolean; onClose?: () => void} = {}) {
-    const home = await FileOpen();
+export async function openFiles(host: string, opts: {closeConnection?: boolean; onClose?: () => void} = {}) {
+    const res = await FileOpen();
     closeConnection = !!opts.closeConnection;
     onClosed = opts.onClose;
-    title.textContent = heading;
+    title.textContent = `파일 전송 (${res.protocol}) - ${host}`;
     overlay.hidden = false;
     panel.focus();
-    await load(home || '/');
+    await load(res.home || '/');
 }
 
 export function closeFiles() {

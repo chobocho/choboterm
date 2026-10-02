@@ -14,7 +14,7 @@ export function FileDownload(arg1:string,arg2:number):Promise<string>;
 
 export function FileList(arg1:string):Promise<Array<main.FileEntry>>;
 
-export function FileOpen():Promise<string>;
+export function FileOpen():Promise<main.FileOpenResult>;
 
 export function FileUpload(arg1:string):Promise<number>;
 

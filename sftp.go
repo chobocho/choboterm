@@ -59,7 +59,7 @@ func (s *sftpFS) Download(remotePath string, w io.Writer) error {
 	return err
 }
 
-func (s *sftpFS) Upload(remotePath string, r io.Reader) error {
+func (s *sftpFS) Upload(remotePath string, r io.Reader, _ int64) error {
 	f, err := s.c.Create(remotePath)
 	if err != nil {
 		return err
