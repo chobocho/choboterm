@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>choboterm</title>
+</head>
+<body>
+<div id="terminal"></div>
+
+<div id="overlay" hidden>
+    <form id="connect" class="dialog" autocomplete="off">
+        <div class="titlebar">
+            <span class="title">choboterm - Connect to</span>
+            <button type="button" class="close" id="close" title="닫기">✕</button>
+        </div>
+        <div class="body">
+            <label for="host">Host</label>
+            <div class="combo">
+                <input id="host" spellcheck="false"/>
+                <button type="button" id="hostDrop" tabindex="-1">▼</button>
+                <ul id="hostList" hidden></ul>
+            </div>
+
+            <label for="port">Port</label>
+            <div class="port">
+                <input id="port" inputmode="numeric" value="23"/>
+                <span id="proto">Telnet</span>
+            </div>
+
+            <label for="login">Login</label>
+            <input id="login" spellcheck="false"/>
+
+            <label for="pass">Pass</label>
+            <input id="pass" type="password"/>
+
+            <div class="error" id="error"></div>
+
+            <div class="buttons">
+                <button type="submit" id="ok"><u>C</u>onnect</button>
+                <button type="button" id="cancel">C<u>a</u>ncel</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="./src/main.ts" type="module"></script>
+</body>
+</html>
