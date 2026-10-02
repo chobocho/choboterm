@@ -43,6 +43,12 @@ html, body {
     --wails-draggable: no-drag;
 }
 
+.titlebar .icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
 .titlebar .title {
     flex: 1;
 }

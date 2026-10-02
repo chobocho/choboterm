@@ -95,6 +95,7 @@ go test ./...
 | `frontend/src/main.ts` | 터미널, 접속 창, 단축키 |
 | `frontend/src/files.ts` | 파일 전송 창, 진행률 상자 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
+| `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
 
 ## 아직 지원하지 않는 기능
 
