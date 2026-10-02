@@ -3,3 +3,4 @@ node_modules
 frontend/dist
 /choboterm.exe
 .idea/
+__pycache__/
