@@ -112,7 +112,7 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 		a.mu.Lock()
 		a.title = fmt.Sprintf("%s - ftp://%s:%d", appName, req.Host, req.Port)
 		a.mu.Unlock()
-		_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc})
+		_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, nil)
 		a.updateTitle()
 		return proto, nil
 	}
@@ -136,7 +136,12 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 	a.title = fmt.Sprintf("%s - %s:%d", appName, req.Host, req.Port)
 	a.mu.Unlock()
 
-	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc})
+	// Telnet passwords are remembered (DPAPI-encrypted) and filled in next time.
+	var savePass *string
+	if proto == "telnet" {
+		savePass = &req.Pass
+	}
+	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, savePass)
 	a.updateTitle()
 	go a.pump(sess)
 	return proto, nil

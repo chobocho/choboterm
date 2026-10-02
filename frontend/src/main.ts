@@ -87,9 +87,9 @@ function updateProto() {
 
 async function openDialog() {
     error.textContent = '';
-    pass.value = '';
     history = (await GetHistory()) ?? [];
     if (!host.value && history.length > 0) applyEntry(history[0]);
+    else fillSavedPass();
     updateProto();
     overlay.hidden = false;
     host.focus();
@@ -107,7 +107,14 @@ function applyEntry(e: main.HostEntry) {
     port.value = String(e.port);
     login.value = e.login;
     encoding.value = e.encoding || 'UTF-8';
+    pass.value = e.pass ?? '';
     updateProto();
+}
+
+// Fills the remembered (Telnet) password for the host/port currently typed in.
+function fillSavedPass() {
+    const e = history.find(h => h.host === host.value.trim() && h.port === Number(port.value));
+    pass.value = e?.pass ?? '';
 }
 
 function showList() {
@@ -147,6 +154,8 @@ hostDrop.addEventListener('click', () => {
 });
 
 host.addEventListener('blur', hideList);
+host.addEventListener('change', fillSavedPass);
+port.addEventListener('change', fillSavedPass);
 host.addEventListener('keydown', ev => {
     if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
         ev.preventDefault();

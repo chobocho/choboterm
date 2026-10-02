@@ -47,6 +47,7 @@ export namespace main {
 	    port: number;
 	    login: string;
 	    encoding: string;
+	    pass: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new HostEntry(source);
@@ -58,6 +59,7 @@ export namespace main {
 	        this.port = source["port"];
 	        this.login = source["login"];
 	        this.encoding = source["encoding"];
+	        this.pass = source["pass"];
 	    }
 	}
 
