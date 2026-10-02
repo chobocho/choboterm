@@ -38,6 +38,10 @@ export function GetHistory() {
   return window['go']['main']['App']['GetHistory']();
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
 export function Resize(arg1, arg2) {
   return window['go']['main']['App']['Resize'](arg1, arg2);
 }

@@ -110,7 +110,7 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 		a.files.mu.Unlock()
 		enc := a.codec.Set(req.Encoding)
 		a.mu.Lock()
-		a.title = fmt.Sprintf("choboterm - ftp://%s:%d", req.Host, req.Port)
+		a.title = fmt.Sprintf("%s - ftp://%s:%d", appName, req.Host, req.Port)
 		a.mu.Unlock()
 		_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc})
 		a.updateTitle()
@@ -133,7 +133,7 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 	enc := a.codec.Set(req.Encoding)
 	a.mu.Lock()
 	a.sess = sess
-	a.title = fmt.Sprintf("choboterm - %s:%d", req.Host, req.Port)
+	a.title = fmt.Sprintf("%s - %s:%d", appName, req.Host, req.Port)
 	a.mu.Unlock()
 
 	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc})
@@ -280,9 +280,14 @@ func (a *App) updateTitle() {
 	title := a.title
 	a.mu.Unlock()
 	if title == "" {
-		title = "choboterm"
+		title = appName
 	}
 	a.setTitle(title + " [" + a.codec.Name() + "]")
+}
+
+// GetVersion returns the application version (e.g. "0.1.0").
+func (a *App) GetVersion() string {
+	return AppVersion
 }
 
 // Resize propagates the terminal size to the remote side.

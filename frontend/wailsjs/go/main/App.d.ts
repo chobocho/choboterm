@@ -20,6 +20,8 @@ export function FileUpload(arg1:string):Promise<number>;
 
 export function GetHistory():Promise<Array<main.HostEntry>>;
 
+export function GetVersion():Promise<string>;
+
 export function Resize(arg1:number,arg2:number):Promise<void>;
 
 export function Send(arg1:string):Promise<void>;

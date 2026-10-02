@@ -6,7 +6,7 @@ import {FitAddon} from '@xterm/addon-fit';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {closeFiles, filesOpen, openFiles} from './files';
 
-import {Connect, Disconnect, GetHistory, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
+import {Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 
@@ -271,5 +271,8 @@ window.addEventListener('keydown', ev => {
     }
 }, true);
 
-term.write('choboterm\r\n\x1b[90mEnter 또는 Ctrl+Shift+N: 접속 창 열기 / Ctrl+Shift+E: UTF-8 ↔ EUC-KR / Ctrl+Shift+F: 파일 전송\x1b[0m\r\n');
+GetVersion().then(v => {
+    term.write(`choboterm V${v}\r\n`);
+    term.write('\x1b[90mEnter 또는 Ctrl+Shift+N: 접속 창 열기 / Ctrl+Shift+E: UTF-8 ↔ EUC-KR / Ctrl+Shift+F: 파일 전송\x1b[0m\r\n');
+});
 openDialog();

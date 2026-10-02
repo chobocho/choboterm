@@ -11,13 +11,19 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// AppVersion is shown in the window title. Keep in sync with wails.json productVersion.
+const AppVersion = "0.1.0"
+
+// appName is the window title prefix, e.g. "choboterm V0.1.0".
+const appName = "choboterm V" + AppVersion
+
 func main() {
 	// Create an instance of the app structure
 	app := NewApp()
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "choboterm",
+		Title:  appName,
 		Width:  900,
 		Height: 600,
 		AssetServer: &assetserver.Options{
