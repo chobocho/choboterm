@@ -4,6 +4,7 @@ import './style.css';
 import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
+import {closeFiles, filesOpen, openFiles} from './files';
 
 import {Connect, Disconnect, GetHistory, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -217,7 +218,21 @@ form.addEventListener('keydown', ev => {
 window.addEventListener('keydown', ev => {
     if (ev.ctrlKey && ev.shiftKey && (ev.key === 'N' || ev.key === 'n')) {
         ev.preventDefault();
+        closeFiles();
         openDialog();
+    }
+}, true);
+
+// Ctrl+Shift+F: file transfer window (SFTP on SSH connections).
+window.addEventListener('keydown', async ev => {
+    if (ev.ctrlKey && ev.shiftKey && (ev.key === 'F' || ev.key === 'f')) {
+        ev.preventDefault();
+        if (!connected || filesOpen() || !overlay.hidden) return;
+        try {
+            await openFiles(`파일 전송 (SFTP) - ${host.value.trim()}`, {onClose: () => term.focus()});
+        } catch (e) {
+            term.write(`\r\n\x1b[33m[${String(e).replace(/\n/g, '\r\n')}]\x1b[0m\r\n`);
+        }
     }
 }, true);
 
@@ -228,9 +243,7 @@ window.addEventListener('keydown', async ev => {
         const next = encoding.value === 'EUC-KR' ? 'UTF-8' : 'EUC-KR';
         encoding.value = await SetEncoding(next);
         applyEncoding(encoding.value);
-        term.write(`
-[33m[인코딩: ${encoding.value}][0m
-`);
+        term.write(`\r\n\x1b[33m[인코딩: ${encoding.value}]\x1b[0m\r\n`);
     }
 }, true);
 
@@ -244,5 +257,5 @@ window.addEventListener('keydown', ev => {
     }
 }, true);
 
-term.write('choboterm\r\n\x1b[90mEnter 또는 Ctrl+Shift+N: 접속 창 열기 / Ctrl+Shift+E: UTF-8 ↔ EUC-KR\x1b[0m\r\n');
+term.write('choboterm\r\n\x1b[90mEnter 또는 Ctrl+Shift+N: 접속 창 열기 / Ctrl+Shift+E: UTF-8 ↔ EUC-KR / Ctrl+Shift+F: 파일 전송\x1b[0m\r\n');
 openDialog();

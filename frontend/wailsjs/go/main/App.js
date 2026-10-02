@@ -10,6 +10,30 @@ export function Disconnect() {
   return window['go']['main']['App']['Disconnect']();
 }
 
+export function FileCancel() {
+  return window['go']['main']['App']['FileCancel']();
+}
+
+export function FileClose() {
+  return window['go']['main']['App']['FileClose']();
+}
+
+export function FileDownload(arg1, arg2) {
+  return window['go']['main']['App']['FileDownload'](arg1, arg2);
+}
+
+export function FileList(arg1) {
+  return window['go']['main']['App']['FileList'](arg1);
+}
+
+export function FileOpen() {
+  return window['go']['main']['App']['FileOpen']();
+}
+
+export function FileUpload(arg1) {
+  return window['go']['main']['App']['FileUpload'](arg1);
+}
+
 export function GetHistory() {
   return window['go']['main']['App']['GetHistory']();
 }

@@ -23,9 +23,9 @@ type Session interface {
 
 // ConnectRequest carries the values from the Connect dialog.
 type ConnectRequest struct {
-	Host  string `json:"host"`
-	Port  int    `json:"port"`
-	Login string `json:"login"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Login    string `json:"login"`
 	Pass     string `json:"pass"`
 	Encoding string `json:"encoding"`
 	Cols     int    `json:"cols"`
@@ -39,6 +39,7 @@ type App struct {
 	sess  Session
 	codec *codec
 	title string
+	files fileState
 }
 
 // NewApp creates a new App application struct
@@ -53,6 +54,7 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	a.FileClose()
 	a.mu.Lock()
 	sess := a.sess
 	a.sess = nil
@@ -154,6 +156,7 @@ func (a *App) pump(sess Session) {
 				}
 				a.mu.Unlock()
 				if current {
+					a.FileClose()
 					msg := "연결이 종료되었습니다"
 					if err != nil && !errors.Is(err, io.EOF) {
 						msg += ": " + err.Error()
@@ -213,6 +216,7 @@ func (a *App) Resize(cols, rows int) {
 
 // Disconnect closes the current session, if any.
 func (a *App) Disconnect() {
+	a.FileClose()
 	a.mu.Lock()
 	sess := a.sess
 	a.sess = nil

@@ -6,6 +6,18 @@ export function Connect(arg1:main.ConnectRequest):Promise<void>;
 
 export function Disconnect():Promise<void>;
 
+export function FileCancel():Promise<void>;
+
+export function FileClose():Promise<void>;
+
+export function FileDownload(arg1:string,arg2:number):Promise<string>;
+
+export function FileList(arg1:string):Promise<Array<main.FileEntry>>;
+
+export function FileOpen():Promise<string>;
+
+export function FileUpload(arg1:string):Promise<number>;
+
 export function GetHistory():Promise<Array<main.HostEntry>>;
 
 export function Resize(arg1:number,arg2:number):Promise<void>;

@@ -24,6 +24,24 @@ export namespace main {
 	        this.rows = source["rows"];
 	    }
 	}
+	export class FileEntry {
+	    name: string;
+	    size: number;
+	    isDir: boolean;
+	    modTime: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.size = source["size"];
+	        this.isDir = source["isDir"];
+	        this.modTime = source["modTime"];
+	    }
+	}
 	export class HostEntry {
 	    host: string;
 	    port: number;

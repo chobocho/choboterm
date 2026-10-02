@@ -52,6 +52,18 @@
   <li>수정: 공유 프로토타입의 register를 가로채도록 변경(cjkwidth.ts). 등록에 실패해도 접속은 막히지 않도록 applyEncoding에서 등록 여부 확인</li>
   <li>검증: 실행 화면에서 versions=6,11,11-cjk 확인, WIDE 모드에서 ─│■○※가 2칸 폭으로 배치되는 것 확인(임시 디버그 코드는 제거)</li>
   <li>남은 문제: 2칸 폭 셀 안에서 ─ 같은 선 문자가 1칸 길이로 그려져 가로선이 끊겨 보일 수 있음</li>
+  <li>커밋 0313e6f (main): EUC-KR 지원 + 11-cjk 오류 수정 (이전 커밋 이후 기록한 history.html 변경도 포함)</li>
+</ul>
+
+<h2>2026-10-03 — 1단계: SFTP 파일 전송</h2>
+<ul>
+  <li>filexfer.go: 공통 RemoteFS 인터페이스(Getwd/List/Download/Upload/Close), 진행률(100ms 단위 xfer:progress 이벤트), 취소, 다운로드 기본 위치 ~/Downloads</li>
+  <li>sftp.go: 기존 SSH 연결 위에 SFTP 채널을 열어 재로그인 없이 사용 (pkg/sftp), 심볼릭 링크 폴더 처리</li>
+  <li>files.ts: 파일 전송 창 — 경로 입력, 상위 폴더, 새로 고침, 더블클릭/Enter로 폴더 이동·다운로드, 여러 파일 업로드, 키보드(↑↓ Home End Enter Backspace F5 Esc)</li>
+  <li>진행률 상자: 파일 창이 열려 있으면 창 안에, 아니면(Zmodem 등) 오른쪽 아래에 표시. 속도 표시, 취소 버튼</li>
+  <li>단축키 Ctrl+Shift+F (SSH 접속 중). Telnet이면 sz/rz 사용 안내</li>
+  <li>수정: main.ts 안내 문구에 줄바꿈/ESC가 이스케이프 대신 실제 제어문자로 들어가 있던 것 복구</li>
+  <li>검증: 프로세스 내 SSH+SFTP 서버로 목록/다운로드/1MB 업로드 테스트 통과, 화면 레이아웃 확인(임시 데이터). 실제 서버에서 GUI 조작은 미확인</li>
 </ul>
 </body>
 </html>

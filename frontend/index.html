@@ -8,7 +8,7 @@
 <body>
 <div id="terminal"></div>
 
-<div id="overlay" hidden>
+<div id="overlay" class="overlay" hidden>
     <form id="connect" class="dialog" autocomplete="off">
         <div class="titlebar">
             <span class="title">choboterm - Connect to</span>
@@ -48,6 +48,44 @@
             </div>
         </div>
     </form>
+</div>
+
+<div id="filesOverlay" class="overlay" hidden>
+    <div class="dialog files" id="files" tabindex="-1">
+        <div class="titlebar">
+            <span class="title" id="filesTitle">파일 전송</span>
+            <button type="button" class="close" id="filesX" title="닫기">✕</button>
+        </div>
+        <div class="body">
+            <div class="toolbar">
+                <button type="button" id="fUp" title="상위 폴더 (Backspace)">↑</button>
+                <input id="fPath" spellcheck="false"/>
+                <button type="button" id="fRefresh" title="새로 고침 (F5)">⟳</button>
+            </div>
+            <div class="flist">
+                <table>
+                    <thead><tr><th>이름</th><th class="num">크기</th><th>수정한 날짜</th></tr></thead>
+                    <tbody id="fBody"></tbody>
+                </table>
+            </div>
+            <div class="error" id="fError"></div>
+            <div id="xferSlot"></div>
+            <div class="buttons">
+                <button type="button" id="fUpload">업로드...</button>
+                <button type="button" id="fDownload">다운로드</button>
+                <button type="button" id="fClose">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="xfer" hidden>
+    <div id="xferName"></div>
+    <div class="bar"><div id="xferBar"></div></div>
+    <div class="row">
+        <span id="xferText"></span>
+        <button type="button" id="xferCancel">취소</button>
+    </div>
 </div>
 
 <script src="./src/main.ts" type="module"></script>
