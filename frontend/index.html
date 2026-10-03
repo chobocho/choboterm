@@ -28,6 +28,7 @@
     <li data-act="reconnect">다시 연결</li>
     <li data-act="duplicate">복제 (새 탭으로 같은 서버 접속)</li>
     <li data-act="files">파일 전송</li>
+    <li data-act="forwards">포트 포워딩</li>
     <li data-act="disconnect">연결 끊기</li>
     <li class="sep"></li>
     <li data-act="close">탭 닫기</li>
@@ -181,6 +182,47 @@
             <div class="buttons">
                 <button type="button" id="mSend" title="Enter (목록) / Ctrl+Enter">보내기</button>
                 <button type="button" id="mClose">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="pfOverlay" class="overlay modal" hidden>
+    <div class="dialog pf" id="pf" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title" id="pfTitle">포트 포워딩</span>
+            <button type="button" class="close" id="pfX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div class="pflist">
+                <table>
+                    <thead><tr><th>종류</th><th>수신</th><th>대상</th><th>상태</th></tr></thead>
+                    <tbody id="pfBody"></tbody>
+                </table>
+            </div>
+            <div class="pfnew">
+                <select id="pfType" title="종류">
+                    <option value="L">로컬 (-L)</option>
+                    <option value="R">원격 (-R)</option>
+                    <option value="D">동적 (-D, SOCKS5)</option>
+                </select>
+                <input id="pfBindAddr" spellcheck="false" autocomplete="off" title="수신 주소 (비우면 기본값)"/>
+                <span>:</span>
+                <input id="pfBindPort" class="portno" inputmode="numeric" placeholder="포트" title="수신 포트"/>
+                <span id="pfTarget">
+                    <span>→</span>
+                    <input id="pfHost" spellcheck="false" autocomplete="off" placeholder="대상 호스트"/>
+                    <span>:</span>
+                    <input id="pfPort" class="portno" inputmode="numeric" placeholder="포트"/>
+                </span>
+                <button type="button" id="pfAdd">추가</button>
+            </div>
+            <div class="hint" id="pfHint"></div>
+            <div class="error" id="pfError"></div>
+            <div class="buttons">
+                <button type="button" id="pfDel" title="Delete">삭제</button>
+                <button type="button" id="pfClose">닫기</button>
             </div>
         </div>
     </div>

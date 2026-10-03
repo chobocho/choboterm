@@ -20,6 +20,12 @@ export function FileOpen(arg1:number):Promise<main.FileOpenResult>;
 
 export function FileUpload(arg1:number,arg2:string):Promise<number>;
 
+export function ForwardAdd(arg1:number,arg2:main.Forward):Promise<main.ForwardStatus>;
+
+export function ForwardList(arg1:number):Promise<Array<main.ForwardStatus>>;
+
+export function ForwardRemove(arg1:number,arg2:number):Promise<void>;
+
 export function GetHistory():Promise<Array<main.HostEntry>>;
 
 export function GetSettings():Promise<main.Settings>;

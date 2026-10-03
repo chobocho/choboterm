@@ -38,6 +38,18 @@ export function FileUpload(arg1, arg2) {
   return window['go']['main']['App']['FileUpload'](arg1, arg2);
 }
 
+export function ForwardAdd(arg1, arg2) {
+  return window['go']['main']['App']['ForwardAdd'](arg1, arg2);
+}
+
+export function ForwardList(arg1) {
+  return window['go']['main']['App']['ForwardList'](arg1);
+}
+
+export function ForwardRemove(arg1, arg2) {
+  return window['go']['main']['App']['ForwardRemove'](arg1, arg2);
+}
+
 export function GetHistory() {
   return window['go']['main']['App']['GetHistory']();
 }

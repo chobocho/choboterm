@@ -256,5 +256,14 @@
   <li>내용: 줄바꿈 = Enter, \t \e \xHH \ 이스케이프</li>
   <li>검증: Edge 자동 점검 — F5/Ctrl+F2 매크로 전송, 미지정 F6은 ESC[17~로 통과, 목록 Enter 전송, 저장 확인. expandMacro 결과 확인</li>
 </ul>
+
+<h2>2026-10-03 — SSH 포트 포워딩</h2>
+<ul>
+  <li>forward.go: 로컬(-L, client.Dial), 원격(-R, client.Listen), 동적(-D, SOCKS5 CONNECT 무인증 직접 구현). 규칙마다 연결 수·오류 상태, 연결이 끊기거나 탭을 닫으면 수신 포트와 연결 모두 정리</li>
+  <li>규칙은 접속 기록(hosts.json)의 호스트별 forwards에 저장, SSH 접속(자동 재접속 포함) 때 자동 시작. 접속 기록 갱신 시 forwards 보존. 같은 수신 주소 중복 거부, 사용 중 포트는 오류와 함께 규칙 유지</li>
+  <li>포워딩 창(forwards.ts, Ctrl+Shift+P / 탭 우클릭 메뉴): 목록(종류·수신·대상·상태), 종류별 설명, 추가(Enter)/삭제(Delete), fwd:changed 이벤트로 상태 갱신</li>
+  <li>테스트: forward_test.go — direct-tcpip/tcpip-forward를 처리하는 테스트 SSH 서버로 L/R/D 실제 왕복, 중복/사용 중/잘못된 포트, 끊기 후 해제, 재접속 후 복원, 기록 저장 확인</li>
+  <li>UI 검증: 스크래치 SSH 서버 + Edge 자동 점검으로 L/R/D 통신, 끊기·재접속, 탭 메뉴 열기·삭제 확인</li>
+</ul>
 </body>
 </html>

@@ -11,20 +11,22 @@ import (
 // HostEntry is one remembered connection as shown in the Host list.
 // Pass is filled only for hosts with a saved (Telnet) password.
 type HostEntry struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Login    string `json:"login"`
-	Encoding string `json:"encoding"`
-	Pass     string `json:"pass"`
+	Host     string    `json:"host"`
+	Port     int       `json:"port"`
+	Login    string    `json:"login"`
+	Encoding string    `json:"encoding"`
+	Pass     string    `json:"pass"`
+	Forwards []Forward `json:"forwards"`
 }
 
 // storedEntry is the on-disk form: the password is DPAPI-encrypted, never plain.
 type storedEntry struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Login    string `json:"login"`
-	Encoding string `json:"encoding"`
-	PassEnc  string `json:"passEnc,omitempty"`
+	Host     string    `json:"host"`
+	Port     int       `json:"port"`
+	Login    string    `json:"login"`
+	Encoding string    `json:"encoding"`
+	PassEnc  string    `json:"passEnc,omitempty"`
+	Forwards []Forward `json:"forwards,omitempty"` // SSH port forwarding rules
 }
 
 const maxHistory = 20
@@ -52,6 +54,7 @@ func loadHistory() []HostEntry {
 			Login:    s.Login,
 			Encoding: s.Encoding,
 			Pass:     decryptPass(s.PassEnc),
+			Forwards: s.Forwards,
 		})
 	}
 	return list
@@ -111,6 +114,7 @@ func addHistory(e HostEntry, pass *string) error {
 	for _, h := range old {
 		if h.Host == e.Host && h.Port == e.Port {
 			entry.PassEnc = h.PassEnc
+			entry.Forwards = h.Forwards
 		}
 	}
 	if pass != nil {
@@ -127,6 +131,10 @@ func addHistory(e HostEntry, pass *string) error {
 		list = list[:maxHistory]
 	}
 
+	return writeHistory(list)
+}
+
+func writeHistory(list []storedEntry) error {
 	p, err := historyFile()
 	if err != nil {
 		return err
@@ -139,4 +147,31 @@ func addHistory(e HostEntry, pass *string) error {
 		return err
 	}
 	return os.WriteFile(p, data, 0o600)
+}
+
+// historyForwards returns the port forwarding rules saved for host:port.
+func historyForwards(host string, port int) []Forward {
+	historyMu.Lock()
+	defer historyMu.Unlock()
+	for _, h := range readHistory() {
+		if h.Host == host && h.Port == port {
+			return h.Forwards
+		}
+	}
+	return nil
+}
+
+// setHistoryForwards saves the port forwarding rules of host:port, which is
+// already in the history (it was added when connecting).
+func setHistoryForwards(host string, port int, list []Forward) error {
+	historyMu.Lock()
+	defer historyMu.Unlock()
+	entries := readHistory()
+	for i := range entries {
+		if entries[i].Host == host && entries[i].Port == port {
+			entries[i].Forwards = list
+			return writeHistory(entries)
+		}
+	}
+	return nil
 }

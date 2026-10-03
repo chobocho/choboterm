@@ -77,7 +77,10 @@ type tab struct {
 	codec *codec
 	files fileState
 	zm    zmodemState
-	dead  error // why keepalive closed sess (guarded by mu)
+	fwd   forwards
+	dead  error  // why keepalive closed sess (guarded by mu)
+	host  string // where sess is connected (guarded by mu)
+	port  int
 }
 
 // testHooks lets tests run the app without a Wails window.
@@ -236,6 +239,7 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	enc := t.codec.Set(req.Encoding)
 	t.mu.Lock()
 	t.sess = sess
+	t.host, t.port = req.Host, req.Port
 	t.mu.Unlock()
 
 	// Telnet passwords are remembered (DPAPI-encrypted) and filled in next time.
@@ -246,6 +250,9 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, savePass)
 	go t.pump(sess)
 	go t.keepAlive(sess, time.Duration(loadSettings().KeepAlive)*time.Second)
+	if s, ok := sess.(*sshSession); ok {
+		t.restoreForwards(s, req.Host, req.Port)
+	}
 	return proto, nil
 }
 
@@ -366,6 +373,7 @@ func (t *tab) pump(sess Session) {
 				t.mu.Unlock()
 				if current {
 					t.fileClose()
+					t.stopForwards()
 					// A connection that broke (not one the server ended normally)
 					// is reported as lost, so the frontend can reconnect.
 					lost := err != nil && !errors.Is(err, io.EOF)
@@ -460,6 +468,7 @@ func (a *App) CloseTab(tabID int) {
 
 func (t *tab) disconnect() {
 	t.fileClose()
+	t.stopForwards()
 	t.mu.Lock()
 	sess := t.sess
 	t.sess = nil

@@ -9,6 +9,7 @@ import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
 import {openPrefs, prefsOpen} from './prefs';
 import {expandMacro, macroForKey, macrosOpen, openMacros} from './macros';
+import {forwardsOpen, forwardsTabClosed, openForwards} from './forwards';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
@@ -310,6 +311,7 @@ function cycleTab(step: number) {
 
 function closeTab(t: Tab) {
     cancelRetry(t);
+    forwardsTabClosed(t.id);
     forgetFiles(t.id);
     if (t === active) closeSearch();
     if (t.dialog && t === active) hideDialog();
@@ -449,6 +451,7 @@ async function duplicate(t: Tab) {
 }
 
 function disconnect(t: Tab) {
+    forwardsTabClosed(t.id);
     if (t.retry) {
         cancelRetry(t);
         t.term.write('\x1b[33m[자동 재접속을 취소했습니다] Enter: 다시 접속\x1b[0m\r\n');
@@ -494,6 +497,7 @@ EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
     const t = tabs.get(id);
     if (!t) return;
     forgetFiles(t.id);
+    forwardsTabClosed(t.id);
     setState(t, 'idle');
     if (lost && settings.autoReconnect && t.req) scheduleRetry(t, 1, msg);
     else t.term.write(`\r\n\x1b[33m[${msg}] Enter: 다시 접속\x1b[0m\r\n`);
@@ -514,6 +518,7 @@ function showMenu(t: Tab, x: number, y: number) {
     enable('reconnect', true);
     enable('duplicate', !!t.req);
     enable('files', t.state !== 'idle');
+    enable('forwards', t.state === 'on' && t.proto === 'ssh');
     enable('disconnect', t.state !== 'idle');
     menu.hidden = false;
     const r = menu.getBoundingClientRect();
@@ -541,6 +546,9 @@ menu.addEventListener('click', ev => {
             break;
         case 'files':
             openFilesFor(t);
+            break;
+        case 'forwards':
+            showForwards(t);
             break;
         case 'disconnect':
             disconnect(t);
@@ -669,7 +677,7 @@ function cancelDialog() {
     if (active?.dialog && !active.dialog.connecting) dismissDialog(active, true);
 }
 
-function applyEntry(e: main.HostEntry) {
+function applyEntry(e: Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'>) {
     host.value = e.host;
     port.value = String(e.port);
     login.value = e.login;
@@ -816,11 +824,20 @@ function showMacros() {
     openMacros(m => active && sendMacro(active, m), focusActive);
 }
 
+// ---- Port forwarding ----
+
+function showForwards(t: Tab) {
+    if (modalOpen()) return;
+    if (t.state !== 'on' || t.proto !== 'ssh' || !t.req) return toast('포트 포워딩은 SSH 접속에서만 사용할 수 있습니다');
+    if (t !== active) activate(t);
+    openForwards(t.id, t.req.host, focusActive);
+}
+
 // ---- Shortcuts ----
 
 /** A window that takes all keys until it is closed. */
 function modalOpen() {
-    return pasteConfirmOpen() || prefsOpen() || macrosOpen();
+    return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen();
 }
 
 function isAppShortcut(ev: KeyboardEvent): boolean {
@@ -829,7 +846,7 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (macroForKey(ev)) return true;
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOM]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMP]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
@@ -873,6 +890,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'M':
             showMacros();
+            break;
+        case 'P':
+            if (t) showForwards(t);
             break;
         case 'T':
         case 'N':
