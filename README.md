@@ -16,11 +16,15 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 
 ## 기능
 
+- **탭**: MobaXterm처럼 여러 접속을 탭으로 띄웁니다. 탭마다 접속, 인코딩, 파일 전송이 따로 동작합니다.
+  - 탭 상태 점: 초록 = 접속 중, 회색 = 끊김, 주황 = 파일 전송 중. 보고 있지 않은 탭에 새 출력이 오면 탭 이름이 강조됩니다.
+  - `+` 버튼이나 탭 바 빈 곳 더블클릭으로 새 탭, 가운데 클릭으로 닫기, 끌어서 순서 바꾸기
+  - 탭 우클릭 메뉴: 다시 연결, 복제(같은 서버로 새 탭), 파일 전송, 연결 끊기, 탭 닫기
 - **SSH** (포트 22): 비밀번호, keyboard-interactive, `~/.ssh` 개인키(id_ed25519 / id_ecdsa / id_rsa, 암호 없는 키) 인증
   - `~/.ssh/known_hosts`로 호스트 키 확인. 처음 접속하는 호스트는 지문을 보여 주고 신뢰할지 묻고, 키가 바뀐 호스트는 차단합니다.
 - **Telnet** (22, 21 외의 포트): NAWS / TTYPE / ECHO / SGA / BINARY 협상, `login:` / `password:` 프롬프트 자동 로그인
   - 비밀번호를 기억해 두었다가 Host를 고르면 자동으로 채웁니다. Windows DPAPI로 암호화해 저장하므로 현재 Windows 사용자만 풀 수 있습니다. Pass를 비우고 접속하면 저장된 비밀번호를 지웁니다.
-- **FTP** (포트 21): 터미널 없이 파일 전송 창이 바로 열립니다. Login을 비워 두면 anonymous로 로그인합니다.
+- **FTP** (포트 21): 접속하면 파일 전송 창이 바로 열립니다. 창을 닫아도 탭을 닫기 전까지 연결이 유지되며 `Ctrl+Shift+F`로 다시 엽니다. Login을 비워 두면 anonymous로 로그인합니다.
 - **SFTP / SCP**: SSH 접속 중 `Ctrl+Shift+F`로 파일 전송 창을 엽니다. 다시 로그인할 필요가 없습니다.
   - 서버에 SFTP가 없으면(Dropbear, 공유기, 임베디드 장비 등) 자동으로 SCP로 바꿔 씁니다. 이때 폴더 목록은 `ls`로 가져옵니다.
 - **Zmodem**: 터미널에서 `sz 파일` / `rz`를 실행하면 자동으로 전송합니다. 원격 서버에 lrzsz가 설치되어 있어야 합니다.
@@ -35,9 +39,12 @@ X11 포워딩은 지원하지 않습니다.
 
 | 키 | 동작 |
 |---|---|
-| `Enter` (연결이 없을 때) / `Ctrl+Shift+N` | 접속 창 열기 |
+| `Enter` (연결이 없는 탭에서) | 그 탭에서 접속 창 열기 |
+| `Ctrl+Shift+T` / `Ctrl+Shift+N` | 새 탭으로 접속 |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` (`Ctrl+PgDn` / `Ctrl+PgUp`) | 다음 / 이전 탭 |
+| `Ctrl+Shift+W` | 탭 닫기 |
 | `Alt+C` / `Alt+A` / `Esc` | 접속 창에서 Connect / Cancel / 닫기 |
-| `Ctrl+Shift+D` | 연결 끊기 |
+| `Ctrl+Shift+D` | 연결 끊기 (탭은 유지) |
 | `Ctrl+Shift+E` | UTF-8 ↔ EUC-KR 전환 |
 | `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP) |
 | `Ctrl+C` / `Ctrl+X` (Zmodem 전송 중) | 전송 취소 |
@@ -96,14 +103,14 @@ go test ./...
 
 | 파일 | 내용 |
 |---|---|
-| `app.go` | 접속, 키 입력 전달, 출력 묶음 전송, Zmodem 감지 |
+| `app.go` | 탭별 접속, 키 입력 전달, 출력 묶음 전송, Zmodem 감지 |
 | `ssh.go` / `telnet.go` / `ftp.go` / `sftp.go` / `scp.go` | 프로토콜 |
 | `filexfer.go` | 파일 전송 공통 계층(RemoteFS), 진행률, 취소 |
 | `zmodem.go` / `zmodem_app.go` | Zmodem 프로토콜과 앱 연결 |
 | `codec.go` | UTF-8 ↔ CP949 변환 |
 | `history_store.go` | 최근 접속 기록 |
 | `secret_windows.go` | 비밀번호 암호화 (Windows DPAPI) |
-| `frontend/src/main.ts` | 터미널, 접속 창, 단축키 |
+| `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
 | `frontend/src/files.ts` | 파일 전송 창, 진행률 상자 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
 | `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
@@ -112,7 +119,6 @@ go test ./...
 
 - X11 포워딩, 포트 포워딩
 - FTPS(TLS), 이어받기, 원격 파일 삭제와 폴더 만들기
-- 다중 탭
 
 ## 라이선스
 

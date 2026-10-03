@@ -1,4 +1,4 @@
-import {Disconnect, FileCancel, FileDownload, FileList, FileOpen, FileUpload} from '../wailsjs/go/main/App';
+import {FileCancel, FileDownload, FileList, FileOpen, FileUpload} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 
@@ -20,8 +20,8 @@ let entries: main.FileEntry[] = [];
 let selected = -1;
 let busy = false;
 let onClosed: (() => void) | undefined;
-// When true (FTP), closing the window also drops the connection.
-let closeConnection = false;
+// The tab whose connection the window is showing.
+let tabId = 0;
 
 export function filesOpen() {
     return !overlay.hidden;
@@ -69,7 +69,7 @@ async function load(dir: string) {
     setStatus('');
     setBusy(true);
     try {
-        entries = (await FileList(dir)) ?? [];
+        entries = (await FileList(tabId, dir)) ?? [];
         cwd = dir;
         pathInput.value = dir;
         render();
@@ -110,7 +110,7 @@ async function download() {
     setStatus('');
     setBusy(true);
     try {
-        const local = await FileDownload(joinPath(cwd, e.name), e.size);
+        const local = await FileDownload(tabId, joinPath(cwd, e.name), e.size);
         if (local) setStatus(`저장했습니다: ${local}`, true);
     } catch (err) {
         setStatus(String(err));
@@ -125,7 +125,7 @@ async function upload() {
     setStatus('');
     setBusy(true);
     try {
-        const n = await FileUpload(cwd);
+        const n = await FileUpload(tabId, cwd);
         if (n > 0) {
             setBusy(false);
             await load(cwd);
@@ -140,12 +140,12 @@ async function upload() {
 }
 
 /**
- * Opens the file transfer window for the current connection.
+ * Opens the file transfer window for a tab's connection.
  * Throws if the connection doesn't support file access (e.g. Telnet).
  */
-export async function openFiles(host: string, opts: {closeConnection?: boolean; onClose?: () => void} = {}) {
-    const res = await FileOpen();
-    closeConnection = !!opts.closeConnection;
+export async function openFiles(id: number, host: string, opts: {onClose?: () => void} = {}) {
+    const res = await FileOpen(id);
+    tabId = id;
     onClosed = opts.onClose;
     title.textContent = `파일 전송 (${res.protocol}) - ${host}`;
     overlay.hidden = false;
@@ -155,9 +155,8 @@ export async function openFiles(host: string, opts: {closeConnection?: boolean; 
 
 export function closeFiles() {
     if (overlay.hidden) return;
-    if (busy) FileCancel();
+    if (busy) FileCancel(tabId);
     overlay.hidden = true;
-    if (closeConnection) Disconnect();
     onClosed?.();
 }
 
@@ -216,6 +215,7 @@ const xferName = $<HTMLDivElement>('xferName');
 const xferBar = $<HTMLDivElement>('xferBar');
 const xferText = $<HTMLSpanElement>('xferText');
 let started = 0;
+let xferTab = 0;
 
 // Mirrors the Go XferProgress event payload (events aren't part of the generated bindings).
 interface XferProgress {
@@ -225,10 +225,11 @@ interface XferProgress {
     upload: boolean;
 }
 
-EventsOn('xfer:progress', (p: XferProgress) => {
+EventsOn('xfer:progress', (id: number, p: XferProgress) => {
+    xferTab = id;
     if (xfer.hidden || p.done === 0) started = Date.now();
     // Show progress inside the file window when it's open, otherwise as a floating box.
-    const slot = filesOpen() ? $<HTMLDivElement>('xferSlot') : document.body;
+    const slot = filesOpen() && id === tabId ? $<HTMLDivElement>('xferSlot') : document.body;
     if (xfer.parentElement !== slot) slot.appendChild(xfer);
     xfer.classList.toggle('inline', slot !== document.body);
     xfer.hidden = false;
@@ -242,8 +243,8 @@ EventsOn('xfer:progress', (p: XferProgress) => {
         : `${formatSize(p.done)}${rate}`;
 });
 
-EventsOn('xfer:end', () => {
-    xfer.hidden = true;
+EventsOn('xfer:end', (id: number) => {
+    if (id === xferTab) xfer.hidden = true;
 });
 
-$<HTMLButtonElement>('xferCancel').addEventListener('click', () => FileCancel());
+$<HTMLButtonElement>('xferCancel').addEventListener('click', () => FileCancel(xferTab));

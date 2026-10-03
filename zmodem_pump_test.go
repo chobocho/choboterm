@@ -55,16 +55,17 @@ func TestZmodemThroughPump(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		switch name {
-		case "term:data":
-			b, _ := base64.StdEncoding.DecodeString(data[0].(string))
+		case "term:data": // (tabID, base64)
+			b, _ := base64.StdEncoding.DecodeString(data[1].(string))
 			screen.Write(b)
 		case "term:closed":
 			close(closed)
 		}
 	}
 	sess := &cmdSession{cmd: cmd, stdin: stdin, stdout: stdout}
-	a.sess = sess
-	go a.pump(sess)
+	t1 := a.getTab(1)
+	t1.sess = sess
+	go t1.pump(sess)
 
 	select {
 	case <-closed:
@@ -117,11 +118,11 @@ func TestZmodemCancelThroughPump(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		switch name {
-		case "term:data":
-			b, _ := base64.StdEncoding.DecodeString(data[0].(string))
+		case "term:data": // (tabID, base64)
+			b, _ := base64.StdEncoding.DecodeString(data[1].(string))
 			screen.Write(b)
 		case "xfer:progress":
-			if data[0].(XferProgress).Done > 1_000_000 {
+			if data[1].(XferProgress).Done > 1_000_000 {
 				select {
 				case progress <- struct{}{}:
 				default:
@@ -132,15 +133,16 @@ func TestZmodemCancelThroughPump(t *testing.T) {
 		}
 	}
 	sess := &cmdSession{cmd: cmd, stdin: stdin, stdout: stdout}
-	a.sess = sess
-	go a.pump(sess)
+	t1 := a.getTab(1)
+	t1.sess = sess
+	go t1.pump(sess)
 
 	select {
 	case <-progress:
 	case <-time.After(30 * time.Second):
 		t.Fatal("transfer did not start")
 	}
-	a.Send("\x03")
+	a.Send(1, "\x03")
 
 	select {
 	case <-closed:

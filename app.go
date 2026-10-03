@@ -36,12 +36,20 @@ type ConnectRequest struct {
 type App struct {
 	ctx   context.Context
 	mu    sync.Mutex
+	tabs  map[int]*tab
+	hooks testHooks
+}
+
+// tab is one connection with its own terminal tab in the frontend.
+// Events for a tab carry its id as the first argument.
+type tab struct {
+	id    int
+	app   *App
+	mu    sync.Mutex
 	sess  Session
 	codec *codec
-	title string
 	files fileState
 	zm    zmodemState
-	hooks testHooks
 }
 
 // testHooks lets tests run the app without a Wails window.
@@ -52,7 +60,7 @@ type testHooks struct {
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{codec: newCodec(EncodingUTF8)}
+	return &App{tabs: make(map[int]*tab)}
 }
 
 // startup is called when the app starts. The context is saved
@@ -62,14 +70,51 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) shutdown(ctx context.Context) {
-	a.FileClose()
 	a.mu.Lock()
-	sess := a.sess
-	a.sess = nil
+	tabs := a.tabs
+	a.tabs = make(map[int]*tab)
 	a.mu.Unlock()
-	if sess != nil {
-		_ = sess.Close()
+	for _, t := range tabs {
+		t.disconnect()
 	}
+}
+
+// getTab returns the tab with id, creating it on first use.
+func (a *App) getTab(id int) *tab {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	t := a.tabs[id]
+	if t == nil {
+		t = &tab{id: id, app: a, codec: newCodec(EncodingUTF8)}
+		a.tabs[id] = t
+	}
+	return t
+}
+
+// findTab returns the tab with id, or nil.
+func (a *App) findTab(id int) *tab {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.tabs[id]
+}
+
+// emit sends an event to the frontend (replaceable in tests).
+func (a *App) emit(name string, data ...interface{}) {
+	if a.hooks.emit != nil {
+		a.hooks.emit(name, data...)
+		return
+	}
+	runtime.EventsEmit(a.ctx, name, data...)
+}
+
+func (t *tab) emit(name string, data ...interface{}) {
+	t.app.emit(name, append([]interface{}{t.id}, data...)...)
+}
+
+func (t *tab) session() Session {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.sess
 }
 
 // Protocol returns "ssh" for port 22, "ftp" for port 21, otherwise "telnet".
@@ -83,9 +128,10 @@ func Protocol(port int) string {
 	return "telnet"
 }
 
-// Connect opens a session and returns the protocol used.
+// Connect opens a session in the given tab and returns the protocol used.
 // Port 22 uses SSH, port 21 FTP (file window only), any other port Telnet.
-func (a *App) Connect(req ConnectRequest) (string, error) {
+// An existing connection in that tab is closed first.
+func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	req.Host = strings.TrimSpace(req.Host)
 	if req.Host == "" {
 		return "", errors.New("Host를 입력하세요")
@@ -97,7 +143,8 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 		req.Cols, req.Rows = 80, 24
 	}
 
-	a.Disconnect()
+	t := a.getTab(tabID)
+	t.disconnect()
 
 	proto := Protocol(req.Port)
 	if proto == "ftp" {
@@ -105,15 +152,11 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		a.files.mu.Lock()
-		a.files.fs, a.files.proto = fs, "FTP"
-		a.files.mu.Unlock()
-		enc := a.codec.Set(req.Encoding)
-		a.mu.Lock()
-		a.title = fmt.Sprintf("%s - ftp://%s:%d", appName, req.Host, req.Port)
-		a.mu.Unlock()
+		t.files.mu.Lock()
+		t.files.fs, t.files.proto = fs, "FTP"
+		t.files.mu.Unlock()
+		enc := t.codec.Set(req.Encoding)
 		_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, nil)
-		a.updateTitle()
 		return proto, nil
 	}
 
@@ -130,11 +173,10 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 		return "", err
 	}
 
-	enc := a.codec.Set(req.Encoding)
-	a.mu.Lock()
-	a.sess = sess
-	a.title = fmt.Sprintf("%s - %s:%d", appName, req.Host, req.Port)
-	a.mu.Unlock()
+	enc := t.codec.Set(req.Encoding)
+	t.mu.Lock()
+	t.sess = sess
+	t.mu.Unlock()
 
 	// Telnet passwords are remembered (DPAPI-encrypted) and filled in next time.
 	var savePass *string
@@ -142,14 +184,13 @@ func (a *App) Connect(req ConnectRequest) (string, error) {
 		savePass = &req.Pass
 	}
 	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, savePass)
-	a.updateTitle()
-	go a.pump(sess)
+	go t.pump(sess)
 	return proto, nil
 }
 
 // pump reads session output and emits it to the frontend in batches,
 // so that bulk output (e.g. cat of a large file) doesn't flood the event bridge.
-func (a *App) pump(sess Session) {
+func (t *tab) pump(sess Session) {
 	chunks := make(chan []byte, 64)
 	readErr := make(chan error, 1)
 	go func() {
@@ -178,7 +219,7 @@ func (a *App) pump(sess Session) {
 	)
 	flush := func() {
 		if len(pending) > 0 {
-			a.emit("term:data", base64.StdEncoding.EncodeToString(pending))
+			t.emit("term:data", base64.StdEncoding.EncodeToString(pending))
 			pending = pending[:0]
 		}
 	}
@@ -195,16 +236,16 @@ func (a *App) pump(sess Session) {
 		data = append(held, data...)
 		held = nil
 		if i, receive := findZmodemStart(data); i >= 0 {
-			pending = append(pending, a.codec.Decode(data[:i])...)
+			pending = append(pending, t.codec.Decode(data[:i])...)
 			flush()
 			zmIn, zmDone = make(chan []byte, 1024), make(chan []byte, 1)
 			zmIn <- data[i:]
-			go a.runZmodem(sess, receive, zmIn, zmDone)
+			go t.runZmodem(sess, receive, zmIn, zmDone)
 			return
 		}
 		k := partialSigSuffix(data)
 		held = append([]byte(nil), data[len(data)-k:]...)
-		pending = append(pending, a.codec.Decode(data[:len(data)-k])...)
+		pending = append(pending, t.codec.Decode(data[:len(data)-k])...)
 	}
 
 	for {
@@ -214,24 +255,22 @@ func (a *App) pump(sess Session) {
 				if zmIn != nil {
 					close(zmIn) // the transfer sees EOF and stops
 				}
-				pending = append(pending, a.codec.Decode(held)...)
+				pending = append(pending, t.codec.Decode(held)...)
 				flush()
 				err := <-readErr
-				a.mu.Lock()
-				current := a.sess == sess
+				t.mu.Lock()
+				current := t.sess == sess
 				if current {
-					a.sess = nil
-					a.title = ""
+					t.sess = nil
 				}
-				a.mu.Unlock()
+				t.mu.Unlock()
 				if current {
-					a.FileClose()
+					t.fileClose()
 					msg := "연결이 종료되었습니다"
 					if err != nil && !errors.Is(err, io.EOF) {
 						msg += ": " + err.Error()
 					}
-					a.updateTitle()
-					a.emit("term:closed", msg)
+					t.emit("term:closed", msg)
 				}
 				return
 			}
@@ -246,7 +285,7 @@ func (a *App) pump(sess Session) {
 			}
 		case <-ticker.C:
 			if len(held) > 0 && zmIn == nil {
-				pending = append(pending, a.codec.Decode(held)...)
+				pending = append(pending, t.codec.Decode(held)...)
 				held = nil
 			}
 			flush()
@@ -254,40 +293,30 @@ func (a *App) pump(sess Session) {
 	}
 }
 
-// Send writes keyboard input to the session.
-func (a *App) Send(data string) {
-	a.mu.Lock()
-	sess := a.sess
-	a.mu.Unlock()
+// Send writes keyboard input to a tab's session.
+func (a *App) Send(tabID int, data string) {
+	t := a.findTab(tabID)
+	if t == nil {
+		return
+	}
+	sess := t.session()
 	if sess == nil {
 		return
 	}
-	if a.zmodemActive() {
+	if t.zmodemActive() {
 		// Keyboard input is not sent during a transfer; Ctrl+C / Ctrl+X cancel it.
 		if strings.ContainsAny(data, "\x03\x18") {
-			a.cancelZmodem()
+			t.cancelZmodem()
 		}
 		return
 	}
-	_, _ = sess.Write(a.codec.Encode(data))
+	_, _ = sess.Write(t.codec.Encode(data))
 }
 
-// SetEncoding switches the character set of the current connection
-// ("UTF-8" or "EUC-KR") and returns the normalized name.
-func (a *App) SetEncoding(name string) string {
-	name = a.codec.Set(name)
-	a.updateTitle()
-	return name
-}
-
-func (a *App) updateTitle() {
-	a.mu.Lock()
-	title := a.title
-	a.mu.Unlock()
-	if title == "" {
-		title = appName
-	}
-	a.setTitle(title + " [" + a.codec.Name() + "]")
+// SetEncoding switches a tab's character set ("UTF-8" or "EUC-KR")
+// and returns the normalized name.
+func (a *App) SetEncoding(tabID int, name string) string {
+	return a.getTab(tabID).codec.Set(name)
 }
 
 // GetVersion returns the application version (e.g. "0.1.0").
@@ -295,30 +324,43 @@ func (a *App) GetVersion() string {
 	return AppVersion
 }
 
-// Resize propagates the terminal size to the remote side.
-func (a *App) Resize(cols, rows int) {
-	a.mu.Lock()
-	sess := a.sess
-	a.mu.Unlock()
-	if sess != nil && cols > 0 && rows > 0 {
+// Resize propagates a tab's terminal size to the remote side.
+func (a *App) Resize(tabID, cols, rows int) {
+	t := a.findTab(tabID)
+	if t == nil {
+		return
+	}
+	if sess := t.session(); sess != nil && cols > 0 && rows > 0 {
 		_ = sess.Resize(cols, rows)
 	}
 }
 
-// Disconnect closes the current session, if any.
-func (a *App) Disconnect() {
-	a.FileClose()
+// Disconnect closes a tab's connection but keeps the tab.
+func (a *App) Disconnect(tabID int) {
+	if t := a.findTab(tabID); t != nil {
+		t.disconnect()
+	}
+}
+
+// CloseTab closes a tab's connection and forgets the tab.
+func (a *App) CloseTab(tabID int) {
 	a.mu.Lock()
-	sess := a.sess
-	hadTitle := a.title != ""
-	a.sess = nil
-	a.title = ""
+	t := a.tabs[tabID]
+	delete(a.tabs, tabID)
 	a.mu.Unlock()
+	if t != nil {
+		t.disconnect()
+	}
+}
+
+func (t *tab) disconnect() {
+	t.fileClose()
+	t.mu.Lock()
+	sess := t.sess
+	t.sess = nil
+	t.mu.Unlock()
 	if sess != nil {
 		_ = sess.Close()
-	}
-	if hadTitle {
-		a.updateTitle()
 	}
 }
 

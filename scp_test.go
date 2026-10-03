@@ -116,8 +116,9 @@ func TestSCPFallback(t *testing.T) {
 
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
-	a.sess = &sshSession{client: client}
-	res, err := a.FileOpen()
+	t1 := a.getTab(1)
+	t1.sess = &sshSession{client: client}
+	res, err := a.FileOpen(1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +126,7 @@ func TestSCPFallback(t *testing.T) {
 		t.Fatalf("protocol = %q", res.Protocol)
 	}
 
-	list, err := a.FileList("/tmp/scpt")
+	list, err := a.FileList(1, "/tmp/scpt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +134,7 @@ func TestSCPFallback(t *testing.T) {
 		t.Fatalf("list = %+v", list)
 	}
 
-	fs := a.files.fs
+	fs := t1.files.fs
 	var buf bytes.Buffer
 	if err := fs.Download("/tmp/scpt/한글.txt", &buf); err != nil {
 		t.Fatal(err)

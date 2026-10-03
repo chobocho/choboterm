@@ -5,9 +5,185 @@ html, body {
     overflow: hidden;
 }
 
-#terminal {
+/* ---- Tabs (MobaXterm-like) ---- */
+
+#tabbar {
     position: absolute;
-    inset: 4px;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 4px;
+    background: #1e1f22;
+    border-bottom: 1px solid #3a3b3f;
+    user-select: none;
+    font: 12px "Malgun Gothic", "Segoe UI", sans-serif;
+}
+
+#tabs {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    max-width: 200px;
+    height: 27px;
+    padding: 0 6px 0 10px;
+    border: 1px solid #3a3b3f;
+    border-bottom: 0;
+    border-radius: 6px 6px 0 0;
+    background: #2b2d31;
+    color: #a9abb0;
+    cursor: default;
+}
+
+.tab:hover {
+    background: #34363b;
+}
+
+.tab.active {
+    height: 29px;
+    margin-bottom: -1px;
+    background: #000;
+    color: #fff;
+    border-color: #4a4c52;
+}
+
+.tab .dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6b6e75;
+}
+
+.tab.on .dot {
+    background: #3ecf6e;
+}
+
+.tab.busy .dot {
+    background: #f0b429;
+}
+
+.tab.activity:not(.active) .label {
+    color: #5eead4;
+    font-weight: bold;
+}
+
+.tab .label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.tab .x {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+    line-height: 18px;
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.tab .x:hover {
+    background: #c42b1c;
+    color: #fff;
+    opacity: 1;
+}
+
+.tab.dragging {
+    opacity: 0.4;
+}
+
+#newTab {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 24px;
+    margin: 0 0 3px 4px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #a9abb0;
+    font-size: 18px;
+    line-height: 22px;
+    cursor: pointer;
+}
+
+#newTab:hover {
+    background: #34363b;
+    color: #fff;
+}
+
+#terms {
+    position: absolute;
+    top: 37px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+}
+
+#terms .term {
+    position: absolute;
+    inset: 0;
+}
+
+#terms .term[hidden] {
+    display: none;
+}
+
+.menu {
+    position: fixed;
+    z-index: 30;
+    min-width: 200px;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+    background: #f0f0f0;
+    border: 1px solid #a0a0a0;
+    box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.4);
+    font: 12px "Malgun Gothic", "Segoe UI", sans-serif;
+    color: #000;
+}
+
+.menu[hidden] {
+    display: none;
+}
+
+.menu li {
+    padding: 5px 20px;
+    cursor: default;
+}
+
+.menu li:hover:not(.sep):not(.disabled) {
+    background: #0078d7;
+    color: #fff;
+}
+
+.menu li.disabled {
+    color: #999;
+}
+
+.menu li.sep {
+    height: 1px;
+    margin: 4px 0;
+    padding: 0;
+    background: #ccc;
 }
 
 /* ---- Connect dialog (classic, compact like ZTerm) ---- */

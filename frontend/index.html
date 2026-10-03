@@ -6,7 +6,20 @@
     <title>choboterm</title>
 </head>
 <body>
-<div id="terminal"></div>
+<div id="tabbar">
+    <div id="tabs"></div>
+    <button type="button" id="newTab" title="새 탭 (Ctrl+Shift+T)">+</button>
+</div>
+<div id="terms"></div>
+
+<ul id="tabMenu" class="menu" hidden>
+    <li data-act="reconnect">다시 연결</li>
+    <li data-act="duplicate">복제 (새 탭으로 같은 서버 접속)</li>
+    <li data-act="files">파일 전송</li>
+    <li data-act="disconnect">연결 끊기</li>
+    <li class="sep"></li>
+    <li data-act="close">탭 닫기</li>
+</ul>
 
 <div id="overlay" class="overlay" hidden>
     <form id="connect" class="dialog" autocomplete="off">

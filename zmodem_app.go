@@ -12,41 +12,42 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// zmodemState tracks the running ZMODEM transfer, if any.
+// zmodemState tracks a tab's running ZMODEM transfer, if any.
 type zmodemState struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc
 }
 
-func (a *App) zmodemActive() bool {
-	a.zm.mu.Lock()
-	defer a.zm.mu.Unlock()
-	return a.zm.cancel != nil
+func (t *tab) zmodemActive() bool {
+	t.zm.mu.Lock()
+	defer t.zm.mu.Unlock()
+	return t.zm.cancel != nil
 }
 
-func (a *App) cancelZmodem() {
-	a.zm.mu.Lock()
-	c := a.zm.cancel
-	a.zm.mu.Unlock()
+func (t *tab) cancelZmodem() {
+	t.zm.mu.Lock()
+	c := t.zm.cancel
+	t.zm.mu.Unlock()
 	if c != nil {
 		c()
 	}
 }
 
-// termMessage prints a status line in the terminal (yellow).
-func (a *App) termMessage(msg string) {
+// termMessage prints a status line in the tab's terminal (yellow).
+func (t *tab) termMessage(msg string) {
 	msg = strings.ReplaceAll(msg, "\n", "\r\n")
 	data := "\r\n\x1b[33m" + msg + "\x1b[0m\r\n"
-	a.emit("term:data", base64.StdEncoding.EncodeToString([]byte(data)))
+	t.emit("term:data", base64.StdEncoding.EncodeToString([]byte(data)))
 }
 
 // runZmodem handles one sz (receive=true) or rz session detected in the output.
 // Raw remote bytes arrive on in; unconsumed bytes are handed back on done.
-func (a *App) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<- []byte) {
+func (t *tab) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<- []byte) {
+	a := t.app
 	ctx, cancel := context.WithCancel(context.Background())
-	a.zm.mu.Lock()
-	a.zm.cancel = cancel
-	a.zm.mu.Unlock()
+	t.zm.mu.Lock()
+	t.zm.cancel = cancel
+	t.zm.mu.Unlock()
 
 	_, telnet := sess.(*telnetSession)
 	p := &zmPeer{
@@ -60,12 +61,12 @@ func (a *App) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 	var last time.Time
 	o := zmOptions{
 		Dir:        a.downloadDir(),
-		DecodeName: a.codec.DecodeString,
-		EncodeName: a.codec.EncodeString,
+		DecodeName: t.codec.DecodeString,
+		EncodeName: t.codec.EncodeString,
 		Progress: func(x XferProgress) {
 			if now := time.Now(); now.Sub(last) >= 100*time.Millisecond || x.Done == x.Total {
 				last = now
-				a.emit("xfer:progress", x)
+				t.emit("xfer:progress", x)
 			}
 		},
 	}
@@ -75,7 +76,7 @@ func (a *App) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 		err error
 	)
 	if receive {
-		a.termMessage("[Zmodem] 파일을 받는 중입니다... (Ctrl+C: 취소)")
+		t.termMessage("[Zmodem] 파일을 받는 중입니다... (Ctrl+C: 취소)")
 		var saved []string
 		saved, err = zmReceive(p, o)
 		if len(saved) > 0 {
@@ -87,7 +88,7 @@ func (a *App) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 			p.abort()
 			err = errCancelled
 		} else {
-			a.termMessage(fmt.Sprintf("[Zmodem] %d개 파일을 보내는 중입니다... (Ctrl+C: 취소)", len(files)))
+			t.termMessage(fmt.Sprintf("[Zmodem] %d개 파일을 보내는 중입니다... (Ctrl+C: 취소)", len(files)))
 			if err = zmSend(p, files, o); err == nil {
 				msg = fmt.Sprintf("[Zmodem] %d개 파일을 보냈습니다", len(files))
 			}
@@ -95,9 +96,9 @@ func (a *App) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 	}
 
 	cancel()
-	a.zm.mu.Lock()
-	a.zm.cancel = nil
-	a.zm.mu.Unlock()
+	t.zm.mu.Lock()
+	t.zm.cancel = nil
+	t.zm.mu.Unlock()
 
 	if err != nil {
 		if ctx.Err() != nil {
@@ -108,30 +109,14 @@ func (a *App) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 		}
 		msg += "[Zmodem] " + err.Error()
 	}
-	a.emit("xfer:end", XferEnd{OK: err == nil, Message: msg})
-	a.termMessage(msg)
+	t.emit("xfer:end", XferEnd{OK: err == nil, Message: msg})
+	t.termMessage(msg)
 
 	if errors.Is(err, errCancelled) {
 		// Give the remote a moment to print its own cancel message.
 		time.Sleep(200 * time.Millisecond)
 	}
 	done <- p.buf
-}
-
-// emit sends an event to the frontend (replaceable in tests).
-func (a *App) emit(name string, data ...interface{}) {
-	if a.hooks.emit != nil {
-		a.hooks.emit(name, data...)
-		return
-	}
-	runtime.EventsEmit(a.ctx, name, data...)
-}
-
-func (a *App) setTitle(title string) {
-	if a.hooks.emit != nil {
-		return
-	}
-	runtime.WindowSetTitle(a.ctx, title)
 }
 
 func (a *App) downloadDir() string {

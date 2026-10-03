@@ -128,5 +128,18 @@
   <li>README 빌드 항목에 build.bat 사용법 추가</li>
   <li>검증: cmd에서 build.bat 실행 → 종료 코드 0, release\choboterm.exe(12.5MB) 생성 확인</li>
 </ul>
+
+<h2>2026-10-03 — 탭 기능 (MobaXterm 스타일)</h2>
+<ul>
+  <li>백엔드: 단일 접속 구조를 탭 단위(tab: 세션, 인코딩, 파일 전송, Zmodem 상태)로 재구성. 모든 API에 tabID 추가(Connect/Send/Resize/SetEncoding/Disconnect/CloseTab/File*), 이벤트는 (tabID, ...)로 전달</li>
+  <li>창 제목은 프런트엔드가 활성 탭 기준으로 설정(WindowSetTitle) → 백엔드의 제목 관리 코드 제거</li>
+  <li>프런트엔드: 탭마다 xterm 터미널, 탭 바(상태 점 초록/회색/주황, 백그라운드 출력 강조, ✕, +, 가운데 클릭 닫기, 드래그로 순서 변경, 빈 곳 더블클릭 새 탭), 우클릭 메뉴(다시 연결/복제/파일 전송/연결 끊기/닫기)</li>
+  <li>단축키: Ctrl+Shift+T·N 새 탭, Ctrl+Tab·Ctrl+Shift+Tab·Ctrl+PgUp/PgDn 탭 전환, Ctrl+Shift+W 탭 닫기. xterm에 키가 넘어가지 않도록 attachCustomKeyEventHandler + 캡처 단계 stopPropagation</li>
+  <li>접속 창: 빈 탭에서는 그 탭에 접속, 아니면 새 탭 생성(실패하면 새 탭 제거). 끊긴 탭에서 Enter → 이전 접속 정보로 채워진 접속 창</li>
+  <li>FTP 탭: 파일 창을 닫아도 탭이 열려 있는 동안 연결 유지, Ctrl+Shift+F로 다시 열기</li>
+  <li>탭 이름: 호스트(기본 포트가 아니면 host:port), 툴팁에 scheme://login@host:port</li>
+  <li>검증: 탭 분리 테스트(출력/인코딩/입력/원격 종료/탭 닫기 독립) 추가, 전체 go test(WSL 연동 포함) 통과, 로컬 가짜 서버 2개에 자동 접속시킨 임시 빌드로 화면 확인(상태 점, 백그라운드 출력 강조, 제목). 테스트 중 hosts.json은 백업 후 복원</li>
+  <li>제약: 접속 창·파일 전송 창이 열려 있는 동안에는 탭 전환 불가(모달)</li>
+</ul>
 </body>
 </html>

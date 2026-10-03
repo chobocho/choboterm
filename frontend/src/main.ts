@@ -6,63 +6,365 @@ import {FitAddon} from '@xterm/addon-fit';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {closeFiles, filesOpen, openFiles} from './files';
 
-import {Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
+import {CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
-import {EventsOn} from '../wailsjs/runtime/runtime';
+import {EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
 
-// ---- Terminal ----
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const term = new Terminal({
-    fontFamily: '"D2Coding", "Consolas", "Malgun Gothic", monospace',
-    fontSize: 15,
-    cursorBlink: true,
-    scrollback: 5000,
-    allowProposedApi: true,
-    theme: {background: '#000000'},
-});
-const fit = new FitAddon();
-term.loadAddon(fit);
-loadUnicodeWidths(term);
-term.unicode.activeVersion = NARROW;
-term.open(document.getElementById('terminal')!);
-fit.fit();
+let appName = 'choboterm';
+let version = '';
 
-let connected = false;
+// ---- Tabs ----
 
-// EUC-KR screens assume ambiguous-width symbols (─│■○ etc.) take 2 columns.
-function applyEncoding(name: string) {
-    const wanted = name === 'EUC-KR' ? WIDE : NARROW;
-    // Never let a missing width provider break connecting.
-    if (term.unicode.versions.includes(wanted)) term.unicode.activeVersion = wanted;
+// idle: not connected, on: terminal session, ftp: FTP (file window only)
+type TabState = 'idle' | 'on' | 'ftp';
+
+interface Tab {
+    id: number;
+    term: Terminal;
+    fit: FitAddon;
+    pane: HTMLDivElement;
+    el: HTMLDivElement;
+    label: HTMLSpanElement;
+    state: TabState;
+    encoding: string;
+    // Last connection, kept in memory only, for reconnect / duplicate.
+    req?: main.ConnectRequest;
 }
 
-term.onData(data => {
-    if (connected) {
-        Send(data);
-    } else if (data === '\r') {
-        openDialog();
-    }
-});
-term.onResize(({cols, rows}) => {
-    if (connected) Resize(cols, rows);
-});
-new ResizeObserver(() => fit.fit()).observe(document.getElementById('terminal')!);
+const tabs = new Map<number, Tab>();
+const tabsEl = $<HTMLDivElement>('tabs');
+const termsEl = $<HTMLDivElement>('terms');
+let active: Tab | undefined;
+let nextId = 1;
+let dragging: Tab | undefined;
 
-EventsOn('term:data', (b64: string) => {
+function notice(t: Tab, msg: string) {
+    t.term.write(`\r\n\x1b[33m[${msg.replace(/\n/g, '\r\n')}]\x1b[0m\r\n`);
+}
+
+function welcome(t: Tab) {
+    t.term.write(`choboterm V${version}\r\n`);
+    t.term.write('\x1b[90mEnter: 접속 창 · Ctrl+Shift+T: 새 탭 · Ctrl+Tab: 탭 전환 · Ctrl+Shift+W: 탭 닫기\r\n');
+    t.term.write('Ctrl+Shift+E: UTF-8 ↔ EUC-KR · Ctrl+Shift+F: 파일 전송 · Ctrl+Shift+D: 연결 끊기\x1b[0m\r\n');
+}
+
+// EUC-KR screens assume ambiguous-width symbols (─│■○ etc.) take 2 columns.
+function applyEncoding(t: Tab, name: string) {
+    t.encoding = name;
+    const wanted = name === 'EUC-KR' ? WIDE : NARROW;
+    // Never let a missing width provider break connecting.
+    if (t.term.unicode.versions.includes(wanted)) t.term.unicode.activeVersion = wanted;
+}
+
+function createTab(): Tab {
+    const id = nextId++;
+
+    const pane = document.createElement('div');
+    pane.className = 'term';
+    pane.hidden = true;
+    termsEl.appendChild(pane);
+
+    const term = new Terminal({
+        fontFamily: '"D2Coding", "Consolas", "Malgun Gothic", monospace',
+        fontSize: 15,
+        cursorBlink: true,
+        scrollback: 5000,
+        allowProposedApi: true,
+        theme: {background: '#000000'},
+    });
+    const fit = new FitAddon();
+    term.loadAddon(fit);
+    loadUnicodeWidths(term);
+    term.unicode.activeVersion = NARROW;
+    term.attachCustomKeyEventHandler(ev => !isAppShortcut(ev));
+    term.open(pane);
+
+    const el = document.createElement('div');
+    el.className = 'tab';
+    el.draggable = true;
+    el.dataset.id = String(id);
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = '새 탭';
+    const x = document.createElement('button');
+    x.className = 'x';
+    x.type = 'button';
+    x.title = '탭 닫기 (Ctrl+Shift+W)';
+    x.textContent = '✕';
+    el.append(dot, label, x);
+    tabsEl.appendChild(el);
+
+    const t: Tab = {id, term, fit, pane, el, label, state: 'idle', encoding: 'UTF-8'};
+    tabs.set(id, t);
+
+    term.onData(data => {
+        if (t.state === 'on') Send(t.id, data);
+        else if (data === '\r') openDialog(t);
+    });
+    term.onResize(({cols, rows}) => {
+        if (t.state === 'on') Resize(t.id, cols, rows);
+    });
+
+    el.addEventListener('mousedown', ev => {
+        if (ev.button === 0) activate(t);
+    });
+    el.addEventListener('auxclick', ev => {
+        if (ev.button === 1) { // middle click closes, like browsers and MobaXterm
+            ev.preventDefault();
+            closeTab(t);
+        }
+    });
+    el.addEventListener('contextmenu', ev => {
+        ev.preventDefault();
+        activate(t);
+        showMenu(t, ev.clientX, ev.clientY);
+    });
+    x.addEventListener('mousedown', ev => ev.stopPropagation());
+    x.addEventListener('click', () => closeTab(t));
+
+    // Drag to reorder.
+    el.addEventListener('dragstart', ev => {
+        dragging = t;
+        el.classList.add('dragging');
+        ev.dataTransfer?.setData('text/plain', String(id));
+    });
+    el.addEventListener('dragend', () => {
+        dragging = undefined;
+        el.classList.remove('dragging');
+    });
+    el.addEventListener('dragover', ev => {
+        if (!dragging || dragging === t) return;
+        ev.preventDefault();
+        const r = el.getBoundingClientRect();
+        tabsEl.insertBefore(dragging.el, ev.clientX < r.left + r.width / 2 ? el : el.nextSibling);
+    });
+
+    welcome(t);
+    return t;
+}
+
+function orderedTabs(): Tab[] {
+    return Array.from(tabsEl.children)
+        .map(el => tabs.get(Number((el as HTMLElement).dataset.id)))
+        .filter((t): t is Tab => !!t);
+}
+
+function activate(t: Tab) {
+    if (active !== t) {
+        if (active) {
+            active.el.classList.remove('active');
+            active.pane.hidden = true;
+        }
+        active = t;
+        t.el.classList.add('active');
+        t.el.classList.remove('activity');
+        t.pane.hidden = false;
+        t.el.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    }
+    t.fit.fit();
+    updateTitle();
+    if (overlay.hidden && !filesOpen()) t.term.focus();
+}
+
+function cycleTab(step: number) {
+    const list = orderedTabs();
+    if (list.length < 2 || !active) return;
+    const i = list.indexOf(active);
+    activate(list[(i + step + list.length) % list.length]);
+}
+
+function closeTab(t: Tab) {
+    if (t === active && filesOpen()) closeFiles();
+    const list = orderedTabs();
+    const i = list.indexOf(t);
+    CloseTab(t.id);
+    t.term.dispose();
+    t.pane.remove();
+    t.el.remove();
+    tabs.delete(t.id);
+
+    if (active === t) {
+        active = undefined;
+        const next = list[i + 1] ?? list[i - 1];
+        if (next) activate(next);
+    }
+    if (tabs.size === 0) {
+        const n = createTab();
+        activate(n);
+        openDialog(n);
+    }
+}
+
+function setState(t: Tab, state: TabState) {
+    t.state = state;
+    t.el.classList.toggle('on', state !== 'idle');
+    if (t.req) {
+        const scheme = state === 'ftp' ? 'ftp' : Number(t.req.port) === 22 ? 'ssh' : 'telnet';
+        // Show the port only when it isn't the protocol's usual one.
+        const usual = [21, 22, 23].includes(Number(t.req.port));
+        t.label.textContent = usual ? t.req.host : `${t.req.host}:${t.req.port}`;
+        t.el.title = `${scheme}://${t.req.login ? t.req.login + '@' : ''}${t.req.host}:${t.req.port}`;
+    }
+    if (t === active) updateTitle();
+}
+
+function updateTitle() {
+    let title = appName;
+    const t = active;
+    if (t?.req && t.state !== 'idle') {
+        const where = `${t.req.host}:${t.req.port}`;
+        title += t.state === 'ftp' ? ` - ftp://${where}` : ` - ${where}`;
+        title += ` [${t.encoding}]`;
+    }
+    WindowSetTitle(title);
+}
+
+/** Connects tab t with req; returns the protocol. Throws on failure. */
+async function connectTab(t: Tab, req: main.ConnectRequest): Promise<string> {
+    req.cols = t.term.cols;
+    req.rows = t.term.rows;
+    const protocol = await Connect(t.id, req);
+    t.req = req;
+    t.term.reset();
+    applyEncoding(t, req.encoding || 'UTF-8');
+    if (protocol === 'ftp') {
+        setState(t, 'ftp');
+        t.term.write(`FTP ${req.host}:${req.port}\r\n\x1b[90mCtrl+Shift+F: 파일 전송 창 열기 · 탭을 닫으면 연결이 끊어집니다\x1b[0m\r\n`);
+    } else {
+        setState(t, 'on');
+    }
+    return protocol;
+}
+
+async function reconnect(t: Tab) {
+    if (!t.req) return openDialog(t);
+    try {
+        if (await connectTab(t, t.req) === 'ftp') await openFilesFor(t);
+    } catch (e) {
+        notice(t, String(e));
+    }
+}
+
+async function duplicate(t: Tab) {
+    if (!t.req) return;
+    const n = createTab();
+    activate(n);
+    try {
+        if (await connectTab(n, main.ConnectRequest.createFrom({...t.req})) === 'ftp') await openFilesFor(n);
+    } catch (e) {
+        notice(n, String(e));
+    }
+}
+
+function disconnect(t: Tab) {
+    if (t.state === 'idle') return;
+    if (t === active && filesOpen()) closeFiles();
+    Disconnect(t.id);
+    setState(t, 'idle');
+    t.term.write('\r\n\x1b[33m[연결을 끊었습니다] Enter: 다시 접속\x1b[0m\r\n');
+}
+
+async function openFilesFor(t: Tab) {
+    if (t.state === 'idle' || !t.req || filesOpen() || !overlay.hidden) return;
+    try {
+        await openFiles(t.id, t.req.host, {onClose: () => active?.term.focus()});
+    } catch (e) {
+        notice(t, String(e));
+    }
+}
+
+async function toggleEncoding(t: Tab) {
+    const name = await SetEncoding(t.id, t.encoding === 'EUC-KR' ? 'UTF-8' : 'EUC-KR');
+    applyEncoding(t, name);
+    if (t.req) t.req.encoding = name;
+    notice(t, `인코딩: ${name}`);
+    updateTitle();
+}
+
+new ResizeObserver(() => active?.fit.fit()).observe(termsEl);
+
+EventsOn('term:data', (id: number, b64: string) => {
+    const t = tabs.get(id);
+    if (!t) return;
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    term.write(bytes);
+    t.term.write(bytes);
+    if (t !== active) t.el.classList.add('activity');
 });
 
-EventsOn('term:closed', (msg: string) => {
-    connected = false;
-    term.write(`\r\n\x1b[33m[${msg}] Enter: 다시 접속\x1b[0m\r\n`);
+EventsOn('term:closed', (id: number, msg: string) => {
+    const t = tabs.get(id);
+    if (!t) return;
+    setState(t, 'idle');
+    t.term.write(`\r\n\x1b[33m[${msg}] Enter: 다시 접속\x1b[0m\r\n`);
+});
+
+EventsOn('xfer:progress', (id: number) => tabs.get(id)?.el.classList.add('busy'));
+EventsOn('xfer:end', (id: number) => tabs.get(id)?.el.classList.remove('busy'));
+
+// ---- Tab context menu ----
+
+const menu = $<HTMLUListElement>('tabMenu');
+let menuTab: Tab | undefined;
+
+function showMenu(t: Tab, x: number, y: number) {
+    menuTab = t;
+    const enable = (act: string, on: boolean) =>
+        menu.querySelector(`[data-act="${act}"]`)!.classList.toggle('disabled', !on);
+    enable('reconnect', true);
+    enable('duplicate', !!t.req);
+    enable('files', t.state !== 'idle');
+    enable('disconnect', t.state !== 'idle');
+    menu.hidden = false;
+    const r = menu.getBoundingClientRect();
+    menu.style.left = `${Math.min(x, window.innerWidth - r.width - 4)}px`;
+    menu.style.top = `${Math.min(y, window.innerHeight - r.height - 4)}px`;
+}
+
+function hideMenu() {
+    menu.hidden = true;
+    menuTab = undefined;
+}
+
+menu.addEventListener('mousedown', ev => ev.stopPropagation());
+menu.addEventListener('click', ev => {
+    const li = (ev.target as HTMLElement).closest('li');
+    const t = menuTab;
+    if (!li || !t || li.classList.contains('disabled') || li.classList.contains('sep')) return;
+    hideMenu();
+    switch (li.dataset.act) {
+        case 'reconnect':
+            reconnect(t);
+            break;
+        case 'duplicate':
+            duplicate(t);
+            break;
+        case 'files':
+            openFilesFor(t);
+            break;
+        case 'disconnect':
+            disconnect(t);
+            break;
+        case 'close':
+            closeTab(t);
+            break;
+    }
+});
+window.addEventListener('mousedown', hideMenu);
+window.addEventListener('blur', hideMenu);
+
+$<HTMLButtonElement>('newTab').addEventListener('click', () => openDialog(null));
+tabsEl.addEventListener('dblclick', ev => {
+    if (ev.target === tabsEl) openDialog(null); // double-click empty tab bar: new tab
 });
 
 // ---- Connect dialog ----
 
-const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const overlay = $<HTMLDivElement>('overlay');
 const form = $<HTMLFormElement>('connect');
 const host = $<HTMLInputElement>('host');
@@ -79,17 +381,31 @@ const hostList = $<HTMLUListElement>('hostList');
 
 let history: main.HostEntry[] = [];
 let activeIndex = -1;
+// The tab to (re)connect in; null opens a new tab.
+let target: Tab | null = null;
 
 function updateProto() {
     const p = Number(port.value);
     proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : 'Telnet';
 }
 
-async function openDialog() {
+/**
+ * Opens the Connect dialog. t: the tab to connect in, null: a new tab,
+ * undefined: the active tab if it's empty, otherwise a new tab.
+ */
+async function openDialog(t?: Tab | null) {
+    if (!overlay.hidden || filesOpen()) return;
+    target = t !== undefined ? t : active && active.state === 'idle' ? active : null;
     error.textContent = '';
     history = (await GetHistory()) ?? [];
-    if (!host.value && history.length > 0) applyEntry(history[0]);
-    else fillSavedPass();
+    if (target?.req) {
+        const r = target.req;
+        applyEntry({host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass});
+    } else if (!host.value && history.length > 0) {
+        applyEntry(history[0]);
+    } else {
+        fillSavedPass();
+    }
     updateProto();
     overlay.hidden = false;
     host.focus();
@@ -99,7 +415,7 @@ async function openDialog() {
 function closeDialog() {
     hideList();
     overlay.hidden = true;
-    term.focus();
+    active?.term.focus();
 }
 
 function applyEntry(e: main.HostEntry) {
@@ -180,36 +496,28 @@ async function doConnect() {
     error.textContent = '';
     ok.disabled = cancel.disabled = true;
     ok.textContent = '접속 중...';
+
+    const prev = active;
+    const created = !target;
+    const t = target ?? createTab();
+    activate(t); // so the terminal has its real size
     try {
-        const protocol = await Connect(main.ConnectRequest.createFrom({
+        const protocol = await connectTab(t, main.ConnectRequest.createFrom({
             host: host.value.trim(),
             port: Number(port.value),
             login: login.value,
             pass: pass.value,
             encoding: encoding.value,
-            cols: term.cols,
-            rows: term.rows,
         }));
         pass.value = '';
-        if (protocol === 'ftp') {
-            // FTP has no terminal: go straight to the file window; closing it disconnects.
-            connected = false;
-            closeDialog();
-            try {
-                await openFiles(host.value.trim(), {closeConnection: true, onClose: () => openDialog()});
-            } catch (e) {
-                Disconnect();
-                await openDialog();
-                error.textContent = String(e);
-            }
-            return;
-        }
-        connected = true;
-        term.reset();
-        applyEncoding(encoding.value);
         closeDialog();
+        if (protocol === 'ftp') await openFilesFor(t);
     } catch (e) {
         error.textContent = String(e);
+        if (created) {
+            closeTab(t);
+            if (prev && tabs.has(prev.id)) activate(prev);
+        }
     } finally {
         ok.disabled = cancel.disabled = false;
         ok.innerHTML = '<u>C</u>onnect';
@@ -237,51 +545,49 @@ form.addEventListener('keydown', ev => {
     }
 });
 
-// Ctrl+Shift+N: open the connect dialog at any time (disconnects on connect).
+// ---- Shortcuts ----
+
+function isAppShortcut(ev: KeyboardEvent): boolean {
+    if (ev.type !== 'keydown') return false;
+    if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEF]$/i.test(ev.key);
+}
+
 window.addEventListener('keydown', ev => {
-    if (ev.ctrlKey && ev.shiftKey && (ev.key === 'N' || ev.key === 'n')) {
-        ev.preventDefault();
-        closeFiles();
-        openDialog();
+    if (!isAppShortcut(ev)) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (!overlay.hidden || filesOpen()) return; // dialogs are modal
+    const t = active;
+    if (ev.key === 'Tab') return cycleTab(ev.shiftKey ? -1 : 1);
+    if (ev.key === 'PageDown') return cycleTab(1);
+    if (ev.key === 'PageUp') return cycleTab(-1);
+    switch (ev.key.toUpperCase()) {
+        case 'T':
+        case 'N':
+            openDialog(null);
+            break;
+        case 'W':
+            if (t) closeTab(t);
+            break;
+        case 'D':
+            if (t) disconnect(t);
+            break;
+        case 'E':
+            if (t) toggleEncoding(t);
+            break;
+        case 'F':
+            if (t) openFilesFor(t);
+            break;
     }
 }, true);
 
-// Ctrl+Shift+F: file transfer window (SFTP, or SCP fallback, on SSH connections).
-window.addEventListener('keydown', async ev => {
-    if (ev.ctrlKey && ev.shiftKey && (ev.key === 'F' || ev.key === 'f')) {
-        ev.preventDefault();
-        if (!connected || filesOpen() || !overlay.hidden) return;
-        try {
-            await openFiles(host.value.trim(), {onClose: () => term.focus()});
-        } catch (e) {
-            term.write(`\r\n\x1b[33m[${String(e).replace(/\n/g, '\r\n')}]\x1b[0m\r\n`);
-        }
-    }
-}, true);
-
-// Ctrl+Shift+E: toggle UTF-8 / EUC-KR on the current connection.
-window.addEventListener('keydown', async ev => {
-    if (ev.ctrlKey && ev.shiftKey && (ev.key === 'E' || ev.key === 'e')) {
-        ev.preventDefault();
-        const next = encoding.value === 'EUC-KR' ? 'UTF-8' : 'EUC-KR';
-        encoding.value = await SetEncoding(next);
-        applyEncoding(encoding.value);
-        term.write(`\r\n\x1b[33m[인코딩: ${encoding.value}]\x1b[0m\r\n`);
-    }
-}, true);
-
-// Ctrl+Shift+D: disconnect.
-window.addEventListener('keydown', ev => {
-    if (ev.ctrlKey && ev.shiftKey && (ev.key === 'D' || ev.key === 'd') && connected) {
-        ev.preventDefault();
-        connected = false;
-        Disconnect();
-        term.write('\r\n\x1b[33m[연결을 끊었습니다] Enter: 다시 접속\x1b[0m\r\n');
-    }
-}, true);
+// ---- Start ----
 
 GetVersion().then(v => {
-    term.write(`choboterm V${v}\r\n`);
-    term.write('\x1b[90mEnter 또는 Ctrl+Shift+N: 접속 창 열기 / Ctrl+Shift+E: UTF-8 ↔ EUC-KR / Ctrl+Shift+F: 파일 전송\x1b[0m\r\n');
+    version = v;
+    appName = `choboterm V${v}`;
+    const first = createTab();
+    activate(first);
+    openDialog(first);
 });
-openDialog();
