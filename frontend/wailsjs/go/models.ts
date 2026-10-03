@@ -172,6 +172,44 @@ export namespace main {
 	        this.text = source["text"];
 	    }
 	}
+	export class SSHConfigHost {
+	    host: string;
+	    hostName: string;
+	    port: number;
+	    login: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHConfigHost(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.hostName = source["hostName"];
+	        this.port = source["port"];
+	        this.login = source["login"];
+	    }
+	}
+	export class SSHTarget {
+	    host: string;
+	    port: number;
+	    login: string;
+	    hostName: string;
+	    fromConfig: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHTarget(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.login = source["login"];
+	        this.hostName = source["hostName"];
+	        this.fromConfig = source["fromConfig"];
+	    }
+	}
 	export class WindowState {
 	    left: number;
 	    top: number;

@@ -78,6 +78,10 @@ export function GetHistory() {
   return window['go']['main']['App']['GetHistory']();
 }
 
+export function GetSSHConfigHosts() {
+  return window['go']['main']['App']['GetSSHConfigHosts']();
+}
+
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
@@ -88,6 +92,10 @@ export function GetVersion() {
 
 export function LogPath(arg1) {
   return window['go']['main']['App']['LogPath'](arg1);
+}
+
+export function LookupSSH(arg1) {
+  return window['go']['main']['App']['LookupSSH'](arg1);
 }
 
 export function Resize(arg1, arg2, arg3) {

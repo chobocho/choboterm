@@ -455,6 +455,44 @@ html, body {
     color: #dbe9f7;
 }
 
+/* Host field tooltip: above the field, like a classic Windows tooltip. */
+.combo .tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: -50px; /* over the label column, so the examples fit on one line */
+    right: 0;
+    z-index: 11;
+    padding: 5px 8px;
+    background: #ffffe1;
+    border: 1px solid #767676;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25);
+    color: #000;
+    font-size: 12px;
+    line-height: 1.45;
+    pointer-events: none;
+    overflow-wrap: anywhere;
+}
+
+.combo .tip .pre {
+    white-space: pre;
+}
+
+.combo .tip[hidden] {
+    display: none;
+}
+
+.combo .tip .head {
+    font-weight: bold;
+}
+
+.combo .tip .names {
+    color: #555;
+}
+
+.body input::placeholder {
+    color: #999;
+}
+
 .port {
     position: relative;
 }

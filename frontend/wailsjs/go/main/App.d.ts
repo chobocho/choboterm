@@ -40,11 +40,15 @@ export function ForwardRemove(arg1:number,arg2:number):Promise<void>;
 
 export function GetHistory():Promise<Array<main.HostEntry>>;
 
+export function GetSSHConfigHosts():Promise<Array<main.SSHConfigHost>>;
+
 export function GetSettings():Promise<main.Settings>;
 
 export function GetVersion():Promise<string>;
 
 export function LogPath(arg1:number):Promise<string>;
+
+export function LookupSSH(arg1:string):Promise<main.SSHTarget>;
 
 export function Resize(arg1:number,arg2:number,arg3:number):Promise<void>;
 

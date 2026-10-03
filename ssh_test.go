@@ -100,7 +100,7 @@ func dialTestSSH(t *testing.T, addr string) (Session, error) {
 	host, portStr, _ := net.SplitHostPort(addr)
 	port, _ := strconv.Atoi(portStr)
 	return dialSSH(ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24},
-		func(string, string) bool { t.Fatal("unexpected host key prompt"); return false }, nil)
+		func(string, string) bool { t.Fatal("unexpected host key prompt"); return false }, nil, nil)
 }
 
 // The server has ECDSA and Ed25519 keys; known_hosts only has the Ed25519 one

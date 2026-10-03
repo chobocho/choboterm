@@ -1,4 +1,4 @@
-# choboterm V0.1.2
+# choboterm V0.1.3
 
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows용 SSH / Telnet / FTP 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다.
@@ -18,6 +18,9 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 접속 창과 파일 전송 창은 탭마다 따로 열립니다. 창이 떠 있어도 탭을 바꿀 수 있고, 돌아오면 입력값·폴더·전송 상태가 그대로 남아 있습니다. 파일 전송은 다른 탭을 보는 동안에도 계속됩니다.
 - **프로토콜 선택**: 22 = SSH, 21 = FTP, 23 = Telnet. 그 밖의 포트(예: Termux의 8022)는 접속하자마자 서버의 첫 인사말로 자동 판별합니다(`SSH-` → SSH, `220` → FTP, 그 외 → Telnet). 먼저 말을 걸지 않는 Telnet 서버는 판별에 2초가 걸립니다.
 - **SSH**: 비밀번호, keyboard-interactive, `~/.ssh` 개인키(id_ed25519 / id_ecdsa / id_rsa, 암호 없는 키) 인증
+  - **`~/.ssh/config` 이름으로 접속**: Host 칸에 config에 적어 둔 이름(예: `pusan`)이나 명령처럼 `ssh pusan`, `ssh -p 2222 user@pusan`을 입력하면 `HostName` / `Port` / `User` / `IdentityFile`을 읽어 Port와 Login을 채우고 접속합니다. 탭 이름과 접속 기록에는 `pusan`이 남습니다.
+    - Host 칸에 포커스를 두면 툴팁으로 입력 예와 등록된 이름을 보여 주고, config 이름을 입력하면 실제 접속할 `user@주소:포트`를 보여 줍니다. config의 이름들은 ▼ 목록에도 `ssh config`로 표시됩니다.
+    - `IdentityFile`의 키를 먼저 시도하고, 안 되면 기본 키와 비밀번호를 씁니다. `Host *.corp` 같은 패턴 항목도 적용합니다. `ProxyJump`, `Match`는 아직 지원하지 않습니다.
   - `~/.ssh/known_hosts`로 호스트 키 확인. 처음 접속하는 호스트는 지문을 보여 주고 신뢰할지 묻고, 키가 바뀐 호스트는 차단합니다.
 - **Telnet**: NAWS / TTYPE / ECHO / SGA / BINARY 협상, `login:` / `password:` 프롬프트 자동 로그인
   - 비밀번호를 기억해 두었다가 Host를 고르면 자동으로 채웁니다. Windows DPAPI로 암호화해 저장하므로 현재 Windows 사용자만 풀 수 있습니다. Pass를 비우고 접속하면 저장된 비밀번호를 지웁니다.

@@ -199,13 +199,26 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 		req.Cols, req.Rows = 80, 24
 	}
 
+	// "ssh [-p port] [user@]name" and names from ~/.ssh/config: req keeps
+	// the name (tab title, history), dial holds the address to connect to.
+	cfg := loadSSHConfig()
+	if _, _, _, isCmd := parseSSHCommand(req.Host); isCmd {
+		st := lookupSSHTarget(cfg, req.Host)
+		req.Host, req.Port = st.Host, st.Port
+		if st.Login != "" {
+			req.Login = st.Login
+		}
+	}
+	dial := req
+	dial.Host = sshDialHost(cfg, req.Host)
+
 	t := a.getTab(tabID)
 	t.disconnect()
 
 	proto := Protocol(req.Port)
 	var conn net.Conn
 	if proto == "" {
-		c, p, err := dialDetect(net.JoinHostPort(req.Host, strconv.Itoa(req.Port)))
+		c, p, err := dialDetect(net.JoinHostPort(dial.Host, strconv.Itoa(req.Port)))
 		if err != nil {
 			return "", fmt.Errorf("접속 실패: %w", err)
 		}
@@ -213,7 +226,7 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	}
 
 	if proto == "ftp" {
-		fs, err := dialFTP(req, conn)
+		fs, err := dialFTP(dial, conn)
 		if err != nil {
 			return "", err
 		}
@@ -230,9 +243,12 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 		err  error
 	)
 	if proto == "ssh" {
-		sess, err = dialSSH(req, a.confirmHostKey, conn)
+		if dial.Login == "" {
+			dial.Login = configGet(cfg, req.Host, "User")
+		}
+		sess, err = dialSSH(dial, a.confirmHostKey, conn, sshIdentityFiles(cfg, req.Host, dial.Login))
 	} else {
-		sess, err = dialTelnet(req, conn)
+		sess, err = dialTelnet(dial, conn)
 	}
 	if err != nil {
 		return "", err

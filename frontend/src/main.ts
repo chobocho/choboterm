@@ -16,7 +16,8 @@ import {loadSettings, saveSettings, settings} from './settings';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding, ShowLogs, StartLog, StopLog,
+    CloseTab, Connect, Disconnect, GetHistory, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send, SetEncoding,
+    ShowLogs, StartLog, StopLog,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
@@ -64,6 +65,7 @@ interface DialogState {
     encoding: string;
     error: string;
     connecting: boolean;
+    resolved: string; // Host text whose ~/.ssh/config values were already filled in
 }
 
 const tabs = new Map<number, Tab>();
@@ -609,9 +611,15 @@ const ok = $<HTMLButtonElement>('ok');
 const cancel = $<HTMLButtonElement>('cancel');
 const hostDrop = $<HTMLButtonElement>('hostDrop');
 const hostList = $<HTMLUListElement>('hostList');
+const hostTip = $<HTMLDivElement>('hostTip');
+
+type ListEntry = Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'> & {fromConfig?: boolean};
 
 let history: main.HostEntry[] = [];
+let configHosts: main.SSHConfigHost[] = [];
+let entries: ListEntry[] = []; // history, then ~/.ssh/config names not in it
 let activeIndex = -1;
+let resolved = '';
 
 function updateProto() {
     const p = Number(port.value);
@@ -636,6 +644,11 @@ async function openDialog(t?: Tab | null) {
     cancelRetry(tab);
 
     history = (await GetHistory()) ?? [];
+    configHosts = (await GetSSHConfigHosts()) ?? [];
+    const seen = new Set(history.map(h => h.host));
+    entries = [...history, ...configHosts.filter(c => !seen.has(c.host)).map(c => ({
+        host: c.host, port: c.port, login: c.login, encoding: 'UTF-8', pass: '', fromConfig: true,
+    }))];
     if (tab.req) {
         const r = tab.req;
         applyEntry({host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass});
@@ -646,7 +659,7 @@ async function openDialog(t?: Tab | null) {
     }
     tab.dialog = {
         host: host.value, port: port.value, login: login.value, pass: pass.value,
-        encoding: encoding.value, error: '', connecting: false,
+        encoding: encoding.value, error: '', connecting: false, resolved,
     };
     if (active === tab) {
         loadDialog(tab);
@@ -666,6 +679,7 @@ function saveDialog(t: Tab) {
     d.pass = pass.value;
     d.encoding = encoding.value;
     d.error = error.textContent ?? '';
+    d.resolved = resolved;
     hideList();
 }
 
@@ -676,6 +690,7 @@ function loadDialog(t: Tab) {
     login.value = d.login;
     pass.value = d.pass;
     encoding.value = d.encoding;
+    resolved = d.resolved;
     error.textContent = d.error;
     paintConnecting(d);
     updateProto();
@@ -684,6 +699,7 @@ function loadDialog(t: Tab) {
 
 function hideDialog() {
     hideList();
+    hideTip();
     overlay.hidden = true;
 }
 
@@ -711,7 +727,68 @@ function applyEntry(e: Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encodin
     login.value = e.login;
     encoding.value = e.encoding || 'UTF-8';
     pass.value = e.pass ?? '';
+    resolved = host.value.trim();
     updateProto();
+}
+
+/**
+ * Fills Port/Login from ~/.ssh/config when the Host field holds a config
+ * name ("pusan") or an ssh command line ("ssh -p 2222 me@pusan"); the field
+ * keeps just the name. Values the user set after that are left alone.
+ */
+async function resolveHost() {
+    const text = host.value.trim();
+    if (!text || text === resolved) return;
+    const r = await LookupSSH(text);
+    if (host.value.trim() !== text) return; // typed on meanwhile
+    host.value = r.host;
+    if (r.port > 0) port.value = String(r.port);
+    if (r.login) login.value = r.login;
+    resolved = host.value.trim();
+    updateProto();
+    fillSavedPass();
+    if (document.activeElement === host) showTip(r);
+}
+
+function hideTip() {
+    hostTip.hidden = true;
+}
+
+function tipLine(text: string, cls = '') {
+    const div = document.createElement('div');
+    if (cls) div.className = cls;
+    div.textContent = text;
+    hostTip.appendChild(div);
+}
+
+/** Explains what the Host field accepts, or what the typed config name stands for. */
+function showTip(r?: main.SSHTarget) {
+    if (!hostList.hidden) return hideTip();
+    hostTip.innerHTML = '';
+    if (r?.fromConfig) {
+        const user = r.login ? r.login + '@' : '';
+        tipLine(`~/.ssh/config의 ${r.host}`, 'head');
+        tipLine(`→ ${user}${r.hostName || r.host}:${r.port || 22}`);
+    } else {
+        tipLine('주소 또는 ~/.ssh/config의 Host 이름', 'head');
+        tipLine('예) pusan · ssh pusan');
+        tipLine('     ssh -p 2222 user@pusan', 'pre');
+        if (configHosts.length > 0) {
+            const names = configHosts.slice(0, 6).map(c => c.host).join(', ');
+            tipLine(`등록된 이름: ${names}${configHosts.length > 6 ? ' …' : ''} (▼ 목록)`, 'names');
+        } else {
+            tipLine('~/.ssh/config가 없거나 등록된 Host가 없습니다.', 'names');
+        }
+    }
+    hostTip.hidden = false;
+}
+
+let tipSeq = 0;
+async function refreshTip() {
+    const text = host.value.trim();
+    const seq = ++tipSeq;
+    const r = text ? await LookupSSH(text) : undefined;
+    if (seq === tipSeq && document.activeElement === host) showTip(r);
 }
 
 // Fills the remembered (Telnet) password for the host/port currently typed in.
@@ -722,13 +799,14 @@ function fillSavedPass() {
 
 function showList() {
     hostList.innerHTML = '';
-    if (history.length === 0) return;
-    history.forEach((e, i) => {
+    if (entries.length === 0) return;
+    hideTip();
+    entries.forEach((e, i) => {
         const li = document.createElement('li');
         li.textContent = e.host;
         const meta = document.createElement('span');
         meta.className = 'meta';
-        meta.textContent = `${e.port}${e.login ? ' · ' + e.login : ''}`;
+        meta.textContent = `${e.port}${e.login ? ' · ' + e.login : ''}${e.fromConfig ? ' · ssh config' : ''}`;
         li.appendChild(meta);
         li.addEventListener('mousedown', ev => {
             ev.preventDefault();
@@ -756,16 +834,24 @@ hostDrop.addEventListener('click', () => {
     }
 });
 
-host.addEventListener('blur', hideList);
-host.addEventListener('change', fillSavedPass);
+host.addEventListener('blur', () => {
+    hideList();
+    hideTip();
+});
+host.addEventListener('focus', () => refreshTip());
+host.addEventListener('input', () => refreshTip());
+host.addEventListener('change', () => {
+    fillSavedPass();
+    resolveHost();
+});
 port.addEventListener('change', fillSavedPass);
 host.addEventListener('keydown', ev => {
     if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
         ev.preventDefault();
-        if (history.length === 0) return;
+        if (entries.length === 0) return;
         const step = ev.key === 'ArrowDown' ? 1 : -1;
-        activeIndex = (activeIndex + step + history.length) % history.length;
-        applyEntry(history[activeIndex]);
+        activeIndex = (activeIndex + step + entries.length) % entries.length;
+        applyEntry(entries[activeIndex]);
         showList();
     } else if (ev.key === 'Enter' && !hostList.hidden) {
         ev.preventDefault();
@@ -782,6 +868,8 @@ port.addEventListener('input', () => {
 async function doConnect() {
     const t = active;
     if (!t?.dialog || t.dialog.connecting) return;
+    await resolveHost();
+    if (t !== active || !t.dialog || t.dialog.connecting) return;
     saveDialog(t);
     const d = t.dialog;
     d.error = '';

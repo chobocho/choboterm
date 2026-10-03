@@ -46,9 +46,10 @@
         <div class="body">
             <label for="host">Host</label>
             <div class="combo">
-                <input id="host" spellcheck="false"/>
+                <input id="host" spellcheck="false" placeholder="주소 또는 ssh config 이름"/>
                 <button type="button" id="hostDrop" tabindex="-1">▼</button>
                 <ul id="hostList" hidden></ul>
+                <div id="hostTip" class="tip" hidden></div>
             </div>
 
             <label for="port">Port</label>
