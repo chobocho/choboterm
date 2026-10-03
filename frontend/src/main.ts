@@ -4,7 +4,7 @@ import './style.css';
 import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
-import {closeFiles, filesOpen, openFiles} from './files';
+import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -31,6 +31,21 @@ interface Tab {
     encoding: string;
     // Last connection, kept in memory only, for reconnect / duplicate.
     req?: main.ConnectRequest;
+    // This tab's Connect dialog, while it is open.
+    dialog?: DialogState;
+    // Created just for a Connect dialog: cancelling the dialog closes it.
+    temp?: boolean;
+}
+
+// Connect dialog contents saved per tab, so switching tabs keeps them.
+interface DialogState {
+    host: string;
+    port: string;
+    login: string;
+    pass: string;
+    encoding: string;
+    error: string;
+    connecting: boolean;
 }
 
 const tabs = new Map<number, Tab>();
@@ -154,8 +169,10 @@ function orderedTabs(): Tab[] {
 }
 
 function activate(t: Tab) {
-    if (active !== t) {
+    const changed = active !== t;
+    if (changed) {
         if (active) {
+            if (active.dialog) saveDialog(active);
             active.el.classList.remove('active');
             active.pane.hidden = true;
         }
@@ -164,10 +181,23 @@ function activate(t: Tab) {
         t.el.classList.remove('activity');
         t.pane.hidden = false;
         t.el.scrollIntoView({block: 'nearest', inline: 'nearest'});
+        // Each tab keeps its own Connect dialog and file window.
+        showFilesFor(t.id);
+        if (t.dialog) loadDialog(t);
+        else hideDialog();
     }
     t.fit.fit();
     updateTitle();
-    if (overlay.hidden && !filesOpen()) t.term.focus();
+    if (changed) focusActive();
+    else if (!t.dialog && !filesOpen()) t.term.focus();
+}
+
+function focusActive() {
+    const t = active;
+    if (!t) return;
+    if (t.dialog) host.focus();
+    else if (filesOpen()) focusFiles();
+    else t.term.focus();
 }
 
 function cycleTab(step: number) {
@@ -178,7 +208,9 @@ function cycleTab(step: number) {
 }
 
 function closeTab(t: Tab) {
-    if (t === active && filesOpen()) closeFiles();
+    forgetFiles(t.id);
+    if (t.dialog && t === active) hideDialog();
+    t.dialog = undefined;
     const list = orderedTabs();
     const i = list.indexOf(t);
     CloseTab(t.id);
@@ -227,7 +259,12 @@ function updateTitle() {
 async function connectTab(t: Tab, req: main.ConnectRequest): Promise<string> {
     req.cols = t.term.cols;
     req.rows = t.term.rows;
+    forgetFiles(t.id); // a reconnect replaces the old connection's file window
     const protocol = await Connect(t.id, req);
+    if (!tabs.has(t.id)) {
+        CloseTab(t.id); // the tab was closed while connecting
+        throw new Error('탭이 닫혔습니다');
+    }
     t.req = req;
     t.term.reset();
     applyEncoding(t, req.encoding || 'UTF-8');
@@ -262,16 +299,16 @@ async function duplicate(t: Tab) {
 
 function disconnect(t: Tab) {
     if (t.state === 'idle') return;
-    if (t === active && filesOpen()) closeFiles();
+    closeFiles(t.id);
     Disconnect(t.id);
     setState(t, 'idle');
     t.term.write('\r\n\x1b[33m[연결을 끊었습니다] Enter: 다시 접속\x1b[0m\r\n');
 }
 
 async function openFilesFor(t: Tab) {
-    if (t.state === 'idle' || !t.req || filesOpen() || !overlay.hidden) return;
+    if (t.state === 'idle' || !t.req || t.dialog) return;
     try {
-        await openFiles(t.id, t.req.host, {onClose: () => active?.term.focus()});
+        await openFiles(t.id, t.req.host, {onClose: () => focusActive()});
     } catch (e) {
         notice(t, String(e));
     }
@@ -300,6 +337,7 @@ EventsOn('term:data', (id: number, b64: string) => {
 EventsOn('term:closed', (id: number, msg: string) => {
     const t = tabs.get(id);
     if (!t) return;
+    forgetFiles(t.id);
     setState(t, 'idle');
     t.term.write(`\r\n\x1b[33m[${msg}] Enter: 다시 접속\x1b[0m\r\n`);
 });
@@ -381,8 +419,6 @@ const hostList = $<HTMLUListElement>('hostList');
 
 let history: main.HostEntry[] = [];
 let activeIndex = -1;
-// The tab to (re)connect in; null opens a new tab.
-let target: Tab | null = null;
 
 function updateProto() {
     const p = Number(port.value);
@@ -394,28 +430,84 @@ function updateProto() {
  * undefined: the active tab if it's empty, otherwise a new tab.
  */
 async function openDialog(t?: Tab | null) {
-    if (!overlay.hidden || filesOpen()) return;
-    target = t !== undefined ? t : active && active.state === 'idle' ? active : null;
-    error.textContent = '';
+    if (active?.dialog) saveDialog(active);
+    let tab: Tab;
+    if (t === null || (t === undefined && !(active && active.state === 'idle'))) {
+        tab = createTab();
+        tab.temp = true;
+    } else {
+        tab = t ?? active!;
+    }
+    if (tab.dialog) return activate(tab);
+
     history = (await GetHistory()) ?? [];
-    if (target?.req) {
-        const r = target.req;
+    if (tab.req) {
+        const r = tab.req;
         applyEntry({host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass});
     } else if (!host.value && history.length > 0) {
         applyEntry(history[0]);
     } else {
         fillSavedPass();
     }
-    updateProto();
-    overlay.hidden = false;
-    host.focus();
+    tab.dialog = {
+        host: host.value, port: port.value, login: login.value, pass: pass.value,
+        encoding: encoding.value, error: '', connecting: false,
+    };
+    if (active === tab) {
+        loadDialog(tab);
+        focusActive();
+    } else {
+        activate(tab);
+    }
     host.select();
 }
 
-function closeDialog() {
+function saveDialog(t: Tab) {
+    const d = t.dialog;
+    if (!d) return;
+    d.host = host.value;
+    d.port = port.value;
+    d.login = login.value;
+    d.pass = pass.value;
+    d.encoding = encoding.value;
+    d.error = error.textContent ?? '';
+    hideList();
+}
+
+function loadDialog(t: Tab) {
+    const d = t.dialog!;
+    host.value = d.host;
+    port.value = d.port;
+    login.value = d.login;
+    pass.value = d.pass;
+    encoding.value = d.encoding;
+    error.textContent = d.error;
+    paintConnecting(d);
+    updateProto();
+    overlay.hidden = false;
+}
+
+function hideDialog() {
     hideList();
     overlay.hidden = true;
-    active?.term.focus();
+}
+
+function paintConnecting(d: DialogState) {
+    ok.disabled = cancel.disabled = d.connecting;
+    ok.innerHTML = d.connecting ? '접속 중...' : '<u>C</u>onnect';
+}
+
+/** Closes tab t's dialog. A tab opened just for a cancelled dialog is closed too. */
+function dismissDialog(t: Tab, cancelled: boolean) {
+    t.dialog = undefined;
+    if (t === active) hideDialog();
+    if (cancelled && t.temp && t.state === 'idle' && tabs.size > 1) return closeTab(t);
+    t.temp = false;
+    if (t === active) focusActive();
+}
+
+function cancelDialog() {
+    if (active?.dialog && !active.dialog.connecting) dismissDialog(active, true);
 }
 
 function applyEntry(e: main.HostEntry) {
@@ -493,55 +585,54 @@ port.addEventListener('input', () => {
 });
 
 async function doConnect() {
+    const t = active;
+    if (!t?.dialog || t.dialog.connecting) return;
+    saveDialog(t);
+    const d = t.dialog;
+    d.error = '';
+    d.connecting = true;
     error.textContent = '';
-    ok.disabled = cancel.disabled = true;
-    ok.textContent = '접속 중...';
-
-    const prev = active;
-    const created = !target;
-    const t = target ?? createTab();
-    activate(t); // so the terminal has its real size
+    paintConnecting(d);
+    // The user may switch tabs while connecting; results go to tab t.
     try {
         const protocol = await connectTab(t, main.ConnectRequest.createFrom({
-            host: host.value.trim(),
-            port: Number(port.value),
-            login: login.value,
-            pass: pass.value,
-            encoding: encoding.value,
+            host: d.host.trim(),
+            port: Number(d.port),
+            login: d.login,
+            pass: d.pass,
+            encoding: d.encoding,
         }));
-        pass.value = '';
-        closeDialog();
+        d.connecting = false;
+        if (t.dialog === d) dismissDialog(t, false);
         if (protocol === 'ftp') await openFilesFor(t);
     } catch (e) {
-        error.textContent = String(e);
-        if (created) {
-            closeTab(t);
-            if (prev && tabs.has(prev.id)) activate(prev);
+        d.connecting = false;
+        d.error = String(e);
+        if (t.dialog === d && t === active) {
+            error.textContent = d.error;
+            paintConnecting(d);
         }
-    } finally {
-        ok.disabled = cancel.disabled = false;
-        ok.innerHTML = '<u>C</u>onnect';
     }
 }
 
 form.addEventListener('submit', ev => {
     ev.preventDefault();
-    if (!ok.disabled) doConnect();
+    doConnect();
 });
-cancel.addEventListener('click', closeDialog);
-$<HTMLButtonElement>('close').addEventListener('click', closeDialog);
+cancel.addEventListener('click', cancelDialog);
+$<HTMLButtonElement>('close').addEventListener('click', cancelDialog);
 
 form.addEventListener('keydown', ev => {
     if (ev.key === 'Escape') {
         ev.preventDefault();
         if (!hostList.hidden) hideList();
-        else closeDialog();
+        else cancelDialog();
     } else if (ev.altKey && (ev.key === 'c' || ev.key === 'C')) {
         ev.preventDefault();
-        if (!ok.disabled) doConnect();
+        doConnect();
     } else if (ev.altKey && (ev.key === 'a' || ev.key === 'A')) {
         ev.preventDefault();
-        closeDialog();
+        cancelDialog();
     }
 });
 
@@ -557,7 +648,7 @@ window.addEventListener('keydown', ev => {
     if (!isAppShortcut(ev)) return;
     ev.preventDefault();
     ev.stopPropagation();
-    if (!overlay.hidden || filesOpen()) return; // dialogs are modal
+    // Tab shortcuts work even while a Connect dialog or file window is open.
     const t = active;
     if (ev.key === 'Tab') return cycleTab(ev.shiftKey ? -1 : 1);
     if (ev.key === 'PageDown') return cycleTab(1);
@@ -583,6 +674,8 @@ window.addEventListener('keydown', ev => {
 }, true);
 
 // ---- Start ----
+
+setActiveTabProvider(() => active?.id ?? 0);
 
 GetVersion().then(v => {
     version = v;

@@ -188,9 +188,10 @@ html, body {
 
 /* ---- Connect dialog (classic, compact like ZTerm) ---- */
 
+/* Covers only the terminal area, so the tab bar stays usable. */
 .overlay {
     position: fixed;
-    inset: 0;
+    inset: 33px 0 0 0;
     display: flex;
     align-items: center;
     justify-content: center;

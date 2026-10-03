@@ -15,16 +15,36 @@ const refreshBtn = $<HTMLButtonElement>('fRefresh');
 const uploadBtn = $<HTMLButtonElement>('fUpload');
 const downloadBtn = $<HTMLButtonElement>('fDownload');
 
-let cwd = '/';
-let entries: main.FileEntry[] = [];
-let selected = -1;
-let busy = false;
-let onClosed: (() => void) | undefined;
-// The tab whose connection the window is showing.
-let tabId = 0;
+// One file window per tab. Only the active tab's window is shown; the others
+// keep their folder, selection and running transfer in the background.
+interface View {
+    tabId: number;
+    heading: string;
+    cwd: string;
+    entries: main.FileEntry[];
+    selected: number;
+    busy: boolean;
+    status: string;
+    statusOk: boolean;
+    onClose?: () => void;
+}
 
+const views = new Map<number, View>();
+let current: View | undefined;
+// Returns the active tab id (set by main.ts), so late results land in the right place.
+let activeTab: () => number = () => 0;
+
+export function setActiveTabProvider(fn: () => number) {
+    activeTab = fn;
+}
+
+/** True while a file window is visible (for the active tab). */
 export function filesOpen() {
-    return !overlay.hidden;
+    return !!current;
+}
+
+export function hasFiles(tabId: number) {
+    return views.has(tabId);
 }
 
 export function formatSize(n: number): string {
@@ -49,41 +69,30 @@ function parentPath(dir: string) {
     return i <= 0 ? '/' : trimmed.slice(0, i);
 }
 
-function setBusy(on: boolean) {
-    busy = on;
-    for (const b of [upBtn, refreshBtn, uploadBtn, downloadBtn]) b.disabled = on;
+// ---- rendering (only for the visible view) ----
+
+function paintBusy(v: View) {
+    if (v !== current) return;
+    for (const b of [upBtn, refreshBtn, uploadBtn, downloadBtn]) b.disabled = v.busy;
 }
 
-function select(i: number) {
-    selected = Math.max(-1, Math.min(i, entries.length - 1));
-    Array.from(body.rows).forEach((row, j) => row.classList.toggle('sel', j === selected));
-    body.rows[selected]?.scrollIntoView({block: 'nearest'});
+function paintStatus(v: View) {
+    if (v !== current) return;
+    error.textContent = v.status;
+    error.classList.toggle('info', v.statusOk);
 }
 
-function setStatus(msg: string, ok = false) {
-    error.textContent = msg;
-    error.classList.toggle('info', ok);
+function paintSelection(v: View) {
+    if (v !== current) return;
+    Array.from(body.rows).forEach((row, j) => row.classList.toggle('sel', j === v.selected));
+    body.rows[v.selected]?.scrollIntoView({block: 'nearest'});
 }
 
-async function load(dir: string) {
-    setStatus('');
-    setBusy(true);
-    try {
-        entries = (await FileList(tabId, dir)) ?? [];
-        cwd = dir;
-        pathInput.value = dir;
-        render();
-    } catch (e) {
-        setStatus(String(e));
-        pathInput.value = cwd;
-    } finally {
-        setBusy(false);
-    }
-}
-
-function render() {
+function paintList(v: View) {
+    if (v !== current) return;
+    pathInput.value = v.cwd;
     body.innerHTML = '';
-    entries.forEach((e, i) => {
+    v.entries.forEach((e, i) => {
         const tr = body.insertRow();
         if (e.isDir) tr.className = 'dir';
         tr.insertCell().textContent = e.name;
@@ -91,116 +100,206 @@ function render() {
         size.className = 'num';
         size.textContent = e.isDir ? '' : formatSize(e.size);
         tr.insertCell().textContent = e.modTime;
-        tr.addEventListener('mousedown', () => select(i));
-        tr.addEventListener('dblclick', () => activate(i));
+        tr.addEventListener('mousedown', () => select(v, i));
+        tr.addEventListener('dblclick', () => enter(v, i));
     });
-    select(entries.length > 0 ? 0 : -1);
+    paintSelection(v);
 }
 
-async function activate(i: number) {
-    const e = entries[i];
-    if (!e || busy) return;
-    if (e.isDir) await load(joinPath(cwd, e.name));
-    else await download();
+function show(v: View) {
+    current = v;
+    title.textContent = v.heading;
+    overlay.hidden = false;
+    paintList(v);
+    paintBusy(v);
+    paintStatus(v);
+    placeXfer();
 }
 
-async function download() {
-    const e = entries[selected];
-    if (!e || e.isDir || busy) return;
-    setStatus('');
-    setBusy(true);
+function hide() {
+    current = undefined;
+    overlay.hidden = true;
+    placeXfer();
+}
+
+// ---- actions ----
+
+function setBusy(v: View, on: boolean) {
+    v.busy = on;
+    paintBusy(v);
+}
+
+function setStatus(v: View, msg: string, ok = false) {
+    v.status = msg;
+    v.statusOk = ok;
+    paintStatus(v);
+}
+
+function select(v: View, i: number) {
+    v.selected = Math.max(-1, Math.min(i, v.entries.length - 1));
+    paintSelection(v);
+}
+
+async function load(v: View, dir: string) {
+    setStatus(v, '');
+    setBusy(v, true);
     try {
-        const local = await FileDownload(tabId, joinPath(cwd, e.name), e.size);
-        if (local) setStatus(`저장했습니다: ${local}`, true);
-    } catch (err) {
-        setStatus(String(err));
+        v.entries = (await FileList(v.tabId, dir)) ?? [];
+        v.cwd = dir;
+        v.selected = v.entries.length > 0 ? 0 : -1;
+        paintList(v);
+    } catch (e) {
+        setStatus(v, String(e));
+        if (v === current) pathInput.value = v.cwd;
     } finally {
-        setBusy(false);
-        panel.focus();
+        setBusy(v, false);
     }
 }
 
-async function upload() {
-    if (busy) return;
-    setStatus('');
-    setBusy(true);
+async function enter(v: View, i: number) {
+    const e = v.entries[i];
+    if (!e || v.busy) return;
+    if (e.isDir) await load(v, joinPath(v.cwd, e.name));
+    else await download(v);
+}
+
+async function download(v: View) {
+    const e = v.entries[v.selected];
+    if (!e || e.isDir || v.busy) return;
+    setStatus(v, '');
+    setBusy(v, true);
     try {
-        const n = await FileUpload(tabId, cwd);
+        const local = await FileDownload(v.tabId, joinPath(v.cwd, e.name), e.size);
+        if (local) setStatus(v, `저장했습니다: ${local}`, true);
+    } catch (err) {
+        setStatus(v, String(err));
+    } finally {
+        setBusy(v, false);
+        if (v === current) panel.focus();
+    }
+}
+
+async function upload(v: View) {
+    if (v.busy) return;
+    setStatus(v, '');
+    setBusy(v, true);
+    try {
+        const n = await FileUpload(v.tabId, v.cwd);
         if (n > 0) {
-            setBusy(false);
-            await load(cwd);
-            setStatus(`${n}개 파일을 업로드했습니다`, true);
+            setBusy(v, false);
+            await load(v, v.cwd);
+            setStatus(v, `${n}개 파일을 업로드했습니다`, true);
         }
     } catch (err) {
-        setStatus(String(err));
+        setStatus(v, String(err));
     } finally {
-        setBusy(false);
-        panel.focus();
+        setBusy(v, false);
+        if (v === current) panel.focus();
     }
 }
 
 /**
- * Opens the file transfer window for a tab's connection.
+ * Opens (or shows again) the file transfer window for a tab's connection.
  * Throws if the connection doesn't support file access (e.g. Telnet).
  */
-export async function openFiles(id: number, host: string, opts: {onClose?: () => void} = {}) {
-    const res = await FileOpen(id);
-    tabId = id;
-    onClosed = opts.onClose;
-    title.textContent = `파일 전송 (${res.protocol}) - ${host}`;
-    overlay.hidden = false;
-    panel.focus();
-    await load(res.home || '/');
+export async function openFiles(tabId: number, host: string, opts: {onClose?: () => void} = {}) {
+    const existing = views.get(tabId);
+    if (existing) {
+        if (activeTab() === tabId) show(existing);
+        return;
+    }
+    const res = await FileOpen(tabId);
+    const v: View = {
+        tabId,
+        heading: `파일 전송 (${res.protocol}) - ${host}`,
+        cwd: res.home || '/',
+        entries: [],
+        selected: -1,
+        busy: false,
+        status: '',
+        statusOk: false,
+        onClose: opts.onClose,
+    };
+    views.set(tabId, v);
+    if (activeTab() === tabId) {
+        show(v);
+        panel.focus();
+    }
+    await load(v, v.cwd);
 }
 
-export function closeFiles() {
-    if (overlay.hidden) return;
-    if (busy) FileCancel(tabId);
-    overlay.hidden = true;
-    onClosed?.();
+/** Shows the file window of tabId if it has one, otherwise hides the window. */
+export function showFilesFor(tabId: number) {
+    const v = views.get(tabId);
+    if (v) show(v);
+    else hide();
 }
 
-upBtn.addEventListener('click', () => load(parentPath(cwd)));
-refreshBtn.addEventListener('click', () => load(cwd));
-uploadBtn.addEventListener('click', upload);
-downloadBtn.addEventListener('click', download);
-$<HTMLButtonElement>('fClose').addEventListener('click', closeFiles);
-$<HTMLButtonElement>('filesX').addEventListener('click', closeFiles);
+export function focusFiles() {
+    if (current) panel.focus();
+}
+
+/** Closes a tab's file window (the visible one by default), cancelling its transfer. */
+export function closeFiles(tabId?: number) {
+    const v = tabId === undefined ? current : views.get(tabId);
+    if (!v) return;
+    if (v.busy) FileCancel(v.tabId);
+    views.delete(v.tabId);
+    if (v === current) hide();
+    v.onClose?.();
+}
+
+/** Drops a tab's file window without callbacks (the tab itself is closing). */
+export function forgetFiles(tabId: number) {
+    const v = views.get(tabId);
+    if (!v) return;
+    views.delete(tabId);
+    if (v === current) hide();
+}
+
+upBtn.addEventListener('click', () => current && load(current, parentPath(current.cwd)));
+refreshBtn.addEventListener('click', () => current && load(current, current.cwd));
+uploadBtn.addEventListener('click', () => current && upload(current));
+downloadBtn.addEventListener('click', () => current && download(current));
+$<HTMLButtonElement>('fClose').addEventListener('click', () => closeFiles());
+$<HTMLButtonElement>('filesX').addEventListener('click', () => closeFiles());
 
 pathInput.addEventListener('keydown', ev => {
-    if (ev.key === 'Enter') {
+    if (ev.key === 'Enter' && current) {
         ev.preventDefault();
-        load(pathInput.value.trim() || '/');
+        load(current, pathInput.value.trim() || '/');
         panel.focus();
     }
     ev.stopPropagation();
 });
 
 panel.addEventListener('keydown', ev => {
+    const v = current;
+    if (!v) return;
     switch (ev.key) {
         case 'Escape':
             closeFiles();
             break;
         case 'ArrowDown':
-            select(selected + 1);
+            select(v, v.selected + 1);
             break;
         case 'ArrowUp':
-            select(selected - 1);
+            select(v, v.selected - 1);
             break;
         case 'Home':
-            select(0);
+            select(v, 0);
             break;
         case 'End':
-            select(entries.length - 1);
+            select(v, v.entries.length - 1);
             break;
         case 'Enter':
-            activate(selected);
+            enter(v, v.selected);
             break;
         case 'Backspace':
-            if (!busy) load(parentPath(cwd));
+            if (!v.busy) load(v, parentPath(v.cwd));
             break;
         case 'F5':
-            if (!busy) load(cwd);
+            if (!v.busy) load(v, v.cwd);
             break;
         default:
             return;
@@ -208,7 +307,7 @@ panel.addEventListener('keydown', ev => {
     ev.preventDefault();
 });
 
-// ---- Progress box (shared by SFTP/FTP and Zmodem) ----
+// ---- Progress box (shared by SFTP/SCP/FTP and Zmodem) ----
 
 const xfer = $<HTMLDivElement>('xfer');
 const xferName = $<HTMLDivElement>('xferName');
@@ -225,13 +324,17 @@ interface XferProgress {
     upload: boolean;
 }
 
-EventsOn('xfer:progress', (id: number, p: XferProgress) => {
-    xferTab = id;
-    if (xfer.hidden || p.done === 0) started = Date.now();
-    // Show progress inside the file window when it's open, otherwise as a floating box.
-    const slot = filesOpen() && id === tabId ? $<HTMLDivElement>('xferSlot') : document.body;
+// Inside the visible file window when the transfer belongs to it, otherwise floating.
+function placeXfer() {
+    const slot = current && current.tabId === xferTab ? $<HTMLDivElement>('xferSlot') : document.body;
     if (xfer.parentElement !== slot) slot.appendChild(xfer);
     xfer.classList.toggle('inline', slot !== document.body);
+}
+
+EventsOn('xfer:progress', (id: number, p: XferProgress) => {
+    if (xfer.hidden || p.done === 0 || id !== xferTab) started = Date.now();
+    xferTab = id;
+    placeXfer();
     xfer.hidden = false;
     xferName.textContent = `${p.upload ? '⬆' : '⬇'} ${p.name}`;
     const pct = p.total > 0 ? Math.min(100, (p.done / p.total) * 100) : 0;
