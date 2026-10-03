@@ -40,6 +40,7 @@ type App struct {
 	mu    sync.Mutex
 	tabs  map[int]*tab
 	hooks testHooks
+	shown sync.Once
 }
 
 // tab is one connection with its own terminal tab in the frontend.
@@ -70,6 +71,24 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+}
+
+// domReady shows the window at its saved position the first time the page loads.
+func (a *App) domReady(ctx context.Context) {
+	a.shown.Do(func() {
+		if w := loadSettings().Window; w != nil {
+			restoreWindowBounds(*w)
+		}
+		runtime.WindowShow(ctx)
+	})
+}
+
+// beforeClose remembers the window position for the next start.
+func (a *App) beforeClose(ctx context.Context) bool {
+	if w, ok := currentWindowState(); ok && w.valid() {
+		_ = updateSettings(func(s *Settings) { s.Window = &w })
+	}
+	return false
 }
 
 func (a *App) shutdown(ctx context.Context) {

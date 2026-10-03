@@ -34,6 +34,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 - **글꼴 크기**: `Ctrl+휠`, `Ctrl+=` / `Ctrl+-`로 바꾸고 `Ctrl+0`으로 되돌립니다. 모든 탭에 적용되고 다음 실행 때도 유지됩니다.
 - **스크롤백 검색**: `Ctrl+Shift+S`로 검색 막대를 엽니다. 입력하는 대로 가장 최근 출력부터 찾고, 모든 결과를 강조합니다. `Enter`는 위로(이전 출력), `Shift+Enter`는 아래로, `Alt+C`는 대소문자 구분, `Alt+R`은 정규식입니다.
 - **링크 열기**: 화면에 나온 `http://` / `https://` 주소를 `Ctrl+클릭`하면 기본 브라우저로 엽니다. 그냥 클릭은 선택용으로 남겨 둡니다.
+- **창 위치 기억**: 창 크기·위치·최대화 상태를 닫을 때 저장해 다음 실행 때 그대로 엽니다. 모니터를 뺀 경우처럼 저장된 위치가 화면 밖이면 보이는 곳으로 옮깁니다.
 - **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 Telnet만, 암호화해서 저장합니다.
 
 X11 포워딩은 지원하지 않습니다.
@@ -138,6 +139,7 @@ go test ./...
 | `codec.go` | UTF-8 ↔ CP949 변환 |
 | `history_store.go` | 최근 접속 기록 |
 | `settings.go` | 사용자 설정 (`settings.json`) |
+| `window_windows.go` | 창 크기·위치 저장과 복원 (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` | 비밀번호 암호화 (Windows DPAPI) |
 | `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
 | `frontend/src/files.ts` | 파일 전송 창, 진행률 상자 |

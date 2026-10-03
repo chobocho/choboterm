@@ -28,8 +28,21 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 	if err := a.SaveSettings(s); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.GetSettings(); got != s {
+	if got := a.GetSettings(); got != s || got.Window != nil {
 		t.Fatalf("got %+v, want %+v", got, s)
+	}
+
+	// The window position belongs to the Go side; saving from the page keeps it.
+	w := WindowState{Left: 10, Top: 20, Right: 910, Bottom: 620, Maximized: true}
+	if err := updateSettings(func(s *Settings) { s.Window = &w }); err != nil {
+		t.Fatal(err)
+	}
+	s.FontSize = 20
+	if err := a.SaveSettings(s); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.GetSettings(); got.FontSize != 20 || got.Window == nil || *got.Window != w {
+		t.Fatalf("window lost: %+v", got)
 	}
 
 	// A file from an older version keeps defaults for fields it doesn't have.

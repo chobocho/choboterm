@@ -6,6 +6,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -21,6 +22,13 @@ func main() {
 	// Create an instance of the app structure
 	app := NewApp()
 
+	// The window starts hidden and is shown once it is moved to where it was
+	// last time (see App.domReady), so it doesn't jump on screen.
+	start := options.Normal
+	if w := loadSettings().Window; w != nil && w.Maximized {
+		start = options.Maximised
+	}
+
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:  appName,
@@ -30,8 +38,15 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 1},
+		StartHidden:      true,
+		WindowStartState: start,
 		OnStartup:        app.startup,
+		OnDomReady:       app.domReady,
+		OnBeforeClose:    app.beforeClose,
 		OnShutdown:       app.shutdown,
+		Windows: &windows.Options{
+			WindowClassName: windowClass,
+		},
 		Bind: []interface{}{
 			app,
 		},

@@ -230,5 +230,13 @@
   <li>링크 위에 마우스를 올리면 'Ctrl+클릭: 브라우저에서 열기' 툴팁</li>
   <li>검증: wails dev + Edge(playwright-core) 자동 점검으로 1~4단계 확인 — 글꼴 토스트, 검색 'line 5' 11건/Enter 이동, 여러 줄 붙여넣기 확인 창 후 서버 수신, 한 줄은 확인 없이 전송, F1 한/영 전환</li>
 </ul>
+
+<h2>2026-10-03 — 창 크기·위치 기억</h2>
+<ul>
+  <li>닫을 때(OnBeforeClose) Win32 GetWindowPlacement로 보통 상태 크기·위치와 최대화 여부를 settings.json에 저장</li>
+  <li>다음 실행: StartHidden으로 숨긴 채 시작 → OnDomReady에서 SetWindowPlacement(SW_HIDE)로 옮긴 뒤 표시. 최대화였으면 WindowStartState=Maximised. 창 클래스 이름을 chobotermWindow로 지정해 자기 창만 찾음</li>
+  <li>프런트엔드의 SaveSettings는 창 위치를 덮어쓰지 않도록 보존 (테스트 추가)</li>
+  <li>검증: build\bin 실행 파일로 PowerShell 자동 점검 — 이동 후 종료→재실행 시 100,120,900,620 그대로, 최대화 복원, 화면 밖 좌표(-30000)는 0,0으로 보정. 실행 중인 release\choboterm.exe는 건드리지 않음. 테스트 중 settings.json은 백업 후 복구</li>
+</ul>
 </body>
 </html>

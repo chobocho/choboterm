@@ -13,6 +13,22 @@ type Settings struct {
 	FontSize int `json:"fontSize"`
 	// PasteNoConfirm skips the confirmation before pasting several lines.
 	PasteNoConfirm bool `json:"pasteNoConfirm"`
+	// Window is the main window's last position, kept by the Go side only.
+	Window *WindowState `json:"window,omitempty"`
+}
+
+// WindowState is the main window's restored bounds (screen pixels) and
+// whether it was maximized.
+type WindowState struct {
+	Left      int  `json:"left"`
+	Top       int  `json:"top"`
+	Right     int  `json:"right"`
+	Bottom    int  `json:"bottom"`
+	Maximized bool `json:"maximized"`
+}
+
+func (w WindowState) valid() bool {
+	return w.Right-w.Left >= 200 && w.Bottom-w.Top >= 150
 }
 
 func defaultSettings() Settings {
@@ -78,7 +94,11 @@ func (a *App) GetSettings() Settings {
 	return loadSettings()
 }
 
-// SaveSettings stores the user preferences.
+// SaveSettings stores the user preferences. The window position is kept as stored.
 func (a *App) SaveSettings(s Settings) error {
-	return updateSettings(func(cur *Settings) { *cur = s })
+	return updateSettings(func(cur *Settings) {
+		w := cur.Window
+		*cur = s
+		cur.Window = w
+	})
 }
