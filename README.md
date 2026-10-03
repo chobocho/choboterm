@@ -3,6 +3,10 @@
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows용 SSH / Telnet / FTP 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다.
 
+**[⬇ 최신 버전 다운로드 (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · [소개 페이지](https://chobocho.github.io/choboterm/) · [모든 버전](https://github.com/chobocho/choboterm/releases)
+
+설치 없이 내려받아 실행하면 됩니다. 코드 서명이 없어 처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요.
+
 ```
 ┌ choboterm - Connect to ─────── ✕ ┐
 │ Host  [                     ▼]   │

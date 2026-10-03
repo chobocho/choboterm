@@ -173,5 +173,14 @@
   <li>진짜로 키가 바뀐 경우 오류에 받은 키 종류·지문, 저장된 파일·줄 번호와 해결 방법(그 줄 삭제)을 표시. 접속 창 오류는 줄바꿈 표시(white-space: pre-line)</li>
   <li>검증: 로컬 SSH 서버(ecdsa+ed25519, known_hosts엔 ed25519만)로 재현 테스트 — 수정 전 실패/수정 후 통과 확인, 진짜 키 변경 시 오류·줄 번호 테스트, ssh-rsa 알고리즘 매핑 테스트. 실제 서버에 사용자 known_hosts의 ed25519 줄만 넣은 임시 known_hosts로 두 번 접속 성공(사용자 ~/.ssh/known_hosts는 변경하지 않음)</li>
 </ul>
+
+<h2>2026-10-03 — GitHub Release / Pages 배포</h2>
+<ul>
+  <li>(이전 기록 보충) known_hosts 오판 수정 커밋 126416c 푸시 완료</li>
+  <li>배포 방식: GitHub Release에 실행 파일 첨부(저장소 git 기록과 별도 보관 → 저장소 용량 증가 없음) + GitHub Pages 소개 페이지의 다운로드 버튼이 releases/latest/download/choboterm.exe를 가리킴</li>
+  <li>GitHub CLI 설치(winget GitHub.cli), 사용자가 gh auth login으로 로그인</li>
+  <li>docs/index.html(다운로드 버튼, 최신 버전 표시(GitHub API), 기능, 단축키, 설치·SmartScreen 안내), docs/icon.png·favicon.png, README 맨 위에 다운로드 링크</li>
+  <li>release\choboterm.exe는 실행 중이라 build.bat 복사 단계가 실패 → 같은 커밋으로 빌드된 buildin\choboterm.exe를 릴리스에 첨부</li>
+</ul>
 </body>
 </html>

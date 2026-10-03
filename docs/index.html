@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>choboterm</title>
+    <meta name="description" content="ZTerm처럼 간결한 Windows용 SSH / Telnet / FTP 터미널"/>
+    <link rel="icon" type="image/png" href="favicon.png"/>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #121a33;
+            --line: #26314f;
+            --text: #e6e9f2;
+            --muted: #9aa3b8;
+            --mint: #5eead4;
+            --blue: #2563eb;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 600px at 50% -200px, #1d2b5c 0%, var(--bg) 60%) no-repeat, var(--bg);
+            color: var(--text);
+            font: 16px/1.6 "Malgun Gothic", "Segoe UI", system-ui, sans-serif;
+        }
+
+        main {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 56px 16px 72px;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        header img {
+            width: 128px;
+            height: 128px;
+        }
+
+        h1 {
+            margin: 12px 0 4px;
+            font-size: 40px;
+            letter-spacing: -0.5px;
+        }
+
+        .tagline {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .download {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 28px;
+            padding: 14px 28px;
+            border-radius: 10px;
+            background: var(--blue);
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 6px 24px rgba(37, 99, 235, 0.45);
+        }
+
+        .download:hover { background: #1d4ed8; }
+
+        .meta {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .meta a { color: var(--mint); }
+
+        .term {
+            margin: 40px auto 0;
+            max-width: 620px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            text-align: left;
+        }
+
+        .term .bar {
+            display: flex;
+            gap: 4px;
+            padding: 6px 8px 0;
+            background: #1e1f22;
+            font-size: 12px;
+        }
+
+        .term .tab {
+            padding: 4px 12px;
+            border-radius: 6px 6px 0 0;
+            background: #2b2d31;
+            color: #a9abb0;
+        }
+
+        .term .tab.on { background: #000; color: #fff; }
+        .term .tab::before { content: "● "; color: #3ecf6e; }
+
+        .term pre {
+            margin: 0;
+            padding: 14px 16px;
+            color: #d4d4d4;
+            font: 14px/1.5 "D2Coding", Consolas, monospace;
+            white-space: pre-wrap;
+        }
+
+        .g { color: #4ade80; }
+        .y { color: #facc15; }
+
+        section {
+            margin-top: 48px;
+        }
+
+        h2 {
+            font-size: 22px;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 6px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            padding: 0;
+            list-style: none;
+        }
+
+        .features li {
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--panel);
+        }
+
+        .features b {
+            display: block;
+            color: var(--mint);
+        }
+
+        .features span {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+
+        td {
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+
+        td:first-child {
+            width: 42%;
+            white-space: nowrap;
+        }
+
+        kbd {
+            padding: 1px 6px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            background: var(--panel);
+            font: 13px Consolas, monospace;
+        }
+
+        .note {
+            padding: 12px 16px;
+            border-left: 3px solid var(--mint);
+            background: var(--panel);
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        footer {
+            margin-top: 56px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        footer a { color: var(--mint); }
+
+        @media (max-width: 560px) {
+            h1 { font-size: 32px; }
+            td:first-child { white-space: normal; }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <img src="icon.png" alt="choboterm 아이콘"/>
+        <h1>choboterm</h1>
+        <p class="tagline">ZTerm처럼 간결한 Windows용 SSH · Telnet · FTP 터미널</p>
+
+        <a class="download" id="download"
+           href="https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe">
+            ⬇ 다운로드 (Windows)
+        </a>
+        <div class="meta">
+            <span id="version">최신 버전</span> · choboterm.exe ·
+            <a href="https://github.com/chobocho/choboterm/releases">모든 버전</a> ·
+            <a href="https://github.com/chobocho/choboterm">소스 코드</a>
+        </div>
+
+        <div class="term" aria-hidden="true">
+            <div class="bar"><span class="tab on">bbs.example.com</span><span class="tab">192.168.0.21:8022</span></div>
+            <pre>Welcome to <span class="y">choboterm</span>
+login: guest
+<span class="g">guest@bbs</span>:~$ sz report.hwp
+<span class="y">[Zmodem] 1개 파일을 받았습니다: C:\Users\me\Downloads</span>
+<span class="g">guest@bbs</span>:~$ <span class="g">▌</span></pre>
+        </div>
+    </header>
+
+    <section>
+        <h2>기능</h2>
+        <ul class="features">
+            <li><b>SSH · Telnet · FTP</b><span>22/23/21번 포트는 바로, 다른 포트는 서버 응답으로 자동 판별 (예: Termux 8022)</span></li>
+            <li><b>탭</b><span>여러 접속을 탭으로. 탭마다 인코딩·파일 전송이 따로 동작</span></li>
+            <li><b>EUC-KR (CP949)</b><span>옛 BBS 한글과 ─│■ 특수문자 2칸 폭까지</span></li>
+            <li><b>SFTP · SCP</b><span>SSH 접속 그대로 파일 전송, SFTP가 없으면 SCP로 자동 전환</span></li>
+            <li><b>Zmodem</b><span>터미널에서 sz / rz만 입력하면 파일 송수신</span></li>
+            <li><b>안전한 저장</b><span>known_hosts 확인, Telnet 비밀번호는 Windows DPAPI로 암호화</span></li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>단축키</h2>
+        <table>
+            <tr><td><kbd>Ctrl+Shift+T</kbd></td><td>새 탭으로 접속</td></tr>
+            <tr><td><kbd>Ctrl+Tab</kbd> / <kbd>Ctrl+Shift+Tab</kbd></td><td>다음 / 이전 탭</td></tr>
+            <tr><td><kbd>Ctrl+Shift+W</kbd></td><td>탭 닫기</td></tr>
+            <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>파일 전송 창 (SFTP / SCP / FTP)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+E</kbd></td><td>UTF-8 ↔ EUC-KR</td></tr>
+            <tr><td><kbd>Ctrl+Shift+D</kbd></td><td>연결 끊기</td></tr>
+        </table>
+    </section>
+
+    <section>
+        <h2>설치</h2>
+        <p>설치 과정 없이 <code>choboterm.exe</code>를 내려받아 실행하면 됩니다. Windows 10 / 11 (WebView2 런타임, Windows 11에는 기본 포함)에서 동작합니다.</p>
+        <p class="note">코드 서명이 없는 실행 파일이라 처음 실행할 때 "Windows의 PC 보호" 창이 뜰 수 있습니다.
+            <b>추가 정보 → 실행</b>을 누르면 됩니다.</p>
+    </section>
+
+    <footer>
+        MIT License · <a href="https://github.com/chobocho/choboterm">github.com/chobocho/choboterm</a>
+    </footer>
+</main>
+<script>
+    // Show the latest release version (best effort; the download link works without it).
+    fetch('https://api.github.com/repos/chobocho/choboterm/releases/latest')
+        .then(r => (r.ok ? r.json() : null))
+        .then(rel => {
+            if (!rel) return;
+            document.getElementById('version').textContent = rel.tag_name.replace(/^v/i, 'V');
+            const asset = (rel.assets || []).find(a => a.name === 'choboterm.exe');
+            if (asset) {
+                const mb = (asset.size / 1024 / 1024).toFixed(1);
+                document.getElementById('version').textContent += ` · ${mb} MB`;
+            }
+        })
+        .catch(() => {});
+</script>
+</body>
+</html>
