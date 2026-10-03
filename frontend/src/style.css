@@ -484,6 +484,77 @@ html, body {
     outline: none;
 }
 
+/* ---- Help window (F1) ---- */
+
+/* Above the other windows; covers the whole app. */
+.overlay.help {
+    inset: 0;
+    z-index: 40;
+}
+
+.dialog.help {
+    width: min(600px, calc(100vw - 32px));
+    outline: none;
+}
+
+.help .body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+#helpContent {
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+#helpContent h3 {
+    margin: 10px 0 4px;
+    font-size: 13px;
+    color: #0063b1;
+}
+
+#helpContent h3:first-child {
+    margin-top: 0;
+}
+
+#helpContent table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #d0d0d0;
+}
+
+#helpContent td {
+    padding: 3px 8px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+}
+
+#helpContent td.key {
+    width: 210px;
+    white-space: nowrap;
+    font-family: Consolas, "Malgun Gothic", monospace;
+    font-size: 12px;
+}
+
+#helpContent ul {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    color: #444;
+    font-size: 12px;
+}
+
+.help .buttons {
+    margin-top: 0;
+}
+
+.help .buttons #helpClose {
+    outline: 1px solid #0078d7;
+}
+
 /* ---- Transfer progress ---- */
 
 #xfer {

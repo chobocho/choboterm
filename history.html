@@ -191,5 +191,14 @@
   <li>검증: https://chobocho.github.io/choboterm/ 새 페이지·icon.png 200, 다운로드 버튼 링크(releases/latest/download/choboterm.exe) 200·크기 일치, 받은 파일 SHA-256이 buildin 및 release 폴더의 exe와 동일(71473bb6...), 실제 페이지 렌더링에서 "V0.1.0 · 12.0 MB" 표시 확인</li>
   <li>README에 다음 버전 릴리스 방법(버전 올리기 → build.bat → gh release create) 추가</li>
 </ul>
+
+<h2>2026-10-03 — F1 도움말 창 추가</h2>
+<ul>
+  <li>F1로 도움말 창 열기/닫기 (frontend/src/help.ts 신규). 터미널·접속 창·파일 전송 창 어디서든 동작</li>
+  <li>내용: 탭 / 접속 / 파일 전송 / 도움말 단축키 표, 저장 위치 안내</li>
+  <li>한국어 ↔ English 전환 버튼(Alt+L), 선택한 언어는 localStorage에 기억 (기본 한국어)</li>
+  <li>Esc·닫기·바깥 클릭으로 닫으면 원래 창(터미널/접속 창/파일 창)으로 포커스 복귀. 도움말이 떠 있는 동안 다른 앱 단축키는 무시</li>
+  <li>README 단축키 표와 소스 구성 표에 반영. tsc + vite build 통과</li>
+</ul>
 </body>
 </html>

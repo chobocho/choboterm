@@ -4,6 +4,7 @@ import './style.css';
 import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
+import {helpOpen, toggleHelp} from './help';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
@@ -643,6 +644,7 @@ form.addEventListener('keydown', ev => {
 
 function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.type !== 'keydown') return false;
+    if (ev.key === 'F1' && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) return true;
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
     return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEF]$/i.test(ev.key);
 }
@@ -651,6 +653,9 @@ window.addEventListener('keydown', ev => {
     if (!isAppShortcut(ev)) return;
     ev.preventDefault();
     ev.stopPropagation();
+    if (ev.key === 'F1') return toggleHelp(focusActive);
+    // Other shortcuts wait until the help window is closed.
+    if (helpOpen()) return;
     // Tab shortcuts work even while a Connect dialog or file window is open.
     const t = active;
     if (ev.key === 'Tab') return cycleTab(ev.shiftKey ? -1 : 1);

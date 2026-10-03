@@ -45,6 +45,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Ctrl+Shift+E` | UTF-8 ↔ EUC-KR 전환 |
 | `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP) |
 | `Ctrl+C` / `Ctrl+X` (Zmodem 전송 중) | 전송 취소 |
+| `F1` | 도움말 열기 / 닫기 (도움말 창에서 `Alt+L`로 한국어 ↔ English 전환) |
 
 파일 전송 창: `↑` `↓` `Home` `End`로 선택, `Enter`/더블클릭으로 폴더 열기·다운로드, `Backspace`로 상위 폴더, `F5`로 새로 고침, `Esc`로 닫기
 
@@ -128,6 +129,7 @@ go test ./...
 | `secret_windows.go` | 비밀번호 암호화 (Windows DPAPI) |
 | `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
 | `frontend/src/files.ts` | 파일 전송 창, 진행률 상자 |
+| `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
 | `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
 
