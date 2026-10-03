@@ -7,16 +7,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 
 설치 없이 내려받아 실행하면 됩니다. 코드 서명이 없어 처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요.
 
-```
-┌ choboterm - Connect to ─────── ✕ ┐
-│ Host  [                     ▼]   │
-│ Port  [23              Telnet]   │
-│ Login [                      ]   │
-│ Pass  [                      ]   │
-│ Code  [UTF-8                ▼]   │
-│          [Connect]  [Cancel]     │
-└──────────────────────────────────┘
-```
+![choboterm 스크린샷](./docs/screen_shot.png)
 
 ## 기능
 
