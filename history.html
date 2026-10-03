@@ -182,5 +182,14 @@
   <li>docs/index.html(다운로드 버튼, 최신 버전 표시(GitHub API), 기능, 단축키, 설치·SmartScreen 안내), docs/icon.png·favicon.png, README 맨 위에 다운로드 링크</li>
   <li>release\choboterm.exe는 실행 중이라 build.bat 복사 단계가 실패 → 같은 커밋으로 빌드된 buildin\choboterm.exe를 릴리스에 첨부</li>
 </ul>
+
+<h2>2026-10-03 — GitHub Release / Pages 배포 완료</h2>
+<ul>
+  <li>커밋 21fb000(소개 페이지, README 다운로드 링크) 푸시</li>
+  <li>릴리스 v0.1.0 생성: https://github.com/chobocho/choboterm/releases/tag/v0.1.0 (choboterm.exe 첨부, 12.6MB)</li>
+  <li>GitHub Pages 기준을 main / → main /docs로 변경(gh api). 변경 직후엔 루트 기준으로 배포된 상태가 남아 있어 Pages 재배포 요청 후 반영됨</li>
+  <li>검증: https://chobocho.github.io/choboterm/ 새 페이지·icon.png 200, 다운로드 버튼 링크(releases/latest/download/choboterm.exe) 200·크기 일치, 받은 파일 SHA-256이 buildin 및 release 폴더의 exe와 동일(71473bb6...), 실제 페이지 렌더링에서 "V0.1.0 · 12.0 MB" 표시 확인</li>
+  <li>README에 다음 버전 릴리스 방법(버전 올리기 → build.bat → gh release create) 추가</li>
+</ul>
 </body>
 </html>

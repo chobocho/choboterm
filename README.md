@@ -76,6 +76,18 @@ wails build   # build/bin/choboterm.exe 생성
 
 `build.bat`을 실행하면 테스트 → `wails build` → `release\choboterm.exe` 복사까지 한 번에 합니다. (`release` 폴더는 git에 올리지 않습니다.)
 
+## 릴리스
+
+1. `main.go`의 `AppVersion`과 `wails.json`의 `productVersion`을 올립니다.
+2. `build.bat`으로 `release\choboterm.exe`를 만듭니다. (실행 중인 choboterm은 먼저 종료)
+3. 커밋·푸시 후 GitHub Release를 만듭니다.
+
+   ```sh
+   gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" --title "choboterm V0.2.0" --notes "..."
+   ```
+
+소개 페이지(`docs/`, GitHub Pages 기준: `main` 브랜치 `/docs`)의 다운로드 버튼은 항상 최신 릴리스의 `choboterm.exe`를 가리키므로 따로 고칠 필요가 없습니다.
+
 ## 테스트
 
 ```sh
