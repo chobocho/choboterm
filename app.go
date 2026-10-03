@@ -23,6 +23,30 @@ type Session interface {
 	Close() error
 }
 
+// errConnLost means the connection broke instead of ending normally
+// (e.g. the shell exited); the frontend may reconnect automatically.
+var errConnLost = errors.New("네트워크 연결이 끊어졌습니다")
+
+// errNoReply is a keepalive that got no answer in time.
+var errNoReply = errors.New("응답이 없습니다")
+
+// keepAliveTimeout is how long one keepalive may wait for an answer.
+var keepAliveTimeout = 15 * time.Second
+
+// keepAliveMisses is how many keepalives in a row may fail before the
+// connection is considered dead and closed.
+const keepAliveMisses = 3
+
+// keepAliver is a session that can check its connection is alive.
+type keepAliver interface {
+	keepAlive() error
+}
+
+func isTimeout(err error) bool {
+	var ne net.Error
+	return errors.As(err, &ne) && ne.Timeout()
+}
+
 // ConnectRequest carries the values from the Connect dialog.
 type ConnectRequest struct {
 	Host     string `json:"host"`
@@ -53,6 +77,7 @@ type tab struct {
 	codec *codec
 	files fileState
 	zm    zmodemState
+	dead  error // why keepalive closed sess (guarded by mu)
 }
 
 // testHooks lets tests run the app without a Wails window.
@@ -220,7 +245,43 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	}
 	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, savePass)
 	go t.pump(sess)
+	go t.keepAlive(sess, time.Duration(loadSettings().KeepAlive)*time.Second)
 	return proto, nil
+}
+
+// keepAlive checks the connection every interval while sess is the tab's
+// session, and closes it after several checks in a row failed.
+func (t *tab) keepAlive(sess Session, every time.Duration) {
+	ka, ok := sess.(keepAliver)
+	if !ok || every <= 0 {
+		return
+	}
+	tick := time.NewTicker(every)
+	defer tick.Stop()
+	misses := 0
+	for range tick.C {
+		if t.session() != sess {
+			return
+		}
+		err := ka.keepAlive()
+		if err == nil {
+			misses = 0
+			continue
+		}
+		if misses++; misses < keepAliveMisses {
+			continue
+		}
+		t.mu.Lock()
+		current := t.sess == sess
+		if current {
+			t.dead = fmt.Errorf("서버가 %d번 연속 응답하지 않아 연결을 끊었습니다 (%v)", misses, err)
+		}
+		t.mu.Unlock()
+		if current {
+			_ = sess.Close()
+		}
+		return
+	}
 }
 
 // pump reads session output and emits it to the frontend in batches,
@@ -297,15 +358,24 @@ func (t *tab) pump(sess Session) {
 				current := t.sess == sess
 				if current {
 					t.sess = nil
+					if t.dead != nil {
+						err = t.dead
+					}
 				}
+				t.dead = nil
 				t.mu.Unlock()
 				if current {
 					t.fileClose()
+					// A connection that broke (not one the server ended normally)
+					// is reported as lost, so the frontend can reconnect.
+					lost := err != nil && !errors.Is(err, io.EOF)
 					msg := "연결이 종료되었습니다"
-					if err != nil && !errors.Is(err, io.EOF) {
-						msg += ": " + err.Error()
+					if errors.Is(err, errConnLost) {
+						msg = err.Error()
+					} else if lost {
+						msg = "연결이 끊어졌습니다: " + err.Error()
 					}
-					t.emit("term:closed", msg)
+					t.emit("term:closed", msg, lost)
 				}
 				return
 			}

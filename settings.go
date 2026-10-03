@@ -13,6 +13,10 @@ type Settings struct {
 	FontSize int `json:"fontSize"`
 	// PasteNoConfirm skips the confirmation before pasting several lines.
 	PasteNoConfirm bool `json:"pasteNoConfirm"`
+	// KeepAlive is the keepalive interval in seconds for SSH and Telnet (0 = off).
+	KeepAlive int `json:"keepAlive"`
+	// AutoReconnect reconnects a tab whose connection broke.
+	AutoReconnect bool `json:"autoReconnect"`
 	// Window is the main window's last position, kept by the Go side only.
 	Window *WindowState `json:"window,omitempty"`
 }
@@ -32,7 +36,7 @@ func (w WindowState) valid() bool {
 }
 
 func defaultSettings() Settings {
-	return Settings{FontSize: 15}
+	return Settings{FontSize: 15, KeepAlive: 60, AutoReconnect: true}
 }
 
 var settingsMu sync.Mutex

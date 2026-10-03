@@ -7,6 +7,7 @@ import {WebLinksAddon} from '@xterm/addon-web-links';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
+import {openPrefs, prefsOpen} from './prefs';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
@@ -42,6 +43,9 @@ interface Tab {
     dialog?: DialogState;
     // Created just for a Connect dialog: cancelling the dialog closes it.
     temp?: boolean;
+    // Automatic reconnect after the connection broke: the pending attempt.
+    retry?: {attempt: number; timer: number};
+    reconnecting?: boolean;
 }
 
 // Connect dialog contents saved per tab, so switching tabs keeps them.
@@ -133,7 +137,14 @@ function createTab(): Tab {
 
     term.onData(data => {
         if (t.state === 'on') Send(t.id, data);
-        else if (data === '\r') openDialog(t);
+        else if (t.reconnecting) return;
+        else if (t.retry) {
+            if (data === '\r') retryNow(t);
+            else if (data === '\x1b') {
+                cancelRetry(t);
+                t.term.write('\x1b[33m[자동 재접속을 취소했습니다] Enter: 다시 접속\x1b[0m\r\n');
+            }
+        } else if (data === '\r') openDialog(t);
     });
     term.onResize(({cols, rows}) => {
         if (t.state === 'on') Resize(t.id, cols, rows);
@@ -204,11 +215,15 @@ function setFontSize(n: number) {
     n = Math.max(MIN_FONT, Math.min(MAX_FONT, Math.round(n)));
     if (n !== settings.fontSize) {
         saveSettings(s => (s.fontSize = n));
-        // Hidden tabs are fitted again when they are activated.
-        for (const t of tabs.values()) t.term.options.fontSize = n;
-        active?.fit.fit();
+        applyFontSize();
     }
     toast(`글꼴 크기 ${n}`);
+}
+
+function applyFontSize() {
+    // Hidden tabs are fitted again when they are activated.
+    for (const t of tabs.values()) t.term.options.fontSize = settings.fontSize;
+    active?.fit.fit();
 }
 
 const toastEl = $<HTMLDivElement>('toast');
@@ -293,6 +308,7 @@ function cycleTab(step: number) {
 }
 
 function closeTab(t: Tab) {
+    cancelRetry(t);
     forgetFiles(t.id);
     if (t === active) closeSearch();
     if (t.dialog && t === active) hideDialog();
@@ -341,8 +357,12 @@ function updateTitle() {
     WindowSetTitle(title);
 }
 
-/** Connects tab t with req; returns the protocol. Throws on failure. */
-async function connectTab(t: Tab, req: main.ConnectRequest): Promise<string> {
+/**
+ * Connects tab t with req; returns the protocol. Throws on failure.
+ * keepScreen keeps the old output (automatic reconnect) instead of clearing it.
+ */
+async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = false): Promise<string> {
+    cancelRetry(t);
     req.cols = t.term.cols;
     req.rows = t.term.rows;
     forgetFiles(t.id); // a reconnect replaces the old connection's file window
@@ -353,7 +373,7 @@ async function connectTab(t: Tab, req: main.ConnectRequest): Promise<string> {
     }
     t.req = req;
     t.proto = protocol;
-    t.term.reset();
+    if (!keepScreen) t.term.reset();
     applyEncoding(t, req.encoding || 'UTF-8');
     if (protocol === 'ftp') {
         setState(t, 'ftp');
@@ -362,6 +382,49 @@ async function connectTab(t: Tab, req: main.ConnectRequest): Promise<string> {
         setState(t, 'on');
     }
     return protocol;
+}
+
+// ---- Automatic reconnect ----
+
+const RETRY_DELAYS = [3, 5, 10, 20, 30]; // seconds; the last one repeats
+const MAX_RETRIES = 10;
+
+function scheduleRetry(t: Tab, attempt: number, why: string) {
+    cancelRetry(t);
+    const reason = `\r\n\x1b[33m[${why.replace(/\n/g, '\r\n')}]\r\n`;
+    if (attempt > MAX_RETRIES) {
+        t.term.write(`${reason}[${MAX_RETRIES}번 시도했지만 연결하지 못했습니다] Enter: 다시 접속\x1b[0m\r\n`);
+        return;
+    }
+    const secs = RETRY_DELAYS[Math.min(attempt - 1, RETRY_DELAYS.length - 1)];
+    t.term.write(`${reason}[${secs}초 후 다시 연결합니다 (${attempt}/${MAX_RETRIES})] Enter: 지금 연결 · Esc: 취소\x1b[0m\r\n`);
+    t.el.classList.add('retry');
+    t.retry = {attempt, timer: window.setTimeout(() => retryNow(t), secs * 1000)};
+}
+
+function cancelRetry(t: Tab) {
+    if (!t.retry) return;
+    clearTimeout(t.retry.timer);
+    t.retry = undefined;
+    t.el.classList.remove('retry');
+}
+
+async function retryNow(t: Tab) {
+    const attempt = t.retry?.attempt ?? 1;
+    cancelRetry(t);
+    if (!t.req || !tabs.has(t.id) || t.state !== 'idle') return;
+    t.reconnecting = true;
+    t.el.classList.add('retry');
+    t.term.write(`\x1b[90m다시 연결하는 중... ${t.req.host}:${t.req.port}\x1b[0m\r\n`);
+    try {
+        await connectTab(t, t.req, true);
+        notice(t, '다시 연결했습니다');
+    } catch (e) {
+        if (tabs.has(t.id) && t.state === 'idle') scheduleRetry(t, attempt + 1, String(e));
+    } finally {
+        t.reconnecting = false;
+        if (!t.retry) t.el.classList.remove('retry');
+    }
 }
 
 async function reconnect(t: Tab) {
@@ -385,6 +448,10 @@ async function duplicate(t: Tab) {
 }
 
 function disconnect(t: Tab) {
+    if (t.retry) {
+        cancelRetry(t);
+        t.term.write('\x1b[33m[자동 재접속을 취소했습니다] Enter: 다시 접속\x1b[0m\r\n');
+    }
     if (t.state === 'idle') return;
     closeFiles(t.id);
     Disconnect(t.id);
@@ -421,12 +488,14 @@ EventsOn('term:data', (id: number, b64: string) => {
     if (t !== active) t.el.classList.add('activity');
 });
 
-EventsOn('term:closed', (id: number, msg: string) => {
+// lost: the connection broke (not ended by the server), so it may be reconnected.
+EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
     const t = tabs.get(id);
     if (!t) return;
     forgetFiles(t.id);
     setState(t, 'idle');
-    t.term.write(`\r\n\x1b[33m[${msg}] Enter: 다시 접속\x1b[0m\r\n`);
+    if (lost && settings.autoReconnect && t.req) scheduleRetry(t, 1, msg);
+    else t.term.write(`\r\n\x1b[33m[${msg}] Enter: 다시 접속\x1b[0m\r\n`);
 });
 
 EventsOn('xfer:progress', (id: number) => tabs.get(id)?.el.classList.add('busy'));
@@ -527,6 +596,7 @@ async function openDialog(t?: Tab | null) {
         tab = t ?? active!;
     }
     if (tab.dialog) return activate(tab);
+    cancelRetry(tab);
 
     history = (await GetHistory()) ?? [];
     if (tab.req) {
@@ -724,14 +794,27 @@ form.addEventListener('keydown', ev => {
     }
 });
 
+// ---- Settings window ----
+
+function showPrefs() {
+    if (!modalOpen()) openPrefs(applyFontSize, focusActive);
+}
+
+$<HTMLButtonElement>('prefsBtn').addEventListener('click', showPrefs);
+
 // ---- Shortcuts ----
+
+/** A window that takes all keys until it is closed. */
+function modalOpen() {
+    return pasteConfirmOpen() || prefsOpen();
+}
 
 function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.type !== 'keydown') return false;
     if (ev.key === 'F1' && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) return true;
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVS]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSO]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
@@ -742,10 +825,10 @@ window.addEventListener('keydown', ev => {
     const el = ev.target;
     const typing = el instanceof HTMLInputElement ||
         (el instanceof HTMLTextAreaElement && !el.classList.contains('xterm-helper-textarea'));
-    if ((key === 'C' || key === 'V') && (typing || t?.dialog || filesOpen() || helpOpen() || pasteConfirmOpen())) return;
+    if ((key === 'C' || key === 'V') && (typing || t?.dialog || filesOpen() || helpOpen() || modalOpen())) return;
     ev.preventDefault();
     ev.stopPropagation();
-    if (pasteConfirmOpen()) return;
+    if (modalOpen()) return;
     if (ev.key === 'F1') return toggleHelp(focusActive);
     // Other shortcuts wait until the help window is closed.
     if (helpOpen()) return;
@@ -765,6 +848,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'S':
             if (t && !t.dialog && !filesOpen()) openSearch(t.search, focusActive);
+            break;
+        case 'O':
+            showPrefs();
             break;
         case 'T':
         case 'N':

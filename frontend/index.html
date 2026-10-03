@@ -9,6 +9,7 @@
 <div id="tabbar">
     <div id="tabs"></div>
     <button type="button" id="newTab" title="새 탭 (Ctrl+Shift+T)">+</button>
+    <button type="button" id="prefsBtn" title="설정 (Ctrl+Shift+O)">⚙</button>
 </div>
 <div id="terms"></div>
 <div id="toast" hidden></div>
@@ -119,6 +120,33 @@
             <div class="buttons">
                 <button type="button" id="pasteOk">붙여넣기</button>
                 <button type="button" id="pasteCancel">취소</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="prefsOverlay" class="overlay modal" hidden>
+    <div class="dialog prefs" id="prefs" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title">설정</span>
+            <button type="button" class="close" id="prefsX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <fieldset>
+                <legend>화면</legend>
+                <label class="row">글꼴 크기 <input id="pFont" inputmode="numeric"/> <span class="hint">8~40 (Ctrl+휠로도 조절)</span></label>
+                <label class="check"><input type="checkbox" id="pPaste"/> 여러 줄을 붙여넣기 전에 확인</label>
+            </fieldset>
+            <fieldset>
+                <legend>연결</legend>
+                <label class="row">연결 유지 간격 <input id="pKeepAlive" inputmode="numeric"/> <span class="hint">초, 0 = 끄기 (새 연결부터 적용)</span></label>
+                <label class="check"><input type="checkbox" id="pReconnect"/> 연결이 끊기면 자동으로 다시 연결</label>
+            </fieldset>
+            <div class="error" id="pError"></div>
+            <div class="buttons">
+                <button type="button" id="pOk">확인</button>
+                <button type="button" id="pCancel">취소</button>
             </div>
         </div>
     </div>

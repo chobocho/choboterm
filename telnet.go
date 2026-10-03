@@ -18,6 +18,7 @@ const (
 	tnWILL = 251
 	tnSB   = 250
 	tnSE   = 240
+	tnNOP  = 241
 
 	optBinary = 0
 	optEcho   = 1
@@ -84,6 +85,20 @@ func dialTelnet(req ConnectRequest, conn net.Conn) (Session, error) {
 }
 
 func (t *telnetSession) Close() error { return t.conn.Close() }
+
+// keepAlive sends a Telnet NOP so idle connections aren't dropped by routers
+// and a dead connection shows up as a write error.
+func (t *telnetSession) keepAlive() error {
+	t.wmu.Lock()
+	defer t.wmu.Unlock()
+	_ = t.conn.SetWriteDeadline(time.Now().Add(keepAliveTimeout))
+	_, err := t.conn.Write([]byte{tnIAC, tnNOP})
+	_ = t.conn.SetWriteDeadline(time.Time{})
+	if err != nil && isTimeout(err) {
+		err = errNoReply
+	}
+	return err
+}
 
 func (t *telnetSession) rawWrite(p []byte) error {
 	t.wmu.Lock()

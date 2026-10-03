@@ -34,6 +34,10 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 - **글꼴 크기**: `Ctrl+휠`, `Ctrl+=` / `Ctrl+-`로 바꾸고 `Ctrl+0`으로 되돌립니다. 모든 탭에 적용되고 다음 실행 때도 유지됩니다.
 - **스크롤백 검색**: `Ctrl+Shift+S`로 검색 막대를 엽니다. 입력하는 대로 가장 최근 출력부터 찾고, 모든 결과를 강조합니다. `Enter`는 위로(이전 출력), `Shift+Enter`는 아래로, `Alt+C`는 대소문자 구분, `Alt+R`은 정규식입니다.
 - **링크 열기**: 화면에 나온 `http://` / `https://` 주소를 `Ctrl+클릭`하면 기본 브라우저로 엽니다. 그냥 클릭은 선택용으로 남겨 둡니다.
+- **연결 유지 / 자동 재접속**: SSH는 `keepalive@openssh.com`, Telnet은 NOP를 60초마다 보내 공유기·방화벽이 쉬는 연결을 끊지 않게 하고, 3번 연속 응답이 없으면 끊긴 것으로 봅니다.
+  - 네트워크가 끊기면 3·5·10·20·30초 간격으로 최대 10번 다시 연결합니다. 화면 내용은 그대로 둡니다. `Enter`로 바로 연결, `Esc`로 취소합니다.
+  - `exit`처럼 서버가 정상적으로 끝낸 연결은 다시 연결하지 않습니다.
+- **설정 창**: `Ctrl+Shift+O` 또는 탭 바 오른쪽 ⚙ 버튼. 글꼴 크기, 여러 줄 붙여넣기 확인, 연결 유지 간격(0 = 끄기), 자동 재접속을 바꿉니다.
 - **창 위치 기억**: 창 크기·위치·최대화 상태를 닫을 때 저장해 다음 실행 때 그대로 엽니다. 모니터를 뺀 경우처럼 저장된 위치가 화면 밖이면 보이는 곳으로 옮깁니다.
 - **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 Telnet만, 암호화해서 저장합니다.
 
@@ -53,6 +57,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP) |
 | `Ctrl+휠` / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | 글꼴 크게 / 작게 / 기본값 |
 | `Ctrl+Shift+S` | 스크롤백 검색 |
+| `Ctrl+Shift+O` | 설정 창 |
 | `Ctrl+클릭` | 화면의 URL을 브라우저에서 열기 |
 | `Ctrl+Shift+C` / `Ctrl+Shift+V` | 복사 / 붙여넣기 (마우스 선택 = 복사, 우클릭 = 붙여넣기) |
 | `Ctrl+C` / `Ctrl+X` (Zmodem 전송 중) | 전송 취소 |
@@ -145,6 +150,7 @@ go test ./...
 | `frontend/src/files.ts` | 파일 전송 창, 진행률 상자 |
 | `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
 | `frontend/src/search.ts` | 스크롤백 검색 막대 |
+| `frontend/src/prefs.ts` | 설정 창 |
 | `frontend/src/paste.ts` | 여러 줄 붙여넣기 확인 창 |
 | `frontend/src/settings.ts` | 설정 읽기 / 저장 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |

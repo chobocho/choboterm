@@ -75,6 +75,16 @@ html, body {
     background: #f0b429;
 }
 
+/* Waiting to reconnect after the connection broke. */
+.tab.retry .dot {
+    background: #f0b429;
+    animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+    to { visibility: hidden; }
+}
+
 .tab.activity:not(.active) .label {
     color: #5eead4;
     font-weight: bold;
@@ -125,9 +135,25 @@ html, body {
     cursor: pointer;
 }
 
-#newTab:hover {
+#newTab:hover,
+#prefsBtn:hover {
     background: #34363b;
     color: #fff;
+}
+
+/* Pushed to the right end of the tab bar. */
+#prefsBtn {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 24px;
+    margin: 0 0 3px auto;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #a9abb0;
+    font-size: 15px;
+    line-height: 22px;
+    cursor: pointer;
 }
 
 #terms {
@@ -642,6 +668,58 @@ html, body {
 }
 
 .help .buttons #helpClose {
+    outline: 1px solid #0078d7;
+}
+
+/* ---- Settings window ---- */
+
+.dialog.prefs {
+    width: min(460px, calc(100vw - 32px));
+    outline: none;
+}
+
+.prefs .body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.prefs fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 12px 10px;
+    border: 1px solid #c8c8c8;
+}
+
+.prefs legend {
+    padding: 0 4px;
+    color: #0063b1;
+}
+
+.prefs label.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.prefs label.row input {
+    width: 60px;
+    flex: 0 0 auto;
+}
+
+.prefs .hint {
+    color: #777;
+    font-size: 12px;
+}
+
+.prefs .buttons {
+    margin-top: 0;
+}
+
+.prefs .buttons #pOk {
     outline: 1px solid #0078d7;
 }
 

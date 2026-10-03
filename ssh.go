@@ -24,8 +24,43 @@ type sshSession struct {
 	stdout  io.Reader
 }
 
-func (s *sshSession) Read(p []byte) (int, error)  { return s.stdout.Read(p) }
 func (s *sshSession) Write(p []byte) (int, error) { return s.stdin.Write(p) }
+
+// Read returns errConnLost when the output ends because the connection broke:
+// the output also ends when the shell exits, but then the server reports an
+// exit status first.
+func (s *sshSession) Read(p []byte) (int, error) {
+	n, err := s.stdout.Read(p)
+	if err == io.EOF {
+		done := make(chan error, 1)
+		go func() { done <- s.session.Wait() }()
+		select {
+		case werr := <-done:
+			var missing *ssh.ExitMissingError
+			if errors.As(werr, &missing) {
+				err = errConnLost
+			}
+		case <-time.After(5 * time.Second):
+		}
+	}
+	return n, err
+}
+
+// keepAlive asks the server for a reply, as OpenSSH's ServerAliveInterval does.
+func (s *sshSession) keepAlive() error {
+	done := make(chan error, 1)
+	go func() {
+		// Servers answer even requests they don't know (with a failure), which is enough.
+		_, _, err := s.client.SendRequest("keepalive@openssh.com", true, nil)
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(keepAliveTimeout):
+		return errNoReply
+	}
+}
 func (s *sshSession) Resize(cols, rows int) error { return s.session.WindowChange(rows, cols) }
 func (s *sshSession) Close() error {
 	_ = s.session.Close()

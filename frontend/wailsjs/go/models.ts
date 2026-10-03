@@ -99,6 +99,8 @@ export namespace main {
 	export class Settings {
 	    fontSize: number;
 	    pasteNoConfirm: boolean;
+	    keepAlive: number;
+	    autoReconnect: boolean;
 	    window?: WindowState;
 	
 	    static createFrom(source: any = {}) {
@@ -109,6 +111,8 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.fontSize = source["fontSize"];
 	        this.pasteNoConfirm = source["pasteNoConfirm"];
+	        this.keepAlive = source["keepAlive"];
+	        this.autoReconnect = source["autoReconnect"];
 	        this.window = this.convertValues(source["window"], WindowState);
 	    }
 	

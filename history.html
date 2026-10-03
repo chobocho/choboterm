@@ -238,5 +238,14 @@
   <li>프런트엔드의 SaveSettings는 창 위치를 덮어쓰지 않도록 보존 (테스트 추가)</li>
   <li>검증: build\bin 실행 파일로 PowerShell 자동 점검 — 이동 후 종료→재실행 시 100,120,900,620 그대로, 최대화 복원, 화면 밖 좌표(-30000)는 0,0으로 보정. 실행 중인 release\choboterm.exe는 건드리지 않음. 테스트 중 settings.json은 백업 후 복구</li>
 </ul>
+
+<h2>2026-10-03 — 연결 유지와 자동 재접속</h2>
+<ul>
+  <li>연결 유지: SSH keepalive@openssh.com 전역 요청, Telnet IAC NOP를 설정 간격(기본 60초)마다 전송. 15초 안에 응답이 없으면 실패, 3번 연속 실패하면 연결을 닫고 '응답하지 않아 끊었습니다' 표시</li>
+  <li>정상 종료와 끊김 구분: SSH는 출력이 끝난 뒤 exit-status가 없으면(ExitMissingError) 끊김, Telnet은 EOF가 아닌 읽기 오류면 끊김. term:closed 이벤트에 lost 플래그 추가</li>
+  <li>자동 재접속: 끊긴 탭은 3·5·10·20·30초 간격으로 최대 10번 재시도, 화면 내용 유지(term.reset 안 함), 탭 점이 주황색으로 깜빡임. Enter 지금 연결 / Esc 취소, 연결 끊기·탭 닫기·접속 창 열기 시 취소</li>
+  <li>설정 창 추가(prefs.ts, Ctrl+Shift+O / 탭 바 ⚙): 글꼴 크기, 여러 줄 붙여넣기 확인, 연결 유지 간격(0~3600초), 자동 재접속</li>
+  <li>테스트: keepalive_test.go (SSH exit vs 끊김, keepalive 응답/무응답, 무응답 3회 시 탭 종료, 정상 종료는 lost 아님, Telnet NOP). 에코 서버 + Edge 자동 점검으로 RST 끊김→카운트다운→재연결, Esc 취소, quit 시 재접속 안 함, 설정 저장 확인</li>
+</ul>
 </body>
 </html>
