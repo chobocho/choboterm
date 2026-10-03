@@ -3,6 +3,7 @@ import './style.css';
 
 import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
+import {WebLinksAddon} from '@xterm/addon-web-links';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
@@ -12,7 +13,7 @@ import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabP
 
 import {CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
-import {ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
+import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -98,6 +99,13 @@ function createTab(): Tab {
     const fit = new FitAddon();
     term.loadAddon(fit);
     const search = attachSearch(term);
+    // Ctrl+click opens a URL; a plain click stays free for selecting.
+    term.loadAddon(new WebLinksAddon((ev, uri) => {
+        if (ev.ctrlKey) BrowserOpenURL(uri);
+    }, {
+        hover: () => (pane.title = 'Ctrl+클릭: 브라우저에서 열기'),
+        leave: () => (pane.title = ''),
+    }));
     loadUnicodeWidths(term);
     term.unicode.activeVersion = NARROW;
     term.attachCustomKeyEventHandler(ev => !isAppShortcut(ev));

@@ -45,6 +45,7 @@ const TEXT: Record<Lang, HelpText> = {
                 rows: [
                     ['Ctrl+휠 / Ctrl+= / Ctrl+-', '글꼴 크게 / 작게 (모든 탭, 크기 기억)'],
                     ['Ctrl+0', '글꼴 크기 기본값(15)'],
+                    ['Ctrl+클릭', '화면의 http(s) 주소를 브라우저에서 열기'],
                     ['Ctrl+Shift+S', '스크롤백 검색 (Enter: 위로, Shift+Enter: 아래로, Alt+C: 대소문자, Alt+R: 정규식, Esc: 닫기)'],
                 ],
             },
@@ -109,6 +110,7 @@ const TEXT: Record<Lang, HelpText> = {
                 rows: [
                     ['Ctrl+Wheel / Ctrl+= / Ctrl+-', 'Larger / smaller font (all tabs, remembered)'],
                     ['Ctrl+0', 'Default font size (15)'],
+                    ['Ctrl+Click', 'Open an http(s) address in the browser'],
                     ['Ctrl+Shift+S', 'Search scrollback (Enter: up, Shift+Enter: down, Alt+C: match case, Alt+R: regex, Esc: close)'],
                 ],
             },

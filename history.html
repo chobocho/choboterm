@@ -223,5 +223,12 @@
   <li>Enter 위로 / Shift+Enter 아래로, Alt+C 대소문자 구분, Alt+R 정규식(잘못된 정규식 표시), Esc 닫기. 탭을 바꾸면 새 탭에서 같은 검색어로 다시 검색</li>
   <li>입력칸에서 Ctrl+Shift+C/V는 터미널이 아닌 입력칸의 기본 동작을 따르도록 수정</li>
 </ul>
+
+<h2>2026-10-03 — URL Ctrl+클릭 열기</h2>
+<ul>
+  <li>@xterm/addon-web-links 0.12 추가. 화면의 http(s) 주소를 Ctrl+클릭하면 기본 브라우저(BrowserOpenURL)로 열기, 그냥 클릭은 선택용으로 유지</li>
+  <li>링크 위에 마우스를 올리면 'Ctrl+클릭: 브라우저에서 열기' 툴팁</li>
+  <li>검증: wails dev + Edge(playwright-core) 자동 점검으로 1~4단계 확인 — 글꼴 토스트, 검색 'line 5' 11건/Enter 이동, 여러 줄 붙여넣기 확인 창 후 서버 수신, 한 줄은 확인 없이 전송, F1 한/영 전환</li>
+</ul>
 </body>
 </html>
