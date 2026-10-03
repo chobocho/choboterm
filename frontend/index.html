@@ -29,6 +29,8 @@
     <li data-act="duplicate">복제 (새 탭으로 같은 서버 접속)</li>
     <li data-act="files">파일 전송</li>
     <li data-act="forwards">포트 포워딩</li>
+    <li data-act="log">로그 기록 시작</li>
+    <li data-act="logs">로그 폴더 열기</li>
     <li data-act="disconnect">연결 끊기</li>
     <li class="sep"></li>
     <li data-act="close">탭 닫기</li>
@@ -147,6 +149,16 @@
                 <legend>연결</legend>
                 <label class="row">연결 유지 간격 <input id="pKeepAlive" inputmode="numeric"/> <span class="hint">초, 0 = 끄기 (새 연결부터 적용)</span></label>
                 <label class="check"><input type="checkbox" id="pReconnect"/> 연결이 끊기면 자동으로 다시 연결</label>
+            </fieldset>
+            <fieldset>
+                <legend>세션 로그</legend>
+                <label class="check"><input type="checkbox" id="pLogAuto"/> 접속할 때마다 자동으로 기록</label>
+                <label class="check"><input type="checkbox" id="pLogPlain"/> 색상·제어 코드를 빼고 일반 텍스트로 저장</label>
+                <div class="dirrow">
+                    <input id="pLogDir" spellcheck="false" autocomplete="off" placeholder="문서\choboterm\logs" title="로그 폴더 (비우면 기본 위치)"/>
+                    <button type="button" id="pLogBrowse">찾아보기</button>
+                </div>
+                <span class="hint">폴더를 비우면 문서\choboterm\logs · 직접 시작 / 중지: Ctrl+Shift+L 또는 탭 우클릭 메뉴</span>
             </fieldset>
             <div class="error" id="pError"></div>
             <div class="buttons">

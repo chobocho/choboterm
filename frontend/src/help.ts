@@ -56,7 +56,8 @@ const TEXT: Record<Lang, HelpText> = {
                     ['Ctrl+Shift+D', '연결 끊기 (탭은 유지)'],
                     ['Ctrl+Shift+E', 'UTF-8 ↔ EUC-KR 전환'],
                     ['자동 재접속', '네트워크가 끊기면 3·5·10·20·30초 간격으로 최대 10번 다시 연결 (Enter: 지금 · Esc: 취소)'],
-                    ['Ctrl+Shift+O / ⚙', '설정: 글꼴, 붙여넣기 확인, 연결 유지 간격, 자동 재접속'],
+                    ['Ctrl+Shift+O / ⚙', '설정: 글꼴, 붙여넣기 확인, 연결 유지 간격, 자동 재접속, 세션 로그'],
+                    ['Ctrl+Shift+L', '세션 로그 기록 시작 / 중지: 받은 출력을 파일에 계속 저장 (탭에 빨간 점 표시). 설정에서 자동 기록·폴더·일반 텍스트 선택'],
                     ['Ctrl+Shift+M', '매크로 창: 자주 쓰는 명령을 저장해 두고 보내기 (Enter / 더블클릭)'],
                     ['Ctrl+Shift+P', 'SSH 포트 포워딩: 로컬(-L) / 원격(-R) / 동적(-D, SOCKS5). 호스트별로 저장해 다음 접속 때 자동 적용'],
                     ['F2~F12, Shift/Ctrl+F1~F12', '매크로에 지정한 키를 누르면 바로 보내기 (지정하지 않은 키는 프로그램으로 전달)'],
@@ -87,6 +88,7 @@ const TEXT: Record<Lang, HelpText> = {
         notes: [
             '다운로드와 Zmodem 수신 파일은 기본으로 ~/Downloads에 저장됩니다.',
             '접속 기록: %AppData%\\choboterm\\hosts.json',
+            '세션 로그: 기본으로 문서\\choboterm\\logs에 "호스트_포트_날짜_시간.log"로 저장됩니다.',
         ],
     },
     en: {
@@ -129,7 +131,8 @@ const TEXT: Record<Lang, HelpText> = {
                     ['Ctrl+Shift+D', 'Disconnect (keeps the tab)'],
                     ['Ctrl+Shift+E', 'Toggle UTF-8 ↔ EUC-KR'],
                     ['Auto reconnect', 'After a network drop, retries at 3/5/10/20/30 s, up to 10 times (Enter: now · Esc: cancel)'],
-                    ['Ctrl+Shift+O / ⚙', 'Settings: font, paste confirmation, keepalive interval, auto reconnect'],
+                    ['Ctrl+Shift+O / ⚙', 'Settings: font, paste confirmation, keepalive interval, auto reconnect, session log'],
+                    ['Ctrl+Shift+L', 'Start / stop the session log: keeps writing the output to a file (red dot on the tab). Auto start, folder and plain text in Settings'],
                     ['Ctrl+Shift+M', 'Macros: save frequent commands and send them (Enter / double-click)'],
                     ['Ctrl+Shift+P', 'SSH port forwarding: local (-L) / remote (-R) / dynamic (-D, SOCKS5). Saved per host and started on the next connection'],
                     ['F2-F12, Shift/Ctrl+F1-F12', 'Sends the macro bound to the key (unbound keys reach the program)'],
@@ -160,6 +163,7 @@ const TEXT: Record<Lang, HelpText> = {
         notes: [
             'Downloads and Zmodem received files are saved to ~/Downloads by default.',
             'Connection history: %AppData%\\choboterm\\hosts.json',
+            'Session logs: saved as "host_port_date_time.log" in Documents\\choboterm\\logs by default.',
         ],
     },
 };

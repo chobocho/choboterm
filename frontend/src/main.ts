@@ -15,7 +15,9 @@ import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
-import {CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
+import {
+    CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding, ShowLogs, StartLog, StopLog,
+} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
 
@@ -49,6 +51,8 @@ interface Tab {
     // Automatic reconnect after the connection broke: the pending attempt.
     retry?: {attempt: number; timer: number};
     reconnecting?: boolean;
+    // Session log file while logging is on.
+    log?: string;
 }
 
 // Connect dialog contents saved per tab, so switching tabs keeps them.
@@ -346,6 +350,8 @@ function setState(t: Tab, state: TabState) {
         const usual = [21, 22, 23].includes(Number(t.req.port));
         t.label.textContent = usual ? t.req.host : `${t.req.host}:${t.req.port}`;
         t.el.title = `${scheme}://${t.req.login ? t.req.login + '@' : ''}${t.req.host}:${t.req.port}`;
+        if (t.log) t.el.title += `
+로그 기록 중: ${t.log}`;
     }
     if (t === active) updateTitle();
 }
@@ -384,6 +390,8 @@ async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = false):
         t.term.write(`FTP ${req.host}:${req.port}\r\n\x1b[90mCtrl+Shift+F: 파일 전송 창 열기 · 탭을 닫으면 연결이 끊어집니다\x1b[0m\r\n`);
     } else {
         setState(t, 'on');
+        // The screen was cleared after an automatic log start was announced.
+        if (t.log && !keepScreen) notice(t, `로그 기록 중: ${t.log}`);
     }
     return protocol;
 }
@@ -504,6 +512,17 @@ EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
     else t.term.write(`\r\n\x1b[33m[${msg}] Enter: 다시 접속\x1b[0m\r\n`);
 });
 
+// path: the new log file, or "" when logging stopped.
+EventsOn('log:changed', (id: number, path: string) => {
+    const t = tabs.get(id);
+    if (!t) return;
+    t.log = path || undefined;
+    t.el.classList.toggle('log', !!path);
+    setState(t, t.state); // refresh the tooltip
+    // While connecting, connectTab announces it once the screen is reset.
+    if (t.state === 'on' || !path) notice(t, path ? `로그 기록 시작: ${path}` : '로그 기록을 멈췄습니다');
+});
+
 EventsOn('xfer:progress', (id: number) => tabs.get(id)?.el.classList.add('busy'));
 EventsOn('xfer:end', (id: number) => tabs.get(id)?.el.classList.remove('busy'));
 
@@ -521,6 +540,8 @@ function showMenu(t: Tab, x: number, y: number) {
     enable('files', t.state !== 'idle');
     enable('forwards', t.state === 'on' && t.proto === 'ssh');
     enable('disconnect', t.state !== 'idle');
+    enable('log', !!t.log || t.state === 'on');
+    menu.querySelector('[data-act="log"]')!.textContent = t.log ? '로그 기록 중지' : '로그 기록 시작';
     menu.hidden = false;
     const r = menu.getBoundingClientRect();
     menu.style.left = `${Math.min(x, window.innerWidth - r.width - 4)}px`;
@@ -550,6 +571,12 @@ menu.addEventListener('click', ev => {
             break;
         case 'forwards':
             showForwards(t);
+            break;
+        case 'log':
+            toggleLog(t);
+            break;
+        case 'logs':
+            ShowLogs(t.id).catch(e => notice(t, String(e)));
             break;
         case 'disconnect':
             disconnect(t);
@@ -834,6 +861,19 @@ function showForwards(t: Tab) {
     openForwards(t.id, t.req.host, focusActive);
 }
 
+// ---- Session log ----
+
+/** Starts or stops writing tab t's output to a file; log:changed reports the result. */
+async function toggleLog(t: Tab) {
+    if (t.log) return StopLog(t.id);
+    if (t.state !== 'on') return toast('연결된 터미널에서만 로그를 기록할 수 있습니다');
+    try {
+        await StartLog(t.id);
+    } catch (e) {
+        notice(t, String(e));
+    }
+}
+
 // ---- Shortcuts ----
 
 /** A window that takes all keys until it is closed. */
@@ -847,7 +887,7 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (macroForKey(ev)) return true;
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMP]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPL]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
@@ -894,6 +934,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'P':
             if (t) showForwards(t);
+            break;
+        case 'L':
+            if (t) toggleLog(t);
             break;
         case 'T':
         case 'N':

@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>choboterm 작업 기록</title></head>
+<body>
+<h1>choboterm 작업 기록</h1>
+
+<h2>2026-10-02 — 기술 스택 검토</h2>
+<ul>
+  <li>질문: Go + Wails + xterm.js 조합으로 SSH/Telnet 터미널을 만들고 X11 포워딩은 지원하지 않아도 되는지</li>
+  <li>결론: 적합한 조합임. X11 미지원도 일반 용도에서는 문제없음 (PuTTY/Windows Terminal 대체 수준이라면 대부분 불필요)</li>
+  <li>권장 라이브러리: golang.org/x/crypto/ssh, xterm.js + addon-fit/webgl/search/web-links, Telnet은 직접 구현(IAC 협상: NAWS, TTYPE, ECHO, SGA)</li>
+  <li>주의점: Wails 이벤트 브리지의 출력 배칭(16ms 단위 등), UTF-8 경계 처리, 리사이즈 시 WindowChange, known_hosts 검증, ssh-agent(Windows는 OpenSSH named pipe/Pageant)</li>
+</ul>
+
+<h2>2026-10-02 — ZTerm 기능 호환성 검토</h2>
+<ul>
+  <li>결론: ZTerm 주요 기능은 모두 구현 가능. 단, 일부는 xterm.js 기본 기능이 아니라 직접 구현 필요</li>
+  <li>쉬움: 주소록, 탭/다중 세션, 로그 저장, 스크롤백, ANSI 컬러, 자동 로그인</li>
+  <li>직접 구현: EUC-KR/CP949 변환(Go x/text), Zmodem(sz/rz), 스크립트/매크로, BBS 번호 클릭 메뉴</li>
+  <li>까다로움: 한글 IME 조합 표시, 동아시아 모호폭(─│ 등) 문자 2칸 처리 → 커스텀 unicode provider 필요</li>
+</ul>
+
+<h2>2026-10-02 — 프로젝트 생성 및 ZTerm 스타일 접속 창 구현</h2>
+<ul>
+  <li>Wails v2(vanilla-ts) 프로젝트 생성, xterm.js(@xterm/xterm, addon-fit, addon-unicode11) 연동</li>
+  <li>시작 시 ZTerm처럼 Host / Port / Login / Pass + Connect / Cancel 접속 창 표시 (Alt+C, Alt+A, Esc 지원)</li>
+  <li>Port 22 → SSH, 그 외 → Telnet 자동 판별 (Port 칸 오른쪽에 프로토콜 표시)</li>
+  <li>Host 콤보박스: 최근 접속 20개 기록(%AppData%\choboterm\hosts.json, 비밀번호는 저장 안 함)</li>
+  <li>SSH(ssh.go): 비밀번호, keyboard-interactive, ~/.ssh 개인키 인증, known_hosts 검증(처음 보는 호스트는 확인 창, 키가 바뀌면 차단)</li>
+  <li>Telnet(telnet.go): IAC 협상(NAWS/TTYPE/ECHO/SGA/BINARY), CR NUL 변환, login:/password: 프롬프트 자동 로그인</li>
+  <li>출력은 16ms 단위로 묶어 base64 이벤트로 전달 (app.go pump)</li>
+  <li>단축키: Ctrl+Shift+N 접속 창, Ctrl+Shift+D 연결 끊기, 연결이 끊긴 상태에서 Enter 누르면 다시 접속</li>
+  <li>검증: go vet / go test(Telnet 협상·이스케이프·자동 로그인) 통과, wails build 성공, 실행 화면 확인. 실제 서버 접속 테스트는 미실시</li>
+  <li>커밋 d6df82d (main). .gitignore에 /choboterm.exe, .idea/ 추가</li>
+</ul>
+
+<h2>2026-10-02 — EUC-KR(CP949) 인코딩 지원</h2>
+<ul>
+  <li>문제: EUC-KR 서버 접속 시 한글 깨짐 (xterm.js는 UTF-8만 해석)</li>
+  <li>codec.go: 수신 CP949→UTF-8 변환(청크 경계에서 잘린 2바이트 문자 보존), 송신 UTF-8→CP949 변환</li>
+  <li>CP949에 없는 문자는 '?'로 전송 (x/text의 ReplaceUnsupported는 0x1A=Ctrl+Z를 보내므로 사용 안 함)</li>
+  <li>접속 창에 Code(UTF-8 / EUC-KR) 항목 추가, 접속 기록에 인코딩도 저장, 창 제목에 [인코딩] 표시</li>
+  <li>Ctrl+Shift+E: 접속 중 UTF-8 ↔ EUC-KR 즉시 전환</li>
+  <li>cjkwidth.ts: EUC-KR 모드에서 모호폭 문자(─│■○※ 등)를 2칸으로 그리는 xterm.js 유니코드 제공자(11-cjk) 추가 → BBS 박스 그림 정렬</li>
+  <li>검증: codec 단위 테스트(분할 수신, CP949 확장 문자 '똠', 인코딩, UTF-8 통과) 통과, wails build 성공, 접속 창 확인. 실제 EUC-KR 서버 접속은 미확인</li>
+</ul>
+
+<h2>2026-10-02 — "unknown Unicode version 11-cjk" 오류 수정</h2>
+<ul>
+  <li>증상: EUC-KR로 접속은 되지만 접속 창에 오류가 뜨고 창이 닫히지 않음</li>
+  <li>원인: xterm.js의 term.unicode는 접근할 때마다 새 객체를 반환 → 인스턴스의 register를 가로채도 애드온은 다른 객체를 써서 Unicode 11 제공자를 못 잡음 → 11-cjk 미등록</li>
+  <li>수정: 공유 프로토타입의 register를 가로채도록 변경(cjkwidth.ts). 등록에 실패해도 접속은 막히지 않도록 applyEncoding에서 등록 여부 확인</li>
+  <li>검증: 실행 화면에서 versions=6,11,11-cjk 확인, WIDE 모드에서 ─│■○※가 2칸 폭으로 배치되는 것 확인(임시 디버그 코드는 제거)</li>
+  <li>남은 문제: 2칸 폭 셀 안에서 ─ 같은 선 문자가 1칸 길이로 그려져 가로선이 끊겨 보일 수 있음</li>
+  <li>커밋 0313e6f (main): EUC-KR 지원 + 11-cjk 오류 수정 (이전 커밋 이후 기록한 history.html 변경도 포함)</li>
+</ul>
+
+<h2>2026-10-03 — 1단계: SFTP 파일 전송</h2>
+<ul>
+  <li>filexfer.go: 공통 RemoteFS 인터페이스(Getwd/List/Download/Upload/Close), 진행률(100ms 단위 xfer:progress 이벤트), 취소, 다운로드 기본 위치 ~/Downloads</li>
+  <li>sftp.go: 기존 SSH 연결 위에 SFTP 채널을 열어 재로그인 없이 사용 (pkg/sftp), 심볼릭 링크 폴더 처리</li>
+  <li>files.ts: 파일 전송 창 — 경로 입력, 상위 폴더, 새로 고침, 더블클릭/Enter로 폴더 이동·다운로드, 여러 파일 업로드, 키보드(↑↓ Home End Enter Backspace F5 Esc)</li>
+  <li>진행률 상자: 파일 창이 열려 있으면 창 안에, 아니면(Zmodem 등) 오른쪽 아래에 표시. 속도 표시, 취소 버튼</li>
+  <li>단축키 Ctrl+Shift+F (SSH 접속 중). Telnet이면 sz/rz 사용 안내</li>
+  <li>수정: main.ts 안내 문구에 줄바꿈/ESC가 이스케이프 대신 실제 제어문자로 들어가 있던 것 복구</li>
+  <li>검증: 프로세스 내 SSH+SFTP 서버로 목록/다운로드/1MB 업로드 테스트 통과, 화면 레이아웃 확인(임시 데이터). 실제 서버에서 GUI 조작은 미확인</li>
+</ul>
+
+<h2>2026-10-03 — 2단계: FTP</h2>
+<ul>
+  <li>Port 21 → FTP (접속 창 Port 칸에 FTP 표시). 터미널 없이 바로 파일 전송 창이 열리고, 창을 닫으면 연결을 끊고 접속 창으로 돌아감</li>
+  <li>ftp.go: jlaffaye/ftp 사용, Login이 비면 anonymous 로그인, 60초마다 NOOP으로 연결 유지(전송 중엔 생략)</li>
+  <li>Code가 EUC-KR이면 파일/폴더 이름을 CP949로 변환해서 송수신 (codec.DecodeString / EncodeString)</li>
+  <li>Connect가 사용한 프로토콜을 반환하도록 변경, FTP 접속 시 창 제목 ftp://host:port</li>
+  <li>검증: pyftpdlib(CP949 모드) 로컬 서버로 한글 이름 목록/다운로드/900KB 업로드·재다운로드 테스트 통과 (ftp_test.go, CHOBOTERM_FTP_TEST 환경변수 있을 때만 실행)</li>
+  <li>미지원: FTPS(TLS), 이어받기</li>
+</ul>
+
+<h2>2026-10-03 — 3단계: Zmodem (sz / rz)</h2>
+<ul>
+  <li>zmodem.go: ZMODEM 직접 구현 — hex/bin16/bin32 헤더, ZDLE 이스케이프, CRC16/CRC32 데이터 패킷, 받기(원격 sz)·보내기(원격 rz), 64KB 창 단위 ZCRCW/ZACK 흐름 제어, ZRPOS 재전송, 원격 취소(CAN×5) 감지</li>
+  <li>터미널 출력에서 시작 신호(**^XB00 = sz, **^XB01 = rz) 자동 감지. 읽기 경계에서 신호가 잘려도 처리, 끝나면 남은 바이트를 터미널로 돌려줌</li>
+  <li>받은 파일은 ~/Downloads에 저장(같은 이름이면 " (1)" 붙임), 파일명은 경로 제거·Windows 금지문자 치환, EUC-KR 이름 변환</li>
+  <li>rz 감지 시 파일 선택 창 → 선택 취소하면 원격 rz도 취소</li>
+  <li>Telnet 접속에서는 모든 제어문자 이스케이프(ESCCTL) 요청/사용 → CR NUL 변환 등에 안전</li>
+  <li>전송 중 키 입력 차단, Ctrl+C/Ctrl+X 또는 진행률 상자의 취소 버튼으로 중단, 실패·취소 시 받다 만 파일 삭제</li>
+  <li>테스트를 위해 이벤트 전송/창 제목/다운로드 폴더를 testHooks로 교체 가능하게 함</li>
+  <li>검증: Go 송수신 루프백, 실제 lrzsz 0.12.21rc(WSL, 설치 없이 dpkg -x로 임시 추출)와 양방향(일반·전체 이스케이프), 출력 감지→수신→터미널 복귀 E2E, Ctrl+C 취소 E2E 모두 통과 (CHOBOTERM_LRZSZ 환경변수 있을 때만 실행)</li>
+  <li>수정: 취소 시 받다 만 파일이 남던 문제(이름 있는 반환값이 정리 전에 덮어써짐)</li>
+</ul>
+
+<h2>2026-10-03 — 푸시</h2>
+<ul>
+  <li>origin/main(github.com/chobocho/choboterm)에 커밋 5개 푸시: d6df82d, 0313e6f, d1717ff, b5d67b9, 1a8479c</li>
+</ul>
+
+<h2>2026-10-03 — README 업데이트</h2>
+<ul>
+  <li>README.md를 한국어로 새로 작성: 기능(SSH/Telnet/FTP/SFTP/Zmodem/EUC-KR), 단축키, 파일 저장 위치, 빌드, 테스트(FTP·lrzsz 환경변수), 소스 구성, 미지원 기능</li>
+</ul>
+
+<h2>2026-10-03 — 앱 아이콘</h2>
+<ul>
+  <li>(이전 작업 기록 보충) README 커밋 67bf908 푸시 완료</li>
+  <li>새 아이콘: 옛 PC통신 파란 화면 느낌의 파란 그라데이션 둥근 사각형 + 어두운 화면 + 은은한 주사선 + 빛나는 민트색 &gt;_ 프롬프트</li>
+  <li>16/24/32px은 화면 테두리를 빼고 글자를 키운 단순 버전, 48~256px은 상세 버전으로 ICO 구성 → 작은 크기에서도 선명</li>
+  <li>tools/make_icon.py(Pillow)로 생성: build/appicon.png(1024px), build/windows/icon.ico. 다시 만들 때 이 스크립트 사용</li>
+  <li>접속 창과 파일 전송 창 제목 표시줄에도 16px 아이콘 표시 (frontend/src/assets/icon.png)</li>
+  <li>검증: 밝은/어두운 배경 미리보기, 16·24·32px 확대 확인, 빌드 후 창 제목 표시줄과 접속 창 아이콘 확인</li>
+</ul>
+
+<h2>2026-10-03 — V0.1.0 표시, Telnet 비밀번호 기억, SCP 자동 전환</h2>
+<ul>
+  <li>(이전 기록 보충) 앱 아이콘 커밋 d95b2d8, Python 캐시 정리 681f5e9 푸시 완료</li>
+  <li>버전(d7a99bd): main.go에 AppVersion=0.1.0, 창 제목 "choboterm V0.1.0 - host:port [인코딩]", 시작 화면에도 표시, wails.json에 제품 정보 추가. exe 속성 창의 버전 정보는 Wails 템플릿 언어 코드(0000) 문제로 표시되지 않음(이번 범위 밖)</li>
+  <li>Telnet 비밀번호(752b5da): 접속 시 Windows DPAPI(CryptProtectData, 현재 사용자)로 암호화해 hosts.json의 passEnc에 저장. Host 선택/입력 시 Pass 자동 채움 → Telnet 자동 로그인에 사용. Pass를 비우고 접속하면 삭제. SSH/FTP는 저장하지 않음. Windows 외에서는 저장 안 함</li>
+  <li>SCP: SFTP 서브시스템이 없으면 자동으로 SCP 사용. 목록은 LC_ALL=C ls -laL 결과 파싱(GNU/BusyBox), 다운로드 scp -f, 업로드 scp -t, 경로는 작은따옴표로 셸 이스케이프, EUC-KR 이름 변환. 파일 창 제목에 실제 프로토콜(SFTP/SCP/FTP) 표시</li>
+  <li>RemoteFS.Upload에 size 인자 추가(SCP는 크기를 먼저 보내야 함), FileOpen이 {home, protocol}을 반환</li>
+  <li>작업 중 발견: 셸 heredoc으로 넘긴 Python 스크립트에서 \\ 이스케이프가 바뀌는 문제 → 백슬래시가 들어가는 패치는 파일로 작성해서 실행</li>
+  <li>검증: 비밀번호 저장 테스트(파일에 평문 없음, 복원, 유지, 삭제), ls 파서 테스트, SFTP 없는 테스트 SSH 서버(명령은 WSL에서 실행)로 SCP 전환·한글/공백 목록·다운로드·공백과 따옴표가 든 경로 업로드·없는 파일 오류 테스트 통과, Windows/Linux go vet, wails build, 창 제목 확인</li>
+</ul>
+
+<h2>2026-10-03 — build.bat 추가</h2>
+<ul>
+  <li>(이전 기록 보충) 6779913까지 origin/main 푸시 완료</li>
+  <li>build.bat (CP949, CRLF): wails 확인 → go test → wails build -clean → release\choboterm.exe 복사. 단계별 한글 메시지, 실패 시 종료 코드 1</li>
+  <li>.gitignore에 release/ 추가, .gitattributes로 *.bat은 CRLF + 작업 폴더 CP949 유지(저장소에는 UTF-8로 보관되어 GitHub에서도 한글이 보임)</li>
+  <li>README 빌드 항목에 build.bat 사용법 추가</li>
+  <li>검증: cmd에서 build.bat 실행 → 종료 코드 0, release\choboterm.exe(12.5MB) 생성 확인</li>
+</ul>
+
+<h2>2026-10-03 — 탭 기능 (MobaXterm 스타일)</h2>
+<ul>
+  <li>백엔드: 단일 접속 구조를 탭 단위(tab: 세션, 인코딩, 파일 전송, Zmodem 상태)로 재구성. 모든 API에 tabID 추가(Connect/Send/Resize/SetEncoding/Disconnect/CloseTab/File*), 이벤트는 (tabID, ...)로 전달</li>
+  <li>창 제목은 프런트엔드가 활성 탭 기준으로 설정(WindowSetTitle) → 백엔드의 제목 관리 코드 제거</li>
+  <li>프런트엔드: 탭마다 xterm 터미널, 탭 바(상태 점 초록/회색/주황, 백그라운드 출력 강조, ✕, +, 가운데 클릭 닫기, 드래그로 순서 변경, 빈 곳 더블클릭 새 탭), 우클릭 메뉴(다시 연결/복제/파일 전송/연결 끊기/닫기)</li>
+  <li>단축키: Ctrl+Shift+T·N 새 탭, Ctrl+Tab·Ctrl+Shift+Tab·Ctrl+PgUp/PgDn 탭 전환, Ctrl+Shift+W 탭 닫기. xterm에 키가 넘어가지 않도록 attachCustomKeyEventHandler + 캡처 단계 stopPropagation</li>
+  <li>접속 창: 빈 탭에서는 그 탭에 접속, 아니면 새 탭 생성(실패하면 새 탭 제거). 끊긴 탭에서 Enter → 이전 접속 정보로 채워진 접속 창</li>
+  <li>FTP 탭: 파일 창을 닫아도 탭이 열려 있는 동안 연결 유지, Ctrl+Shift+F로 다시 열기</li>
+  <li>탭 이름: 호스트(기본 포트가 아니면 host:port), 툴팁에 scheme://login@host:port</li>
+  <li>검증: 탭 분리 테스트(출력/인코딩/입력/원격 종료/탭 닫기 독립) 추가, 전체 go test(WSL 연동 포함) 통과, 로컬 가짜 서버 2개에 자동 접속시킨 임시 빌드로 화면 확인(상태 점, 백그라운드 출력 강조, 제목). 테스트 중 hosts.json은 백업 후 복원</li>
+  <li>제약: 접속 창·파일 전송 창이 열려 있는 동안에는 탭 전환 불가(모달)</li>
+</ul>
+
+<h2>2026-10-03 — 접속 창·파일 전송 창이 떠 있어도 탭 전환</h2>
+<ul>
+  <li>(이전 기록 보충) 탭 기능 커밋 c99499e 푸시 완료</li>
+  <li>두 창(.overlay)이 탭 바를 덮지 않도록 터미널 영역만 덮게 변경 → 창이 떠 있어도 탭 클릭 가능. 탭 단축키의 모달 차단도 제거</li>
+  <li>접속 창을 탭별 상태(DialogState: 입력값, 오류, 접속 중)로 관리. 탭을 바꾸면 저장/복원, 접속 중에 다른 탭으로 가도 결과는 원래 탭에 반영</li>
+  <li>새 탭 접속 창은 탭을 먼저 만들고 그 탭에 연결. 취소하면 그 빈 탭을 닫음(마지막 탭이면 유지)</li>
+  <li>파일 전송 창을 탭별 View(폴더, 목록, 선택, 전송 중, 상태 메시지)로 재작성. 탭 전환 시 해당 탭의 창을 보여 주거나 숨기고, 비동기 결과는 원래 탭의 View에 반영. 진행률 상자는 보이는 창의 전송이면 창 안, 아니면 오른쪽 아래</li>
+  <li>접속 중에 탭을 닫으면 늦게 성공한 연결을 바로 정리(CloseTab), 다시 연결 시 이전 파일 창 정리</li>
+  <li>검증: 임시 빌드로 탭 A 접속 → 새 탭 B에서 접속 창 입력 → 탭 A로 전환(창 숨김) → 탭 B 복귀(입력값 복원) 화면 3장 확인, go test 통과. 테스트 중 hosts.json 백업 후 복원</li>
+</ul>
+
+<h2>2026-10-03 — SSH 8022 포트 접속 문제 수정 (프로토콜 자동 판별)</h2>
+<ul>
+  <li>(이전 기록 보충) 탭 전환 개선 커밋 b7a4ebb 푸시 완료</li>
+  <li>증상: SSH 서버에 8022 포트로 접속하면 안 됨. 원인: 22번만 SSH로 보고 나머지 포트는 모두 Telnet으로 접속하고 있었음(서버 응답 SSH-2.0-OpenSSH_10.5 확인)</li>
+  <li>수정: 21/22/23은 포트로 결정, 그 외 포트는 detect.go에서 접속 직후 서버 첫 바이트로 판별(SSH- → SSH, 220 → FTP, IAC/배너/무응답 → Telnet, 대기 2초). 판별에 읽은 바이트는 prefixConn으로 다시 넘겨 각 프로토콜이 그대로 사용</li>
+  <li>dialSSH/dialTelnet/dialFTP가 이미 연결된 소켓을 받도록 변경(SSH는 ssh.NewClientConn). FTP는 데이터 연결에도 같은 dial 함수를 쓰므로 판별 소켓은 제어 연결에 한 번만 사용</li>
+  <li>화면: 접속 창 Port 칸에 표준 포트가 아니면 "자동 감지" 표시, 탭 툴팁은 실제 판별된 프로토콜 사용. 테스트용 testHooks.confirmKey 추가</li>
+  <li>검증: 판별 테스트(SSH/FTP 단일·여러 줄 인사말/Telnet IAC/배너/무응답, 나뉘어 도착한 인사말, 읽은 바이트 재생) 통과. 사용자 테스트 서버(Termux OpenSSH, 8022)에 App.Connect로 실제 접속 → ssh 판별, 명령 실행, stty size로 창 크기 반영, SFTP 목록, known_hosts의 [host]:8022 항목까지 확인(LiveSSH 테스트, 접속 정보는 환경변수로만 전달하고 코드·기록에 남기지 않음)</li>
+  <li>참고: 새로 빌드한 테스트 실행 파일이 처음 네트워크에 접속할 때 Windows 보안 검사로 수십 초 지연되는 현상이 있었음(코드 문제 아님, 두 번째 실행부터 0.5초)</li>
+</ul>
+
+<h2>2026-10-03 — "호스트 키가 known_hosts와 다릅니다" 오판 수정</h2>
+<ul>
+  <li>(이전 기록 보충) 프로토콜 자동 판별 커밋 6821987 푸시 완료</li>
+  <li>증상: 192.168.0.21:8022 SSH 접속 시 "호스트 키가 known_hosts와 다릅니다 (중간자 공격 가능성)"</li>
+  <li>원인: known_hosts 4번째 줄의 ed25519 키는 서버 키와 동일. 서버는 rsa/ecdsa/ed25519 키를 모두 갖고 있는데 Go SSH 라이브러리가 ecdsa를 먼저 요청 → 저장된 키와 종류가 달라 knownhosts가 KeyError(Want=ed25519)를 돌려줌 → 변경으로 오판</li>
+  <li>수정(ssh.go): known_hosts에 이미 있는 키 종류로 HostKeyAlgorithms를 지정(OpenSSH와 같은 방식, 임시 probe 키로 저장된 키 목록 조회, ssh-rsa는 rsa-sha2-512/256 포함). knownHosts 구조체로 정리</li>
+  <li>진짜로 키가 바뀐 경우 오류에 받은 키 종류·지문, 저장된 파일·줄 번호와 해결 방법(그 줄 삭제)을 표시. 접속 창 오류는 줄바꿈 표시(white-space: pre-line)</li>
+  <li>검증: 로컬 SSH 서버(ecdsa+ed25519, known_hosts엔 ed25519만)로 재현 테스트 — 수정 전 실패/수정 후 통과 확인, 진짜 키 변경 시 오류·줄 번호 테스트, ssh-rsa 알고리즘 매핑 테스트. 실제 서버에 사용자 known_hosts의 ed25519 줄만 넣은 임시 known_hosts로 두 번 접속 성공(사용자 ~/.ssh/known_hosts는 변경하지 않음)</li>
+</ul>
+
+<h2>2026-10-03 — GitHub Release / Pages 배포</h2>
+<ul>
+  <li>(이전 기록 보충) known_hosts 오판 수정 커밋 126416c 푸시 완료</li>
+  <li>배포 방식: GitHub Release에 실행 파일 첨부(저장소 git 기록과 별도 보관 → 저장소 용량 증가 없음) + GitHub Pages 소개 페이지의 다운로드 버튼이 releases/latest/download/choboterm.exe를 가리킴</li>
+  <li>GitHub CLI 설치(winget GitHub.cli), 사용자가 gh auth login으로 로그인</li>
+  <li>docs/index.html(다운로드 버튼, 최신 버전 표시(GitHub API), 기능, 단축키, 설치·SmartScreen 안내), docs/icon.png·favicon.png, README 맨 위에 다운로드 링크</li>
+  <li>release\choboterm.exe는 실행 중이라 build.bat 복사 단계가 실패 → 같은 커밋으로 빌드된 buildin\choboterm.exe를 릴리스에 첨부</li>
+</ul>
+
+<h2>2026-10-03 — GitHub Release / Pages 배포 완료</h2>
+<ul>
+  <li>커밋 21fb000(소개 페이지, README 다운로드 링크) 푸시</li>
+  <li>릴리스 v0.1.0 생성: https://github.com/chobocho/choboterm/releases/tag/v0.1.0 (choboterm.exe 첨부, 12.6MB)</li>
+  <li>GitHub Pages 기준을 main / → main /docs로 변경(gh api). 변경 직후엔 루트 기준으로 배포된 상태가 남아 있어 Pages 재배포 요청 후 반영됨</li>
+  <li>검증: https://chobocho.github.io/choboterm/ 새 페이지·icon.png 200, 다운로드 버튼 링크(releases/latest/download/choboterm.exe) 200·크기 일치, 받은 파일 SHA-256이 buildin 및 release 폴더의 exe와 동일(71473bb6...), 실제 페이지 렌더링에서 "V0.1.0 · 12.0 MB" 표시 확인</li>
+  <li>README에 다음 버전 릴리스 방법(버전 올리기 → build.bat → gh release create) 추가</li>
+</ul>
+
+<h2>2026-10-03 — F1 도움말 창 추가</h2>
+<ul>
+  <li>F1로 도움말 창 열기/닫기 (frontend/src/help.ts 신규). 터미널·접속 창·파일 전송 창 어디서든 동작</li>
+  <li>내용: 탭 / 접속 / 파일 전송 / 도움말 단축키 표, 저장 위치 안내</li>
+  <li>한국어 ↔ English 전환 버튼(Alt+L), 선택한 언어는 localStorage에 기억 (기본 한국어)</li>
+  <li>Esc·닫기·바깥 클릭으로 닫으면 원래 창(터미널/접속 창/파일 창)으로 포커스 복귀. 도움말이 떠 있는 동안 다른 앱 단축키는 무시</li>
+  <li>README 단축키 표와 소스 구성 표에 반영. tsc + vite build 통과</li>
+</ul>
+
+<h2>2026-10-03 — 복사 / 붙여넣기 편의</h2>
+<ul>
+  <li>마우스로 선택하면 바로 복사, 우클릭으로 붙여넣기 (PuTTY 방식). 마우스를 쓰는 프로그램(mc, htop)에서는 Shift+우클릭</li>
+  <li>Ctrl+Shift+C / Ctrl+Shift+V 추가. 접속 창·파일 창 입력칸에서는 원래 동작 유지</li>
+  <li>여러 줄 붙여넣기 확인 창(paste.ts): 줄 수와 내용 미리보기, '다시 묻지 않기' 선택 가능. Ctrl+V/Shift+Insert 붙여넣기도 같은 확인을 거침</li>
+  <li>설정 저장소 추가: settings.go(%AppData%\choboterm\settings.json, 없는 항목은 기본값) + settings.ts, 테스트 settings_test.go</li>
+</ul>
+
+<h2>2026-10-03 — 글꼴 크기 조절</h2>
+<ul>
+  <li>Ctrl+휠, Ctrl+= / Ctrl+- 로 글꼴 크게/작게, Ctrl+0 기본값(15). 범위 8~40</li>
+  <li>모든 탭에 적용, settings.json에 저장해 다음 실행 때 유지. 바꿀 때 화면 위쪽에 '글꼴 크기 N' 알림 표시</li>
+  <li>Ctrl+휠은 터미널 스크롤로 넘어가지 않도록 가로챔</li>
+</ul>
+
+<h2>2026-10-03 — 스크롤백 검색</h2>
+<ul>
+  <li>@xterm/addon-search 0.16 추가, 탭마다 SearchAddon, 검색 막대는 하나(search.ts)</li>
+  <li>Ctrl+Shift+S로 열기(선택한 글자가 있으면 미리 채움). 입력하는 대로 가장 최근 출력부터 위로 검색, 전체 결과 강조와 'n/전체' 표시</li>
+  <li>Enter 위로 / Shift+Enter 아래로, Alt+C 대소문자 구분, Alt+R 정규식(잘못된 정규식 표시), Esc 닫기. 탭을 바꾸면 새 탭에서 같은 검색어로 다시 검색</li>
+  <li>입력칸에서 Ctrl+Shift+C/V는 터미널이 아닌 입력칸의 기본 동작을 따르도록 수정</li>
+</ul>
+
+<h2>2026-10-03 — URL Ctrl+클릭 열기</h2>
+<ul>
+  <li>@xterm/addon-web-links 0.12 추가. 화면의 http(s) 주소를 Ctrl+클릭하면 기본 브라우저(BrowserOpenURL)로 열기, 그냥 클릭은 선택용으로 유지</li>
+  <li>링크 위에 마우스를 올리면 'Ctrl+클릭: 브라우저에서 열기' 툴팁</li>
+  <li>검증: wails dev + Edge(playwright-core) 자동 점검으로 1~4단계 확인 — 글꼴 토스트, 검색 'line 5' 11건/Enter 이동, 여러 줄 붙여넣기 확인 창 후 서버 수신, 한 줄은 확인 없이 전송, F1 한/영 전환</li>
+</ul>
+
+<h2>2026-10-03 — 창 크기·위치 기억</h2>
+<ul>
+  <li>닫을 때(OnBeforeClose) Win32 GetWindowPlacement로 보통 상태 크기·위치와 최대화 여부를 settings.json에 저장</li>
+  <li>다음 실행: StartHidden으로 숨긴 채 시작 → OnDomReady에서 SetWindowPlacement(SW_HIDE)로 옮긴 뒤 표시. 최대화였으면 WindowStartState=Maximised. 창 클래스 이름을 chobotermWindow로 지정해 자기 창만 찾음</li>
+  <li>프런트엔드의 SaveSettings는 창 위치를 덮어쓰지 않도록 보존 (테스트 추가)</li>
+  <li>검증: build\bin 실행 파일로 PowerShell 자동 점검 — 이동 후 종료→재실행 시 100,120,900,620 그대로, 최대화 복원, 화면 밖 좌표(-30000)는 0,0으로 보정. 실행 중인 release\choboterm.exe는 건드리지 않음. 테스트 중 settings.json은 백업 후 복구</li>
+</ul>
+
+<h2>2026-10-03 — 연결 유지와 자동 재접속</h2>
+<ul>
+  <li>연결 유지: SSH keepalive@openssh.com 전역 요청, Telnet IAC NOP를 설정 간격(기본 60초)마다 전송. 15초 안에 응답이 없으면 실패, 3번 연속 실패하면 연결을 닫고 '응답하지 않아 끊었습니다' 표시</li>
+  <li>정상 종료와 끊김 구분: SSH는 출력이 끝난 뒤 exit-status가 없으면(ExitMissingError) 끊김, Telnet은 EOF가 아닌 읽기 오류면 끊김. term:closed 이벤트에 lost 플래그 추가</li>
+  <li>자동 재접속: 끊긴 탭은 3·5·10·20·30초 간격으로 최대 10번 재시도, 화면 내용 유지(term.reset 안 함), 탭 점이 주황색으로 깜빡임. Enter 지금 연결 / Esc 취소, 연결 끊기·탭 닫기·접속 창 열기 시 취소</li>
+  <li>설정 창 추가(prefs.ts, Ctrl+Shift+O / 탭 바 ⚙): 글꼴 크기, 여러 줄 붙여넣기 확인, 연결 유지 간격(0~3600초), 자동 재접속</li>
+  <li>테스트: keepalive_test.go (SSH exit vs 끊김, keepalive 응답/무응답, 무응답 3회 시 탭 종료, 정상 종료는 lost 아님, Telnet NOP). 에코 서버 + Edge 자동 점검으로 RST 끊김→카운트다운→재연결, Esc 취소, quit 시 재접속 안 함, 설정 저장 확인</li>
+</ul>
+
+<h2>2026-10-03 — 매크로</h2>
+<ul>
+  <li>Settings.Macros(이름, 단축키, 내용) 추가, 없으면 빈 목록으로 정규화. 설정 테스트를 reflect.DeepEqual로 변경</li>
+  <li>매크로 창(macros.ts, Ctrl+Shift+M): 목록 + 이름/단축키/내용 편집, 추가(Insert)/삭제(Delete), 보내기(Enter·더블클릭·Ctrl+Enter). 편집 즉시 저장</li>
+  <li>단축키: F2~F12, Shift+F1~F12, Ctrl+F1~F12 중 선택(다른 매크로가 쓰는 키는 비활성). 지정된 키만 가로채고 나머지 F키는 프로그램으로 전달. 접속 창·파일 창(F5 새로 고침)에서는 가로채지 않음</li>
+  <li>내용: 줄바꿈 = Enter, \t \e \xHH \ 이스케이프</li>
+  <li>검증: Edge 자동 점검 — F5/Ctrl+F2 매크로 전송, 미지정 F6은 ESC[17~로 통과, 목록 Enter 전송, 저장 확인. expandMacro 결과 확인</li>
+</ul>
+
+<h2>2026-10-03 — SSH 포트 포워딩</h2>
+<ul>
+  <li>forward.go: 로컬(-L, client.Dial), 원격(-R, client.Listen), 동적(-D, SOCKS5 CONNECT 무인증 직접 구현). 규칙마다 연결 수·오류 상태, 연결이 끊기거나 탭을 닫으면 수신 포트와 연결 모두 정리</li>
+  <li>규칙은 접속 기록(hosts.json)의 호스트별 forwards에 저장, SSH 접속(자동 재접속 포함) 때 자동 시작. 접속 기록 갱신 시 forwards 보존. 같은 수신 주소 중복 거부, 사용 중 포트는 오류와 함께 규칙 유지</li>
+  <li>포워딩 창(forwards.ts, Ctrl+Shift+P / 탭 우클릭 메뉴): 목록(종류·수신·대상·상태), 종류별 설명, 추가(Enter)/삭제(Delete), fwd:changed 이벤트로 상태 갱신</li>
+  <li>테스트: forward_test.go — direct-tcpip/tcpip-forward를 처리하는 테스트 SSH 서버로 L/R/D 실제 왕복, 중복/사용 중/잘못된 포트, 끊기 후 해제, 재접속 후 복원, 기록 저장 확인</li>
+  <li>UI 검증: 스크래치 SSH 서버 + Edge 자동 점검으로 L/R/D 통신, 끊기·재접속, 탭 메뉴 열기·삭제 확인</li>
+</ul>
+
+<h2>2026-10-03 — 파일 전송 창 개선</h2>
+<ul>
+  <li>RemoteFS에 Remove(폴더는 안의 내용까지)/Rename/Mkdir 추가: SFTP(링크는 링크만 삭제), FTP(RemoveDirRecur), SCP(rm -rf/mv/mkdir). App: FileDelete, FileRename, FileMkdir(이름 검사), FileUploadPaths(폴더 하위까지), FileDownloadMany(폴더 선택, 하위까지, 같은 이름은 '이름 (1)'), 진행률에 '(3/10)' 표시</li>
+  <li>files.ts: Ctrl/Shift+클릭·Shift+방향키·Ctrl+A 여러 개 선택, Delete 삭제(확인 창), F2 이름 바꾸기, F7 새 폴더, 우클릭 메뉴, 버튼 추가. 삭제 후 다음 행 선택</li>
+  <li>끌어 놓기 업로드: Wails DragAndDrop(EnableFileDrop) + OnFileDrop, 파일 목록만 드롭 대상(--wails-drop-target)</li>
+  <li>공용 확인/이름 입력 창 dialog.ts 추가</li>
+  <li>테스트: fileops_test.go(SFTP로 만들기·이름 바꾸기·폴더 업로드·여러 개/폴더 다운로드·삭제). UI는 SFTP 테스트 서버 + Edge 자동 점검으로 여러 개 선택·삭제 확인/취소·새 폴더·이름 바꾸기·폴더 삭제 경고·우클릭 메뉴·Ctrl+A·잘못된 이름 오류 확인. 탐색기 끌어 놓기는 네이티브 기능이라 자동 점검하지 못함</li>
+</ul>
+
+<h2>2026-10-03 — V0.1.1 릴리스</h2>
+<ul>
+  <li>버전 0.1.0 → 0.1.1 (main.go AppVersion, wails.json productVersion, README 제목)</li>
+  <li>build.bat으로 테스트 → wails build -clean → release\choboterm.exe (12.8MB, SHA-256 5181a836...). 실행 시 창 제목 'choboterm V0.1.1' 확인</li>
+  <li>소개 페이지(docs/index.html) 기능 목록과 단축키 표에 새 기능 추가. 버전 표시와 다운로드 버튼은 최신 릴리스를 자동으로 가리킴</li>
+  <li>frontend/package.json.md5 (애드온 추가 반영) 함께 커밋</li>
+</ul>
+</body>
+</html>

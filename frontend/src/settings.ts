@@ -8,6 +8,9 @@ export let settings: main.Settings = main.Settings.createFrom({
     pasteNoConfirm: false,
     keepAlive: 60,
     autoReconnect: true,
+    logAuto: false,
+    logDir: '',
+    logRaw: false,
     macros: [],
 });
 

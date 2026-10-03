@@ -197,6 +197,9 @@ export namespace main {
 	    pasteNoConfirm: boolean;
 	    keepAlive: number;
 	    autoReconnect: boolean;
+	    logAuto: boolean;
+	    logDir: string;
+	    logRaw: boolean;
 	    macros: Macro[];
 	    window?: WindowState;
 	
@@ -210,6 +213,9 @@ export namespace main {
 	        this.pasteNoConfirm = source["pasteNoConfirm"];
 	        this.keepAlive = source["keepAlive"];
 	        this.autoReconnect = source["autoReconnect"];
+	        this.logAuto = source["logAuto"];
+	        this.logDir = source["logDir"];
+	        this.logRaw = source["logRaw"];
 	        this.macros = this.convertValues(source["macros"], Macro);
 	        this.window = this.convertValues(source["window"], WindowState);
 	    }

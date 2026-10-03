@@ -17,6 +17,12 @@ type Settings struct {
 	KeepAlive int `json:"keepAlive"`
 	// AutoReconnect reconnects a tab whose connection broke.
 	AutoReconnect bool `json:"autoReconnect"`
+	// LogAuto starts a session log whenever a terminal connection opens.
+	LogAuto bool `json:"logAuto"`
+	// LogDir is the folder for session logs ("" = Documents\choboterm\logs).
+	LogDir string `json:"logDir"`
+	// LogRaw keeps escape codes in session logs instead of plain text.
+	LogRaw bool `json:"logRaw"`
 	// Macros are texts sent to the terminal, optionally bound to a key.
 	Macros []Macro `json:"macros"`
 	// Window is the main window's last position, kept by the Go side only.

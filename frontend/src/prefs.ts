@@ -1,6 +1,7 @@
 // Settings window (Ctrl+Shift+O or the ⚙ button).
 
 import {saveSettings, settings} from './settings';
+import {ChooseLogDir} from '../wailsjs/go/main/App';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -10,6 +11,9 @@ const fontSize = $<HTMLInputElement>('pFont');
 const keepAlive = $<HTMLInputElement>('pKeepAlive');
 const autoReconnect = $<HTMLInputElement>('pReconnect');
 const pasteConfirm = $<HTMLInputElement>('pPaste');
+const logAuto = $<HTMLInputElement>('pLogAuto');
+const logPlain = $<HTMLInputElement>('pLogPlain');
+const logDir = $<HTMLInputElement>('pLogDir');
 const error = $<HTMLDivElement>('pError');
 
 let onApply: (() => void) | undefined;
@@ -27,6 +31,9 @@ export function openPrefs(apply: () => void, close: () => void) {
     keepAlive.value = String(settings.keepAlive);
     autoReconnect.checked = settings.autoReconnect;
     pasteConfirm.checked = !settings.pasteNoConfirm;
+    logAuto.checked = settings.logAuto;
+    logPlain.checked = !settings.logRaw;
+    logDir.value = settings.logDir;
     error.textContent = '';
     overlay.hidden = false;
     fontSize.focus();
@@ -62,11 +69,24 @@ function apply() {
         s.keepAlive = ka;
         s.autoReconnect = autoReconnect.checked;
         s.pasteNoConfirm = !pasteConfirm.checked;
+        s.logAuto = logAuto.checked;
+        s.logRaw = !logPlain.checked;
+        s.logDir = logDir.value.trim();
     });
     const cb = onApply;
     closePrefs();
     cb?.();
 }
+
+$<HTMLButtonElement>('pLogBrowse').addEventListener('click', async () => {
+    try {
+        const dir = await ChooseLogDir(logDir.value.trim());
+        if (dir) logDir.value = dir;
+    } catch (e) {
+        error.textContent = String(e);
+    }
+    logDir.focus();
+});
 
 $<HTMLButtonElement>('pOk').addEventListener('click', apply);
 $<HTMLButtonElement>('pCancel').addEventListener('click', closePrefs);

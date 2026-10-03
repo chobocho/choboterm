@@ -78,6 +78,7 @@ type tab struct {
 	files fileState
 	zm    zmodemState
 	fwd   forwards
+	log   sessionLog
 	dead  error  // why keepalive closed sess (guarded by mu)
 	host  string // where sess is connected (guarded by mu)
 	port  int
@@ -126,6 +127,7 @@ func (a *App) shutdown(ctx context.Context) {
 	a.mu.Unlock()
 	for _, t := range tabs {
 		t.disconnect()
+		t.log.stop()
 	}
 }
 
@@ -253,6 +255,11 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	if s, ok := sess.(*sshSession); ok {
 		t.restoreForwards(s, req.Host, req.Port)
 	}
+	if t.log.active() != "" {
+		t.log.mark(fmt.Sprintf("접속: %s %s:%d", proto, req.Host, req.Port))
+	} else if loadSettings().LogAuto {
+		_, _ = t.startLog() // a failure must not fail the connection
+	}
 	return proto, nil
 }
 
@@ -322,6 +329,7 @@ func (t *tab) pump(sess Session) {
 	)
 	flush := func() {
 		if len(pending) > 0 {
+			t.log.write(pending)
 			t.emit("term:data", base64.StdEncoding.EncodeToString(pending))
 			pending = pending[:0]
 		}
@@ -383,6 +391,7 @@ func (t *tab) pump(sess Session) {
 					} else if lost {
 						msg = "연결이 끊어졌습니다: " + err.Error()
 					}
+					t.log.mark(msg)
 					t.emit("term:closed", msg, lost)
 				}
 				return
@@ -463,6 +472,7 @@ func (a *App) CloseTab(tabID int) {
 	a.mu.Unlock()
 	if t != nil {
 		t.disconnect()
+		t.log.stop()
 	}
 }
 
@@ -474,6 +484,7 @@ func (t *tab) disconnect() {
 	t.sess = nil
 	t.mu.Unlock()
 	if sess != nil {
+		t.log.mark("연결을 끊었습니다")
 		_ = sess.Close()
 	}
 }
