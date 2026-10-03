@@ -25,7 +25,7 @@ func TestFTPRoundTrip(t *testing.T) {
 	}
 	port, _ := strconv.Atoi(portStr)
 
-	fs, err := dialFTP(ConnectRequest{Host: host, Port: port, Login: "user", Pass: "pass", Encoding: os.Getenv("CHOBOTERM_FTP_ENCODING")})
+	fs, err := dialFTP(ConnectRequest{Host: host, Port: port, Login: "user", Pass: "pass", Encoding: os.Getenv("CHOBOTERM_FTP_ENCODING")}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

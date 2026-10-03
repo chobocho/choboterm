@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -56,6 +58,7 @@ type tab struct {
 type testHooks struct {
 	emit        func(name string, data ...interface{})
 	downloadDir string
+	confirmKey  func(host, fingerprint string) bool
 }
 
 // NewApp creates a new App application struct
@@ -117,19 +120,23 @@ func (t *tab) session() Session {
 	return t.sess
 }
 
-// Protocol returns "ssh" for port 22, "ftp" for port 21, otherwise "telnet".
+// Protocol returns the protocol of a well-known port ("ssh" 22, "ftp" 21,
+// "telnet" 23), or "" when it must be detected from the server greeting.
 func Protocol(port int) string {
 	switch port {
 	case 22:
 		return "ssh"
 	case 21:
 		return "ftp"
+	case 23:
+		return "telnet"
 	}
-	return "telnet"
+	return ""
 }
 
-// Connect opens a session in the given tab and returns the protocol used.
-// Port 22 uses SSH, port 21 FTP (file window only), any other port Telnet.
+// Connect opens a session in the given tab and returns the protocol used
+// ("ssh", "telnet" or "ftp"). Ports 22/21/23 decide the protocol directly;
+// for other ports it is detected from the server greeting (e.g. SSH on 8022).
 // An existing connection in that tab is closed first.
 func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	req.Host = strings.TrimSpace(req.Host)
@@ -147,8 +154,17 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	t.disconnect()
 
 	proto := Protocol(req.Port)
+	var conn net.Conn
+	if proto == "" {
+		c, p, err := dialDetect(net.JoinHostPort(req.Host, strconv.Itoa(req.Port)))
+		if err != nil {
+			return "", fmt.Errorf("접속 실패: %w", err)
+		}
+		conn, proto = c, p
+	}
+
 	if proto == "ftp" {
-		fs, err := dialFTP(req)
+		fs, err := dialFTP(req, conn)
 		if err != nil {
 			return "", err
 		}
@@ -165,9 +181,9 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 		err  error
 	)
 	if proto == "ssh" {
-		sess, err = dialSSH(req, a.confirmHostKey)
+		sess, err = dialSSH(req, a.confirmHostKey, conn)
 	} else {
-		sess, err = dialTelnet(req)
+		sess, err = dialTelnet(req, conn)
 	}
 	if err != nil {
 		return "", err
@@ -371,6 +387,9 @@ func (a *App) GetHistory() []HostEntry {
 
 // confirmHostKey asks the user whether to trust an unknown SSH host key.
 func (a *App) confirmHostKey(host, fingerprint string) bool {
+	if a.hooks.confirmKey != nil {
+		return a.hooks.confirmKey(host, fingerprint)
+	}
 	res, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
 		Type:  runtime.QuestionDialog,
 		Title: "알 수 없는 호스트",

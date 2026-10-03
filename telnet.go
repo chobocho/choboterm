@@ -61,11 +61,15 @@ const (
 	stSB
 )
 
-func dialTelnet(req ConnectRequest) (Session, error) {
-	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
-	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
-	if err != nil {
-		return nil, fmt.Errorf("Telnet 접속 실패: %w", err)
+// dialTelnet opens a Telnet session. conn is an already connected socket
+// (from protocol detection) or nil to dial req.Host:req.Port.
+func dialTelnet(req ConnectRequest, conn net.Conn) (Session, error) {
+	if conn == nil {
+		addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
+		var err error
+		if conn, err = net.DialTimeout("tcp", addr, 10*time.Second); err != nil {
+			return nil, fmt.Errorf("Telnet 접속 실패: %w", err)
+		}
 	}
 	return &telnetSession{
 		conn:          conn,

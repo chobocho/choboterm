@@ -32,7 +32,9 @@ func (s *sshSession) Close() error {
 // hostKeyConfirmer asks the user to trust an unknown host key.
 type hostKeyConfirmer func(host, fingerprint string) bool
 
-func dialSSH(req ConnectRequest, confirm hostKeyConfirmer) (Session, error) {
+// dialSSH opens an SSH shell. conn is an already connected socket (from
+// protocol detection) or nil to dial req.Host:req.Port.
+func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, conn net.Conn) (Session, error) {
 	if req.Login == "" {
 		return nil, errors.New("SSH 접속에는 Login이 필요합니다")
 	}
@@ -50,10 +52,17 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer) (Session, error) {
 	}
 
 	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
-	client, err := ssh.Dial("tcp", addr, cfg)
+	if conn == nil {
+		if conn, err = net.DialTimeout("tcp", addr, cfg.Timeout); err != nil {
+			return nil, fmt.Errorf("SSH 접속 실패: %w", err)
+		}
+	}
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, cfg)
 	if err != nil {
+		conn.Close()
 		return nil, fmt.Errorf("SSH 접속 실패: %w", err)
 	}
+	client := ssh.NewClient(c, chans, reqs)
 
 	session, err := client.NewSession()
 	if err != nil {

@@ -28,6 +28,7 @@ interface Tab {
     el: HTMLDivElement;
     label: HTMLSpanElement;
     state: TabState;
+    proto: string; // "ssh" / "telnet" / "ftp" as reported by Connect
     encoding: string;
     // Last connection, kept in memory only, for reconnect / duplicate.
     req?: main.ConnectRequest;
@@ -113,7 +114,7 @@ function createTab(): Tab {
     el.append(dot, label, x);
     tabsEl.appendChild(el);
 
-    const t: Tab = {id, term, fit, pane, el, label, state: 'idle', encoding: 'UTF-8'};
+    const t: Tab = {id, term, fit, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8'};
     tabs.set(id, t);
 
     term.onData(data => {
@@ -235,7 +236,7 @@ function setState(t: Tab, state: TabState) {
     t.state = state;
     t.el.classList.toggle('on', state !== 'idle');
     if (t.req) {
-        const scheme = state === 'ftp' ? 'ftp' : Number(t.req.port) === 22 ? 'ssh' : 'telnet';
+        const scheme = t.proto || 'telnet';
         // Show the port only when it isn't the protocol's usual one.
         const usual = [21, 22, 23].includes(Number(t.req.port));
         t.label.textContent = usual ? t.req.host : `${t.req.host}:${t.req.port}`;
@@ -266,6 +267,7 @@ async function connectTab(t: Tab, req: main.ConnectRequest): Promise<string> {
         throw new Error('탭이 닫혔습니다');
     }
     t.req = req;
+    t.proto = protocol;
     t.term.reset();
     applyEncoding(t, req.encoding || 'UTF-8');
     if (protocol === 'ftp') {
@@ -422,7 +424,8 @@ let activeIndex = -1;
 
 function updateProto() {
     const p = Number(port.value);
-    proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : 'Telnet';
+    // Other ports are detected from the server greeting when connecting.
+    proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : p === 23 ? 'Telnet' : '자동 감지';
 }
 
 /**

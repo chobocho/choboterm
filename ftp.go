@@ -20,9 +20,24 @@ type ftpFS struct {
 	stop  chan struct{}
 }
 
-func dialFTP(req ConnectRequest) (*ftpFS, error) {
+// dialFTP logs in to an FTP server. conn is an already connected control
+// socket (from protocol detection) or nil to dial req.Host:req.Port.
+func dialFTP(req ConnectRequest, conn net.Conn) (*ftpFS, error) {
 	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
-	c, err := ftp.Dial(addr, ftp.DialWithTimeout(10*time.Second))
+	opts := []ftp.DialOption{ftp.DialWithTimeout(10 * time.Second)}
+	if conn != nil {
+		// The library dials data connections with the same function, so hand
+		// out the detected socket only once (for the control connection).
+		first := conn
+		opts = append(opts, ftp.DialWithDialFunc(func(network, address string) (net.Conn, error) {
+			if c := first; c != nil {
+				first = nil
+				return c, nil
+			}
+			return net.DialTimeout(network, address, 10*time.Second)
+		}))
+	}
+	c, err := ftp.Dial(addr, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("FTP 접속 실패: %w", err)
 	}
