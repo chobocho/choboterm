@@ -236,6 +236,12 @@ login: guest
             <li><b>SFTP · SCP</b><span>SSH 접속 그대로 파일 전송, SFTP가 없으면 SCP로 자동 전환</span></li>
             <li><b>Zmodem</b><span>터미널에서 sz / rz만 입력하면 파일 송수신</span></li>
             <li><b>안전한 저장</b><span>known_hosts 확인, Telnet 비밀번호는 Windows DPAPI로 암호화</span></li>
+            <li><b>포트 포워딩</b><span>SSH 로컬(-L) · 원격(-R) · 동적(-D, SOCKS5). 호스트별로 저장해 다음 접속 때 자동 적용</span></li>
+            <li><b>연결 유지 · 자동 재접속</b><span>쉬는 연결이 끊기지 않게 keepalive, 네트워크가 끊기면 화면을 그대로 두고 다시 연결</span></li>
+            <li><b>매크로</b><span>자주 쓰는 명령을 저장해 두고 창이나 F키로 바로 보내기</span></li>
+            <li><b>편한 파일 창</b><span>여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더</span></li>
+            <li><b>복사 · 붙여넣기</b><span>선택하면 복사, 우클릭으로 붙여넣기. 여러 줄은 실행 전에 확인</span></li>
+            <li><b>검색 · 글꼴 · 링크</b><span>스크롤백 검색, Ctrl+휠 글꼴 크기, Ctrl+클릭으로 URL 열기, 창 위치 기억</span></li>
         </ul>
     </section>
 
@@ -248,6 +254,13 @@ login: guest
             <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>파일 전송 창 (SFTP / SCP / FTP)</td></tr>
             <tr><td><kbd>Ctrl+Shift+E</kbd></td><td>UTF-8 ↔ EUC-KR</td></tr>
             <tr><td><kbd>Ctrl+Shift+D</kbd></td><td>연결 끊기</td></tr>
+            <tr><td><kbd>Ctrl+Shift+C</kbd> / <kbd>Ctrl+Shift+V</kbd></td><td>복사 / 붙여넣기 (마우스 선택 = 복사, 우클릭 = 붙여넣기)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+S</kbd></td><td>스크롤백 검색</td></tr>
+            <tr><td><kbd>Ctrl+휠</kbd> / <kbd>Ctrl+=</kbd> / <kbd>Ctrl+-</kbd></td><td>글꼴 크게 / 작게</td></tr>
+            <tr><td><kbd>Ctrl+Shift+M</kbd></td><td>매크로</td></tr>
+            <tr><td><kbd>Ctrl+Shift+P</kbd></td><td>SSH 포트 포워딩</td></tr>
+            <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>설정 (연결 유지 간격, 자동 재접속 등)</td></tr>
+            <tr><td><kbd>F1</kbd></td><td>도움말 (한국어 / English)</td></tr>
         </table>
     </section>
 
