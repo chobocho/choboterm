@@ -200,5 +200,13 @@
   <li>Esc·닫기·바깥 클릭으로 닫으면 원래 창(터미널/접속 창/파일 창)으로 포커스 복귀. 도움말이 떠 있는 동안 다른 앱 단축키는 무시</li>
   <li>README 단축키 표와 소스 구성 표에 반영. tsc + vite build 통과</li>
 </ul>
+
+<h2>2026-10-03 — 복사 / 붙여넣기 편의</h2>
+<ul>
+  <li>마우스로 선택하면 바로 복사, 우클릭으로 붙여넣기 (PuTTY 방식). 마우스를 쓰는 프로그램(mc, htop)에서는 Shift+우클릭</li>
+  <li>Ctrl+Shift+C / Ctrl+Shift+V 추가. 접속 창·파일 창 입력칸에서는 원래 동작 유지</li>
+  <li>여러 줄 붙여넣기 확인 창(paste.ts): 줄 수와 내용 미리보기, '다시 묻지 않기' 선택 가능. Ctrl+V/Shift+Insert 붙여넣기도 같은 확인을 거침</li>
+  <li>설정 저장소 추가: settings.go(%AppData%\choboterm\settings.json, 없는 항목은 기본값) + settings.ts, 테스트 settings_test.go</li>
+</ul>
 </body>
 </html>

@@ -5,11 +5,13 @@ import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
+import {confirmPaste, pasteConfirmOpen} from './paste';
+import {loadSettings} from './settings';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
-import {EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
+import {ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -126,6 +128,23 @@ function createTab(): Tab {
         if (t.state === 'on') Resize(t.id, cols, rows);
     });
 
+    // Like PuTTY: selecting with the mouse copies, right-click pastes.
+    pane.addEventListener('mouseup', ev => {
+        if (ev.button === 0) copySelection(t);
+    });
+    pane.addEventListener('contextmenu', ev => {
+        ev.preventDefault();
+        // Programs using the mouse (mc, htop...) get the click; Shift+right-click still pastes.
+        if (term.modes.mouseTrackingMode !== 'none' && !ev.shiftKey) return;
+        pasteClipboard(t);
+    });
+    // Ctrl+V / Shift+Insert go through the same multi-line check.
+    pane.addEventListener('paste', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        pasteText(t, ev.clipboardData?.getData('text/plain') ?? '');
+    }, true);
+
     el.addEventListener('mousedown', ev => {
         if (ev.button === 0) activate(t);
     });
@@ -162,6 +181,22 @@ function createTab(): Tab {
 
     welcome(t);
     return t;
+}
+
+function copySelection(t: Tab) {
+    const text = t.term.getSelection();
+    if (text) ClipboardSetText(text);
+}
+
+async function pasteText(t: Tab, text: string) {
+    if (!text || t.state !== 'on') return;
+    const ok = await confirmPaste(text);
+    if (ok && t.state === 'on') t.term.paste(text);
+    if (t === active) focusActive();
+}
+
+async function pasteClipboard(t: Tab) {
+    pasteText(t, await ClipboardGetText());
 }
 
 function orderedTabs(): Tab[] {
@@ -646,22 +681,32 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.type !== 'keydown') return false;
     if (ev.key === 'F1' && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) return true;
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEF]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCV]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
     if (!isAppShortcut(ev)) return;
+    const t = active;
+    const key = ev.key.toUpperCase();
+    // Copy / paste belong to the terminal; in a dialog's text box they keep their usual meaning.
+    if ((key === 'C' || key === 'V') && (t?.dialog || filesOpen() || helpOpen() || pasteConfirmOpen())) return;
     ev.preventDefault();
     ev.stopPropagation();
+    if (pasteConfirmOpen()) return;
     if (ev.key === 'F1') return toggleHelp(focusActive);
     // Other shortcuts wait until the help window is closed.
     if (helpOpen()) return;
     // Tab shortcuts work even while a Connect dialog or file window is open.
-    const t = active;
     if (ev.key === 'Tab') return cycleTab(ev.shiftKey ? -1 : 1);
     if (ev.key === 'PageDown') return cycleTab(1);
     if (ev.key === 'PageUp') return cycleTab(-1);
-    switch (ev.key.toUpperCase()) {
+    switch (key) {
+        case 'C':
+            if (t) copySelection(t);
+            break;
+        case 'V':
+            if (t) pasteClipboard(t);
+            break;
         case 'T':
         case 'N':
             openDialog(null);
@@ -685,7 +730,7 @@ window.addEventListener('keydown', ev => {
 
 setActiveTabProvider(() => active?.id ?? 0);
 
-GetVersion().then(v => {
+Promise.all([GetVersion(), loadSettings()]).then(([v]) => {
     version = v;
     appName = `choboterm V${v}`;
     const first = createTab();

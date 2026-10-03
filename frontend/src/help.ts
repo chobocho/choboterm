@@ -32,6 +32,15 @@ const TEXT: Record<Lang, HelpText> = {
                 ],
             },
             {
+                title: '복사 / 붙여넣기',
+                rows: [
+                    ['마우스로 선택', '선택하면 바로 복사'],
+                    ['우클릭', '붙여넣기 (마우스를 쓰는 프로그램에서는 Shift+우클릭)'],
+                    ['Ctrl+Shift+C / Ctrl+Shift+V', '복사 / 붙여넣기'],
+                    ['여러 줄 붙여넣기', '실행 전에 확인 창 표시 (다시 묻지 않기 선택 가능)'],
+                ],
+            },
+            {
                 title: '접속',
                 rows: [
                     ['Alt+C / Alt+A / Esc', '접속 창에서 Connect / Cancel / 닫기'],
@@ -76,6 +85,15 @@ const TEXT: Record<Lang, HelpText> = {
                     ['Ctrl+Shift+W', 'Close tab'],
                     ['Enter (disconnected tab)', 'Open the Connect dialog in that tab'],
                     ['Mouse', '+ or double-click the tab bar: new tab · Middle-click: close · Drag: reorder · Right-click: menu'],
+                ],
+            },
+            {
+                title: 'Copy / Paste',
+                rows: [
+                    ['Select with mouse', 'Copies right away'],
+                    ['Right-click', 'Paste (Shift+right-click in programs that use the mouse)'],
+                    ['Ctrl+Shift+C / Ctrl+Shift+V', 'Copy / Paste'],
+                    ['Multi-line paste', 'Asks before pasting (can be turned off)'],
                 ],
             },
             {

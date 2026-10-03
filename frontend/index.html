@@ -94,7 +94,26 @@
     </div>
 </div>
 
-<div id="helpOverlay" class="overlay help" hidden>
+<div id="pasteOverlay" class="overlay modal" hidden>
+    <div class="dialog paste" id="paste" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title">여러 줄 붙여넣기</span>
+            <button type="button" class="close" id="pasteX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div id="pasteInfo"></div>
+            <pre id="pastePreview"></pre>
+            <label class="check"><input type="checkbox" id="pasteNoAsk"/> 다시 묻지 않기</label>
+            <div class="buttons">
+                <button type="button" id="pasteOk">붙여넣기</button>
+                <button type="button" id="pasteCancel">취소</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="helpOverlay" class="overlay modal help" hidden>
     <div class="dialog help" id="help" tabindex="-1">
         <div class="titlebar">
             <img class="icon" src="./src/assets/icon.png" alt=""/>

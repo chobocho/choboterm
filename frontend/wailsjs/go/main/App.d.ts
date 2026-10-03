@@ -22,9 +22,13 @@ export function FileUpload(arg1:number,arg2:string):Promise<number>;
 
 export function GetHistory():Promise<Array<main.HostEntry>>;
 
+export function GetSettings():Promise<main.Settings>;
+
 export function GetVersion():Promise<string>;
 
 export function Resize(arg1:number,arg2:number,arg3:number):Promise<void>;
+
+export function SaveSettings(arg1:main.Settings):Promise<void>;
 
 export function Send(arg1:number,arg2:string):Promise<void>;
 

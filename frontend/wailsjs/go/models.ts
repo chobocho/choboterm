@@ -76,6 +76,20 @@ export namespace main {
 	        this.pass = source["pass"];
 	    }
 	}
+	export class Settings {
+	    fontSize: number;
+	    pasteNoConfirm: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Settings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fontSize = source["fontSize"];
+	        this.pasteNoConfirm = source["pasteNoConfirm"];
+	    }
+	}
 
 }
 
