@@ -12,13 +12,23 @@ export function FileCancel(arg1:number):Promise<void>;
 
 export function FileClose(arg1:number):Promise<void>;
 
+export function FileDelete(arg1:number,arg2:string,arg3:Array<main.FileEntry>):Promise<number>;
+
 export function FileDownload(arg1:number,arg2:string,arg3:number):Promise<string>;
+
+export function FileDownloadMany(arg1:number,arg2:string,arg3:Array<main.FileEntry>):Promise<main.DownloadResult>;
 
 export function FileList(arg1:number,arg2:string):Promise<Array<main.FileEntry>>;
 
+export function FileMkdir(arg1:number,arg2:string,arg3:string):Promise<void>;
+
 export function FileOpen(arg1:number):Promise<main.FileOpenResult>;
 
+export function FileRename(arg1:number,arg2:string,arg3:string,arg4:string):Promise<void>;
+
 export function FileUpload(arg1:number,arg2:string):Promise<number>;
+
+export function FileUploadPaths(arg1:number,arg2:string,arg3:Array<string>):Promise<number>;
 
 export function ForwardAdd(arg1:number,arg2:main.Forward):Promise<main.ForwardStatus>;
 

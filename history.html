@@ -265,5 +265,14 @@
   <li>테스트: forward_test.go — direct-tcpip/tcpip-forward를 처리하는 테스트 SSH 서버로 L/R/D 실제 왕복, 중복/사용 중/잘못된 포트, 끊기 후 해제, 재접속 후 복원, 기록 저장 확인</li>
   <li>UI 검증: 스크래치 SSH 서버 + Edge 자동 점검으로 L/R/D 통신, 끊기·재접속, 탭 메뉴 열기·삭제 확인</li>
 </ul>
+
+<h2>2026-10-03 — 파일 전송 창 개선</h2>
+<ul>
+  <li>RemoteFS에 Remove(폴더는 안의 내용까지)/Rename/Mkdir 추가: SFTP(링크는 링크만 삭제), FTP(RemoveDirRecur), SCP(rm -rf/mv/mkdir). App: FileDelete, FileRename, FileMkdir(이름 검사), FileUploadPaths(폴더 하위까지), FileDownloadMany(폴더 선택, 하위까지, 같은 이름은 '이름 (1)'), 진행률에 '(3/10)' 표시</li>
+  <li>files.ts: Ctrl/Shift+클릭·Shift+방향키·Ctrl+A 여러 개 선택, Delete 삭제(확인 창), F2 이름 바꾸기, F7 새 폴더, 우클릭 메뉴, 버튼 추가. 삭제 후 다음 행 선택</li>
+  <li>끌어 놓기 업로드: Wails DragAndDrop(EnableFileDrop) + OnFileDrop, 파일 목록만 드롭 대상(--wails-drop-target)</li>
+  <li>공용 확인/이름 입력 창 dialog.ts 추가</li>
+  <li>테스트: fileops_test.go(SFTP로 만들기·이름 바꾸기·폴더 업로드·여러 개/폴더 다운로드·삭제). UI는 SFTP 테스트 서버 + Edge 자동 점검으로 여러 개 선택·삭제 확인/취소·새 폴더·이름 바꾸기·폴더 삭제 경고·우클릭 메뉴·Ctrl+A·잘못된 이름 오류 확인. 탐색기 끌어 놓기는 네이티브 기능이라 자동 점검하지 못함</li>
+</ul>
 </body>
 </html>

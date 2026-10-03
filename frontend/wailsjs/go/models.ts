@@ -24,6 +24,20 @@ export namespace main {
 	        this.rows = source["rows"];
 	    }
 	}
+	export class DownloadResult {
+	    dir: string;
+	    count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DownloadResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.count = source["count"];
+	    }
+	}
 	export class FileEntry {
 	    name: string;
 	    size: number;

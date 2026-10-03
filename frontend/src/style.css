@@ -545,6 +545,16 @@ html, body {
     overflow: auto;
     border: 1px solid #7a7a7a;
     background: #fff;
+    user-select: none;
+    /* Files dropped here from Explorer are uploaded (Wails OnFileDrop). */
+    --wails-drop-target: drop;
+}
+
+.files .flist.wails-drop-target-active {
+    border-color: #0078d7;
+    outline: 2px dashed #0078d7;
+    outline-offset: -4px;
+    background: #f0f7ff;
 }
 
 .files table {
@@ -592,8 +602,23 @@ html, body {
     color: #fff;
 }
 
+/* The row with the keyboard focus inside a multi-selection. */
+.files tbody tr.cur td:first-child {
+    box-shadow: inset 2px 0 0 #ffb900;
+}
+
 .files .buttons {
     margin-top: 0;
+    gap: 6px;
+}
+
+.files .buttons button {
+    min-width: 0;
+    padding: 0 12px;
+}
+
+.files .buttons .gap {
+    flex: 1;
 }
 
 .files .buttons #fDownload {
@@ -976,6 +1001,42 @@ html, body {
 
 .pf .buttons {
     margin-top: 0;
+}
+
+/* ---- Question / text input window ---- */
+
+/* Above the file window it is opened from. */
+.overlay.ask {
+    z-index: 45;
+}
+
+.dialog.ask {
+    width: min(420px, calc(100vw - 32px));
+    outline: none;
+}
+
+.ask .body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+#askMsg {
+    white-space: pre-line;
+    word-break: break-all;
+}
+
+#askInput[hidden] {
+    display: none;
+}
+
+.ask .buttons {
+    margin-top: 0;
+}
+
+.ask .buttons #askOk {
+    outline: 1px solid #0078d7;
 }
 
 /* ---- Multi-line paste confirmation ---- */

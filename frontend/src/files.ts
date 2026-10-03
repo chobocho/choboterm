@@ -1,6 +1,18 @@
-import {FileCancel, FileDownload, FileList, FileOpen, FileUpload} from '../wailsjs/go/main/App';
+import {
+    FileCancel,
+    FileDelete,
+    FileDownload,
+    FileDownloadMany,
+    FileList,
+    FileMkdir,
+    FileOpen,
+    FileRename,
+    FileUpload,
+    FileUploadPaths,
+} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
-import {EventsOn} from '../wailsjs/runtime/runtime';
+import {EventsOn, OnFileDrop} from '../wailsjs/runtime/runtime';
+import {ask, askText} from './dialog';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -8,12 +20,17 @@ const overlay = $<HTMLDivElement>('filesOverlay');
 const panel = $<HTMLDivElement>('files');
 const title = $<HTMLSpanElement>('filesTitle');
 const pathInput = $<HTMLInputElement>('fPath');
+const listEl = $<HTMLDivElement>('fList');
 const body = $<HTMLTableSectionElement>('fBody');
 const error = $<HTMLDivElement>('fError');
 const upBtn = $<HTMLButtonElement>('fUp');
 const refreshBtn = $<HTMLButtonElement>('fRefresh');
 const uploadBtn = $<HTMLButtonElement>('fUpload');
 const downloadBtn = $<HTMLButtonElement>('fDownload');
+const mkdirBtn = $<HTMLButtonElement>('fMkdir');
+const renameBtn = $<HTMLButtonElement>('fRename');
+const deleteBtn = $<HTMLButtonElement>('fDelete');
+const menu = $<HTMLUListElement>('fMenu');
 
 // One file window per tab. Only the active tab's window is shown; the others
 // keep their folder, selection and running transfer in the background.
@@ -22,7 +39,9 @@ interface View {
     heading: string;
     cwd: string;
     entries: main.FileEntry[];
-    selected: number;
+    selected: number; // the row with the keyboard focus
+    picked: Set<number>; // selected rows (Ctrl/Shift+click)
+    anchor: number; // where a Shift selection starts
     busy: boolean;
     status: string;
     statusOk: boolean;
@@ -69,11 +88,20 @@ function parentPath(dir: string) {
     return i <= 0 ? '/' : trimmed.slice(0, i);
 }
 
+/** The selected entries, in list order (the focused row if nothing is picked). */
+function pickedEntries(v: View): main.FileEntry[] {
+    const idx = v.picked.size > 0 ? [...v.picked].sort((a, b) => a - b) : [v.selected];
+    return idx.map(i => v.entries[i]).filter((e): e is main.FileEntry => !!e);
+}
+
 // ---- rendering (only for the visible view) ----
 
-function paintBusy(v: View) {
+function paintButtons(v: View) {
     if (v !== current) return;
-    for (const b of [upBtn, refreshBtn, uploadBtn, downloadBtn]) b.disabled = v.busy;
+    const n = pickedEntries(v).length;
+    for (const b of [upBtn, refreshBtn, uploadBtn, mkdirBtn]) b.disabled = v.busy;
+    downloadBtn.disabled = deleteBtn.disabled = v.busy || n === 0;
+    renameBtn.disabled = v.busy || n !== 1;
 }
 
 function paintStatus(v: View) {
@@ -84,8 +112,12 @@ function paintStatus(v: View) {
 
 function paintSelection(v: View) {
     if (v !== current) return;
-    Array.from(body.rows).forEach((row, j) => row.classList.toggle('sel', j === v.selected));
+    Array.from(body.rows).forEach((row, j) => {
+        row.classList.toggle('sel', v.picked.has(j));
+        row.classList.toggle('cur', j === v.selected);
+    });
     body.rows[v.selected]?.scrollIntoView({block: 'nearest'});
+    paintButtons(v);
 }
 
 function paintList(v: View) {
@@ -100,8 +132,13 @@ function paintList(v: View) {
         size.className = 'num';
         size.textContent = e.isDir ? '' : formatSize(e.size);
         tr.insertCell().textContent = e.modTime;
-        tr.addEventListener('mousedown', () => select(v, i));
-        tr.addEventListener('dblclick', () => enter(v, i));
+        tr.addEventListener('mousedown', ev => {
+            if (ev.button === 2 && v.picked.has(i)) return; // right-click keeps a multi-selection
+            select(v, i, ev.shiftKey ? 'range' : ev.ctrlKey ? 'toggle' : 'one');
+        });
+        tr.addEventListener('dblclick', ev => {
+            if (!ev.ctrlKey && !ev.shiftKey) enter(v, i);
+        });
     });
     paintSelection(v);
 }
@@ -111,7 +148,6 @@ function show(v: View) {
     title.textContent = v.heading;
     overlay.hidden = false;
     paintList(v);
-    paintBusy(v);
     paintStatus(v);
     placeXfer();
 }
@@ -119,6 +155,7 @@ function show(v: View) {
 function hide() {
     current = undefined;
     overlay.hidden = true;
+    hideMenu();
     placeXfer();
 }
 
@@ -126,7 +163,7 @@ function hide() {
 
 function setBusy(v: View, on: boolean) {
     v.busy = on;
-    paintBusy(v);
+    paintButtons(v);
 }
 
 function setStatus(v: View, msg: string, ok = false) {
@@ -135,18 +172,48 @@ function setStatus(v: View, msg: string, ok = false) {
     paintStatus(v);
 }
 
-function select(v: View, i: number) {
-    v.selected = Math.max(-1, Math.min(i, v.entries.length - 1));
+/** Moves the focus to row i; 'one' selects only it, 'toggle' adds/removes it, 'range' selects from the anchor. */
+function select(v: View, i: number, mode: 'one' | 'toggle' | 'range' = 'one') {
+    i = Math.max(-1, Math.min(i, v.entries.length - 1));
+    v.selected = i;
+    if (i < 0) {
+        v.picked.clear();
+    } else if (mode === 'toggle') {
+        if (v.picked.has(i)) v.picked.delete(i);
+        else v.picked.add(i);
+        v.anchor = i;
+    } else if (mode === 'range' && v.anchor >= 0) {
+        v.picked.clear();
+        const [a, b] = v.anchor < i ? [v.anchor, i] : [i, v.anchor];
+        for (let j = a; j <= b; j++) v.picked.add(j);
+    } else {
+        v.picked = new Set([i]);
+        v.anchor = i;
+    }
     paintSelection(v);
 }
 
-async function load(v: View, dir: string) {
+function selectAll(v: View) {
+    v.picked = new Set(v.entries.map((_, i) => i));
+    paintSelection(v);
+}
+
+/** Lists dir; names (if given) are selected afterwards, otherwise the first row. */
+async function load(v: View, dir: string, names?: string[]) {
     setStatus(v, '');
     setBusy(v, true);
     try {
         v.entries = (await FileList(v.tabId, dir)) ?? [];
         v.cwd = dir;
-        v.selected = v.entries.length > 0 ? 0 : -1;
+        v.picked = new Set();
+        v.selected = v.anchor = v.entries.length > 0 ? 0 : -1;
+        if (names?.length) {
+            v.entries.forEach((e, i) => names.includes(e.name) && v.picked.add(i));
+            const first = Math.min(...v.picked);
+            if (Number.isFinite(first)) v.selected = v.anchor = first;
+        } else if (v.selected >= 0) {
+            v.picked.add(v.selected);
+        }
         paintList(v);
     } catch (e) {
         setStatus(v, String(e));
@@ -163,14 +230,13 @@ async function enter(v: View, i: number) {
     else await download(v);
 }
 
-async function download(v: View) {
-    const e = v.entries[v.selected];
-    if (!e || e.isDir || v.busy) return;
+/** Runs a remote operation with the window busy; errors go to the status line. */
+async function run(v: View, op: () => Promise<void>) {
+    if (v.busy) return;
     setStatus(v, '');
     setBusy(v, true);
     try {
-        const local = await FileDownload(v.tabId, joinPath(v.cwd, e.name), e.size);
-        if (local) setStatus(v, `저장했습니다: ${local}`, true);
+        await op();
     } catch (err) {
         setStatus(v, String(err));
     } finally {
@@ -179,23 +245,86 @@ async function download(v: View) {
     }
 }
 
-async function upload(v: View) {
-    if (v.busy) return;
-    setStatus(v, '');
-    setBusy(v, true);
-    try {
-        const n = await FileUpload(v.tabId, v.cwd);
-        if (n > 0) {
-            setBusy(v, false);
-            await load(v, v.cwd);
-            setStatus(v, `${n}개 파일을 업로드했습니다`, true);
+function download(v: View) {
+    const list = pickedEntries(v);
+    if (list.length === 0) return;
+    return run(v, async () => {
+        const e = list[0];
+        if (list.length === 1 && !e.isDir) {
+            const local = await FileDownload(v.tabId, joinPath(v.cwd, e.name), e.size);
+            if (local) setStatus(v, `저장했습니다: ${local}`, true);
+            return;
         }
-    } catch (err) {
-        setStatus(v, String(err));
-    } finally {
+        // Several entries or a folder: pick a folder to save into.
+        const res = await FileDownloadMany(v.tabId, v.cwd, list);
+        if (res.dir) setStatus(v, `${res.count}개 파일을 저장했습니다: ${res.dir}`, true);
+    });
+}
+
+async function uploaded(v: View, n: number, names: string[]) {
+    if (n === 0) return;
+    setBusy(v, false);
+    await load(v, v.cwd, names);
+    setStatus(v, `${n}개 파일을 업로드했습니다`, true);
+}
+
+function upload(v: View) {
+    return run(v, async () => uploaded(v, await FileUpload(v.tabId, v.cwd), []));
+}
+
+/** Uploads files and folders dropped on the window (paths come from Wails). */
+function uploadPaths(v: View, paths: string[]) {
+    const names = paths.map(p => p.split(/[\\/]/).pop() ?? p);
+    return run(v, async () => uploaded(v, await FileUploadPaths(v.tabId, v.cwd, paths), names));
+}
+
+async function remove(v: View) {
+    const list = pickedEntries(v);
+    if (list.length === 0 || v.busy) return;
+    const dirs = list.filter(e => e.isDir).length;
+    const what = list.length === 1 ? `"${list[0].name}"` : `${list.length}개 항목`;
+    const msg = `${what}을(를) 서버에서 삭제할까요? 되돌릴 수 없습니다.` +
+        (dirs > 0 ? '\n폴더는 안에 있는 파일과 폴더까지 모두 삭제됩니다.' : '');
+    if (!await ask('삭제', msg, '삭제')) return panel.focus();
+    // Afterwards select the row after the deleted ones (or before them at the end).
+    const gone = new Set(list);
+    const last = v.entries.indexOf(list[list.length - 1]);
+    const keep = v.entries.slice(last + 1).find(e => !gone.has(e)) ??
+        v.entries.slice(0, last).reverse().find(e => !gone.has(e));
+    await run(v, async () => {
+        let n = 0;
+        try {
+            n = await FileDelete(v.tabId, v.cwd, list);
+        } finally {
+            setBusy(v, false);
+            await load(v, v.cwd, keep ? [keep.name] : undefined);
+        }
+        setStatus(v, `${n}개 항목을 삭제했습니다`, true);
+    });
+}
+
+async function rename(v: View) {
+    const list = pickedEntries(v);
+    if (list.length !== 1 || v.busy) return;
+    const old = list[0].name;
+    const name = await askText('이름 바꾸기', `"${old}"의 새 이름:`, old);
+    if (!name) return panel.focus();
+    await run(v, async () => {
+        await FileRename(v.tabId, v.cwd, old, name);
         setBusy(v, false);
-        if (v === current) panel.focus();
-    }
+        await load(v, v.cwd, [name]);
+    });
+}
+
+async function mkdir(v: View) {
+    if (v.busy) return;
+    const name = await askText('새 폴더', `${v.cwd} 안에 만들 폴더 이름:`, '');
+    if (!name) return panel.focus();
+    await run(v, async () => {
+        await FileMkdir(v.tabId, v.cwd, name);
+        setBusy(v, false);
+        await load(v, v.cwd, [name]);
+    });
 }
 
 /**
@@ -215,6 +344,8 @@ export async function openFiles(tabId: number, host: string, opts: {onClose?: ()
         cwd: res.home || '/',
         entries: [],
         selected: -1,
+        picked: new Set(),
+        anchor: -1,
         busy: false,
         status: '',
         statusOk: false,
@@ -261,6 +392,9 @@ upBtn.addEventListener('click', () => current && load(current, parentPath(curren
 refreshBtn.addEventListener('click', () => current && load(current, current.cwd));
 uploadBtn.addEventListener('click', () => current && upload(current));
 downloadBtn.addEventListener('click', () => current && download(current));
+mkdirBtn.addEventListener('click', () => current && mkdir(current));
+renameBtn.addEventListener('click', () => current && rename(current));
+deleteBtn.addEventListener('click', () => current && remove(current));
 $<HTMLButtonElement>('fClose').addEventListener('click', () => closeFiles());
 $<HTMLButtonElement>('filesX').addEventListener('click', () => closeFiles());
 
@@ -275,25 +409,28 @@ pathInput.addEventListener('keydown', ev => {
 
 panel.addEventListener('keydown', ev => {
     const v = current;
-    if (!v) return;
+    if (!v || ev.target === pathInput) return;
+    const mode = ev.shiftKey ? 'range' : 'one';
     switch (ev.key) {
         case 'Escape':
-            closeFiles();
+            if (!menu.hidden) hideMenu();
+            else closeFiles();
             break;
         case 'ArrowDown':
-            select(v, v.selected + 1);
+            select(v, v.selected + 1, mode);
             break;
         case 'ArrowUp':
-            select(v, v.selected - 1);
+            select(v, Math.max(0, v.selected - 1), mode);
             break;
         case 'Home':
-            select(v, 0);
+            select(v, 0, mode);
             break;
         case 'End':
-            select(v, v.entries.length - 1);
+            select(v, v.entries.length - 1, mode);
             break;
         case 'Enter':
-            enter(v, v.selected);
+            if (v.picked.size > 1) download(v);
+            else enter(v, v.selected);
             break;
         case 'Backspace':
             if (!v.busy) load(v, parentPath(v.cwd));
@@ -301,11 +438,98 @@ panel.addEventListener('keydown', ev => {
         case 'F5':
             if (!v.busy) load(v, v.cwd);
             break;
+        case 'Delete':
+            remove(v);
+            break;
+        case 'F2':
+            rename(v);
+            break;
+        case 'F7':
+            mkdir(v);
+            break;
+        case 'a':
+        case 'A':
+            if (!ev.ctrlKey) return;
+            selectAll(v);
+            break;
         default:
             return;
     }
     ev.preventDefault();
 });
+
+// ---- Right-click menu ----
+
+function showMenu(x: number, y: number) {
+    const v = current;
+    if (!v) return;
+    const list = pickedEntries(v);
+    const enable = (act: string, on: boolean) =>
+        menu.querySelector(`[data-act="${act}"]`)!.classList.toggle('disabled', !on || v.busy);
+    const one = list.length === 1 ? list[0] : undefined;
+    menu.querySelector('[data-act="open"]')!.textContent = one?.isDir ? '열기' : '다운로드';
+    enable('open', list.length > 0);
+    enable('rename', !!one);
+    enable('delete', list.length > 0);
+    enable('mkdir', true);
+    enable('upload', true);
+    enable('refresh', true);
+    menu.hidden = false;
+    const r = menu.getBoundingClientRect();
+    menu.style.left = `${Math.min(x, window.innerWidth - r.width - 4)}px`;
+    menu.style.top = `${Math.min(y, window.innerHeight - r.height - 4)}px`;
+}
+
+function hideMenu() {
+    menu.hidden = true;
+}
+
+listEl.addEventListener('contextmenu', ev => {
+    ev.preventDefault();
+    showMenu(ev.clientX, ev.clientY);
+});
+menu.addEventListener('mousedown', ev => ev.stopPropagation());
+menu.addEventListener('click', ev => {
+    const li = (ev.target as HTMLElement).closest('li');
+    const v = current;
+    if (!li || !v || li.classList.contains('disabled') || li.classList.contains('sep')) return;
+    hideMenu();
+    switch (li.dataset.act) {
+        case 'open': {
+            const one = pickedEntries(v);
+            if (one.length === 1 && one[0].isDir) enter(v, v.entries.indexOf(one[0]));
+            else download(v);
+            break;
+        }
+        case 'rename':
+            rename(v);
+            break;
+        case 'delete':
+            remove(v);
+            break;
+        case 'mkdir':
+            mkdir(v);
+            break;
+        case 'upload':
+            upload(v);
+            break;
+        case 'refresh':
+            load(v, v.cwd);
+            break;
+    }
+});
+window.addEventListener('mousedown', hideMenu);
+window.addEventListener('blur', hideMenu);
+
+// ---- Drag and drop from Explorer ----
+
+// Only the file list (style --wails-drop-target: drop) accepts drops.
+OnFileDrop((_x, _y, paths) => {
+    const v = current;
+    if (!v || paths.length === 0) return;
+    if (v.busy) return setStatus(v, '전송이 끝난 뒤에 다시 끌어 놓으세요');
+    uploadPaths(v, paths);
+}, true);
 
 // ---- Progress box (shared by SFTP/SCP/FTP and Zmodem) ----
 

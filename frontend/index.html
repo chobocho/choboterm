@@ -90,7 +90,7 @@
                 <input id="fPath" spellcheck="false"/>
                 <button type="button" id="fRefresh" title="새로 고침 (F5)">⟳</button>
             </div>
-            <div class="flist">
+            <div class="flist" id="fList" title="파일이나 폴더를 여기로 끌어 놓으면 업로드합니다">
                 <table>
                     <thead><tr><th>이름</th><th class="num">크기</th><th>수정한 날짜</th></tr></thead>
                     <tbody id="fBody"></tbody>
@@ -99,8 +99,12 @@
             <div class="error" id="fError"></div>
             <div id="xferSlot"></div>
             <div class="buttons">
-                <button type="button" id="fUpload">업로드...</button>
-                <button type="button" id="fDownload">다운로드</button>
+                <button type="button" id="fMkdir" title="F7">새 폴더</button>
+                <button type="button" id="fRename" title="F2">이름 바꾸기</button>
+                <button type="button" id="fDelete" title="Delete">삭제</button>
+                <span class="gap"></span>
+                <button type="button" id="fUpload" title="파일을 목록으로 끌어 놓아도 됩니다">업로드...</button>
+                <button type="button" id="fDownload" title="Enter">다운로드</button>
                 <button type="button" id="fClose">닫기</button>
             </div>
         </div>
@@ -240,6 +244,34 @@
             <div class="buttons">
                 <button type="button" id="helpLang" title="Alt+L"></button>
                 <button type="button" id="helpClose"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ul id="fMenu" class="menu" hidden>
+    <li data-act="open">다운로드</li>
+    <li data-act="rename">이름 바꾸기 (F2)</li>
+    <li data-act="delete">삭제 (Delete)</li>
+    <li class="sep"></li>
+    <li data-act="mkdir">새 폴더 (F7)</li>
+    <li data-act="upload">업로드...</li>
+    <li data-act="refresh">새로 고침 (F5)</li>
+</ul>
+
+<div id="askOverlay" class="overlay modal ask" hidden>
+    <div class="dialog ask" id="ask" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title" id="askTitle"></span>
+            <button type="button" class="close" id="askX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div id="askMsg"></div>
+            <input id="askInput" spellcheck="false" autocomplete="off"/>
+            <div class="buttons">
+                <button type="button" id="askOk">확인</button>
+                <button type="button" id="askCancel">취소</button>
             </div>
         </div>
     </div>

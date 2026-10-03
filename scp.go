@@ -232,5 +232,24 @@ func (s *scpFS) Upload(remotePath string, r io.Reader, size int64) error {
 	return sess.Wait()
 }
 
+func (s *scpFS) Remove(p string, isDir bool) error {
+	cmd := "rm -f -- "
+	if isDir {
+		cmd = "rm -rf -- "
+	}
+	_, err := s.run(cmd + s.q(p))
+	return err
+}
+
+func (s *scpFS) Rename(from, to string) error {
+	_, err := s.run("mv -- " + s.q(from) + " " + s.q(to))
+	return err
+}
+
+func (s *scpFS) Mkdir(p string) error {
+	_, err := s.run("mkdir -- " + s.q(p))
+	return err
+}
+
 // Close does nothing: the SSH connection belongs to the terminal session.
 func (s *scpFS) Close() error { return nil }

@@ -23,6 +23,10 @@ type RemoteFS interface {
 	List(dir string) ([]FileEntry, error)
 	Download(remotePath string, w io.Writer) error
 	Upload(remotePath string, r io.Reader, size int64) error
+	// Remove deletes a file, or a folder with everything in it.
+	Remove(p string, isDir bool) error
+	Rename(from, to string) error
+	Mkdir(p string) error
 	Close() error
 }
 
@@ -233,28 +237,247 @@ func (a *App) FileUpload(tabID int, remoteDir string) (int, error) {
 	if err != nil || len(files) == 0 {
 		return 0, err
 	}
+	return t.uploadPaths(remoteDir, files)
+}
 
-	count := 0
-	for _, local := range files {
-		name := filepath.Base(local)
-		f, err := os.Open(local)
+// FileUploadPaths uploads local files and folders (with their contents) into
+// remoteDir, e.g. ones dropped on the file window. Returns the number of files.
+func (a *App) FileUploadPaths(tabID int, remoteDir string, paths []string) (int, error) {
+	t := a.findTab(tabID)
+	if t == nil {
+		return 0, errors.New("연결되어 있지 않습니다")
+	}
+	return t.uploadPaths(remoteDir, paths)
+}
+
+// upItem is one folder to create or file to send.
+type upItem struct {
+	local, remote string
+	size          int64
+	dir           bool
+}
+
+func (t *tab) uploadPaths(remoteDir string, paths []string) (int, error) {
+	var items []upItem
+	files := 0
+	for _, local := range paths {
+		st, err := os.Stat(local)
 		if err != nil {
-			return count, err
+			return 0, err
 		}
-		var size int64
-		if st, err := f.Stat(); err == nil {
-			size = st.Size()
+		top := path.Join(remoteDir, filepath.Base(local))
+		if !st.IsDir() {
+			items = append(items, upItem{local: local, remote: top, size: st.Size()})
+			files++
+			continue
 		}
-		err = t.transfer(name, size, true, func(fs RemoteFS, p *progress) error {
-			return fs.Upload(path.Join(remoteDir, name), progressReader{f, p}, size)
+		err = filepath.WalkDir(local, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			rel, _ := filepath.Rel(local, p)
+			remote := path.Join(top, filepath.ToSlash(rel))
+			if d.IsDir() {
+				items = append(items, upItem{remote: remote, dir: true})
+				return nil
+			}
+			if !d.Type().IsRegular() {
+				return nil // skip links, devices...
+			}
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			items = append(items, upItem{local: p, remote: remote, size: info.Size()})
+			files++
+			return nil
+		})
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	done := 0
+	for _, it := range items {
+		if it.dir {
+			// It may already exist; a real problem shows up when its files are sent.
+			_ = t.withFS(func(fs RemoteFS) error { return fs.Mkdir(it.remote) })
+			continue
+		}
+		f, err := os.Open(it.local)
+		if err != nil {
+			return done, err
+		}
+		name := path.Base(it.remote)
+		if files > 1 {
+			name = fmt.Sprintf("(%d/%d) %s", done+1, files, name)
+		}
+		err = t.transfer(name, it.size, true, func(fs RemoteFS, p *progress) error {
+			return fs.Upload(it.remote, progressReader{f, p}, it.size)
 		})
 		f.Close()
 		if err != nil {
-			return count, err
+			return done, err
 		}
-		count++
+		done++
 	}
-	return count, nil
+	return done, nil
+}
+
+// DownloadResult tells where several downloaded files went.
+type DownloadResult struct {
+	Dir   string `json:"dir"`
+	Count int    `json:"count"`
+}
+
+// FileDownloadMany asks for a local folder and downloads entries of dir into
+// it, folders with all their contents. Existing names get " (1)" etc.
+// Dir is "" if the user cancelled the dialog.
+func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (DownloadResult, error) {
+	t := a.findTab(tabID)
+	if t == nil {
+		return DownloadResult{}, errors.New("연결되어 있지 않습니다")
+	}
+	localDir := a.hooks.downloadDir
+	if localDir == "" {
+		d, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+			Title:            "저장할 폴더 선택",
+			DefaultDirectory: downloadsDir(),
+		})
+		if err != nil || d == "" {
+			return DownloadResult{}, err
+		}
+		localDir = d
+	}
+
+	// Collect the files first, so progress can say "(3/10)".
+	type downItem struct {
+		remote, local string
+		size          int64
+	}
+	var items []downItem
+	var collect func(fs RemoteFS, remote, local string, e FileEntry) error
+	collect = func(fs RemoteFS, remote, local string, e FileEntry) error {
+		if !e.IsDir {
+			items = append(items, downItem{remote, local, e.Size})
+			return nil
+		}
+		if err := os.MkdirAll(local, 0o755); err != nil {
+			return err
+		}
+		list, err := fs.List(remote)
+		if err != nil {
+			return err
+		}
+		for _, c := range list {
+			if err := collect(fs, path.Join(remote, c.Name), filepath.Join(local, c.Name), c); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	err := t.withFS(func(fs RemoteFS) error {
+		for _, e := range entries {
+			if err := collect(fs, path.Join(dir, e.Name), uniquePath(localDir, e.Name), e); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return DownloadResult{}, err
+	}
+
+	res := DownloadResult{Dir: localDir}
+	for _, it := range items {
+		name := path.Base(it.remote)
+		if len(items) > 1 {
+			name = fmt.Sprintf("(%d/%d) %s", res.Count+1, len(items), name)
+		}
+		f, err := os.Create(it.local)
+		if err != nil {
+			return res, err
+		}
+		err = t.transfer(name, it.size, false, func(fs RemoteFS, p *progress) error {
+			return fs.Download(it.remote, progressWriter{f, p})
+		})
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
+		if err != nil {
+			_ = os.Remove(it.local)
+			return res, err
+		}
+		res.Count++
+	}
+	return res, nil
+}
+
+// withFS runs fn with the tab's remote file system, one operation at a time.
+func (t *tab) withFS(fn func(RemoteFS) error) error {
+	t.files.mu.Lock()
+	defer t.files.mu.Unlock()
+	if t.files.fs == nil {
+		return errors.New("연결되어 있지 않습니다")
+	}
+	return fn(t.files.fs)
+}
+
+// checkName rejects names that aren't a single path element.
+func checkName(name string) error {
+	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\\") {
+		return fmt.Errorf("이름이 올바르지 않습니다: %q", name)
+	}
+	return nil
+}
+
+// FileDelete deletes entries of dir; folders are deleted with their contents.
+// Returns how many were deleted before an error.
+func (a *App) FileDelete(tabID int, dir string, entries []FileEntry) (int, error) {
+	t := a.findTab(tabID)
+	if t == nil {
+		return 0, errors.New("연결되어 있지 않습니다")
+	}
+	count := 0
+	err := t.withFS(func(fs RemoteFS) error {
+		for _, e := range entries {
+			if err := checkName(e.Name); err != nil {
+				return err
+			}
+			if err := fs.Remove(path.Join(dir, e.Name), e.IsDir); err != nil {
+				return fmt.Errorf("%s: %w", e.Name, err)
+			}
+			count++
+		}
+		return nil
+	})
+	return count, err
+}
+
+// FileRename renames from to to inside dir.
+func (a *App) FileRename(tabID int, dir, from, to string) error {
+	t := a.findTab(tabID)
+	if t == nil {
+		return errors.New("연결되어 있지 않습니다")
+	}
+	if err := checkName(to); err != nil {
+		return err
+	}
+	return t.withFS(func(fs RemoteFS) error {
+		return fs.Rename(path.Join(dir, from), path.Join(dir, to))
+	})
+}
+
+// FileMkdir creates the folder name inside dir.
+func (a *App) FileMkdir(tabID int, dir, name string) error {
+	t := a.findTab(tabID)
+	if t == nil {
+		return errors.New("연결되어 있지 않습니다")
+	}
+	if err := checkName(name); err != nil {
+		return err
+	}
+	return t.withFS(func(fs RemoteFS) error { return fs.Mkdir(path.Join(dir, name)) })
 }
 
 // transfer runs one cancellable file transfer with progress events.

@@ -23,6 +23,11 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 비밀번호를 기억해 두었다가 Host를 고르면 자동으로 채웁니다. Windows DPAPI로 암호화해 저장하므로 현재 Windows 사용자만 풀 수 있습니다. Pass를 비우고 접속하면 저장된 비밀번호를 지웁니다.
 - **FTP**: 접속하면 파일 전송 창이 바로 열립니다. 창을 닫아도 탭을 닫기 전까지 연결이 유지되며 `Ctrl+Shift+F`로 다시 엽니다. Login을 비워 두면 anonymous로 로그인합니다.
 - **SFTP / SCP**: SSH 접속 중 `Ctrl+Shift+F`로 파일 전송 창을 엽니다. 다시 로그인할 필요가 없습니다.
+- **파일 전송 창** (SFTP / SCP / FTP 공통)
+  - `Ctrl+클릭` / `Shift+클릭` / `Ctrl+A`로 여러 개를 선택해 한 번에 받거나 지웁니다.
+  - 여러 개나 폴더를 받을 때는 저장할 폴더를 고르면 하위 폴더까지 받습니다. 같은 이름이 있으면 `이름 (1)`로 저장합니다.
+  - Windows 탐색기에서 파일·폴더를 목록으로 끌어 놓으면 업로드합니다(폴더는 하위까지).
+  - `Delete` 삭제(폴더는 안의 내용까지, 확인 후), `F2` 이름 바꾸기, `F7` 새 폴더, 우클릭 메뉴
   - 서버에 SFTP가 없으면(Dropbear, 공유기, 임베디드 장비 등) 자동으로 SCP로 바꿔 씁니다. 이때 폴더 목록은 `ls`로 가져옵니다.
 - **Zmodem**: 터미널에서 `sz 파일` / `rz`를 실행하면 자동으로 전송합니다. 원격 서버에 lrzsz가 설치되어 있어야 합니다.
 - **EUC-KR (CP949)**: 접속 창의 Code에서 선택하거나 접속 중 `Ctrl+Shift+E`로 전환합니다.
@@ -73,7 +78,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Ctrl+C` / `Ctrl+X` (Zmodem 전송 중) | 전송 취소 |
 | `F1` | 도움말 열기 / 닫기 (도움말 창에서 `Alt+L`로 한국어 ↔ English 전환) |
 
-파일 전송 창: `↑` `↓` `Home` `End`로 선택, `Enter`/더블클릭으로 폴더 열기·다운로드, `Backspace`로 상위 폴더, `F5`로 새로 고침, `Esc`로 닫기
+파일 전송 창: `↑` `↓` `Home` `End`로 선택(`Shift`로 범위), `Ctrl+클릭`·`Ctrl+A`로 여러 개 선택, `Enter`/더블클릭으로 폴더 열기·다운로드, `Backspace` 상위 폴더, `F5` 새로 고침, `Delete` 삭제, `F2` 이름 바꾸기, `F7` 새 폴더, `Esc` 닫기
 
 ## 파일 저장 위치
 
@@ -158,7 +163,8 @@ go test ./...
 | `window_windows.go` | 창 크기·위치 저장과 복원 (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` | 비밀번호 암호화 (Windows DPAPI) |
 | `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
-| `frontend/src/files.ts` | 파일 전송 창, 진행률 상자 |
+| `frontend/src/files.ts` | 파일 전송 창(여러 개 선택, 끌어 놓기 업로드, 삭제·이름 바꾸기·새 폴더), 진행률 상자 |
+| `frontend/src/dialog.ts` | 확인 / 이름 입력 창 |
 | `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
 | `frontend/src/search.ts` | 스크롤백 검색 막대 |
 | `frontend/src/prefs.ts` | 설정 창 |
@@ -172,7 +178,7 @@ go test ./...
 ## 아직 지원하지 않는 기능
 
 - X11 포워딩
-- FTPS(TLS), 이어받기, 원격 파일 삭제와 폴더 만들기
+- FTPS(TLS), 이어받기
 
 ## 라이선스
 

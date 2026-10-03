@@ -47,6 +47,11 @@ func main() {
 		Windows: &windows.Options{
 			WindowClassName: windowClass,
 		},
+		// Files dropped on the file window are uploaded (see files.ts).
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop:     true,
+			DisableWebViewDrop: true,
+		},
 		Bind: []interface{}{
 			app,
 		},

@@ -71,4 +71,20 @@ func (s *sftpFS) Upload(remotePath string, r io.Reader, _ int64) error {
 	return f.Close()
 }
 
+func (s *sftpFS) Remove(p string, isDir bool) error {
+	// A link to a folder is removed itself, never what it points to.
+	fi, err := s.c.Lstat(p)
+	if err != nil {
+		return err
+	}
+	if !isDir || fi.Mode()&os.ModeSymlink != 0 || !fi.IsDir() {
+		return s.c.Remove(p)
+	}
+	return s.c.RemoveAll(p)
+}
+
+func (s *sftpFS) Rename(from, to string) error { return s.c.Rename(from, to) }
+
+func (s *sftpFS) Mkdir(p string) error { return s.c.Mkdir(p) }
+
 func (s *sftpFS) Close() error { return s.c.Close() }

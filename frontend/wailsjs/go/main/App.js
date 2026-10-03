@@ -22,20 +22,40 @@ export function FileClose(arg1) {
   return window['go']['main']['App']['FileClose'](arg1);
 }
 
+export function FileDelete(arg1, arg2, arg3) {
+  return window['go']['main']['App']['FileDelete'](arg1, arg2, arg3);
+}
+
 export function FileDownload(arg1, arg2, arg3) {
   return window['go']['main']['App']['FileDownload'](arg1, arg2, arg3);
+}
+
+export function FileDownloadMany(arg1, arg2, arg3) {
+  return window['go']['main']['App']['FileDownloadMany'](arg1, arg2, arg3);
 }
 
 export function FileList(arg1, arg2) {
   return window['go']['main']['App']['FileList'](arg1, arg2);
 }
 
+export function FileMkdir(arg1, arg2, arg3) {
+  return window['go']['main']['App']['FileMkdir'](arg1, arg2, arg3);
+}
+
 export function FileOpen(arg1) {
   return window['go']['main']['App']['FileOpen'](arg1);
 }
 
+export function FileRename(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['FileRename'](arg1, arg2, arg3, arg4);
+}
+
 export function FileUpload(arg1, arg2) {
   return window['go']['main']['App']['FileUpload'](arg1, arg2);
+}
+
+export function FileUploadPaths(arg1, arg2, arg3) {
+  return window['go']['main']['App']['FileUploadPaths'](arg1, arg2, arg3);
 }
 
 export function ForwardAdd(arg1, arg2) {

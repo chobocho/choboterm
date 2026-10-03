@@ -125,6 +125,27 @@ func (f *ftpFS) Upload(remotePath string, r io.Reader, _ int64) error {
 	return f.c.Stor(f.names.EncodeString(remotePath), r)
 }
 
+func (f *ftpFS) Remove(p string, isDir bool) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if isDir {
+		return f.c.RemoveDirRecur(f.names.EncodeString(p))
+	}
+	return f.c.Delete(f.names.EncodeString(p))
+}
+
+func (f *ftpFS) Rename(from, to string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.c.Rename(f.names.EncodeString(from), f.names.EncodeString(to))
+}
+
+func (f *ftpFS) Mkdir(p string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.c.MakeDir(f.names.EncodeString(p))
+}
+
 func (f *ftpFS) Close() error {
 	close(f.stop)
 	f.mu.Lock()
