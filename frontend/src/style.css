@@ -147,6 +147,24 @@ html, body {
     display: none;
 }
 
+#toast {
+    position: fixed;
+    top: 48px;
+    left: 50%;
+    z-index: 50;
+    transform: translateX(-50%);
+    padding: 6px 14px;
+    border-radius: 4px;
+    background: rgba(40, 42, 46, 0.92);
+    color: #fff;
+    font: 13px "Malgun Gothic", "Segoe UI", sans-serif;
+    pointer-events: none;
+}
+
+#toast[hidden] {
+    display: none;
+}
+
 .menu {
     position: fixed;
     z-index: 30;

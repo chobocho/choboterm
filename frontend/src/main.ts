@@ -6,7 +6,7 @@ import {FitAddon} from '@xterm/addon-fit';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
-import {loadSettings} from './settings';
+import {loadSettings, saveSettings, settings} from './settings';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {CloseTab, Connect, Disconnect, GetHistory, GetVersion, Resize, Send, SetEncoding} from '../wailsjs/go/main/App';
@@ -87,7 +87,7 @@ function createTab(): Tab {
 
     const term = new Terminal({
         fontFamily: '"D2Coding", "Consolas", "Malgun Gothic", monospace',
-        fontSize: 15,
+        fontSize: settings.fontSize,
         cursorBlink: true,
         scrollback: 5000,
         allowProposedApi: true,
@@ -182,6 +182,42 @@ function createTab(): Tab {
     welcome(t);
     return t;
 }
+
+// ---- Font size ----
+
+const MIN_FONT = 8;
+const MAX_FONT = 40;
+const DEFAULT_FONT = 15;
+
+function setFontSize(n: number) {
+    n = Math.max(MIN_FONT, Math.min(MAX_FONT, Math.round(n)));
+    if (n !== settings.fontSize) {
+        saveSettings(s => (s.fontSize = n));
+        // Hidden tabs are fitted again when they are activated.
+        for (const t of tabs.values()) t.term.options.fontSize = n;
+        active?.fit.fit();
+    }
+    toast(`글꼴 크기 ${n}`);
+}
+
+const toastEl = $<HTMLDivElement>('toast');
+let toastTimer = 0;
+
+function toast(msg: string) {
+    toastEl.textContent = msg;
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => (toastEl.hidden = true), 1200);
+}
+
+termsEl.addEventListener('wheel', ev => {
+    if (!ev.ctrlKey) return;
+    ev.preventDefault();
+    ev.stopPropagation(); // don't scroll the terminal as well
+    setFontSize(settings.fontSize + (ev.deltaY < 0 ? 1 : -1));
+}, {capture: true, passive: false});
+
+// ---- Clipboard ----
 
 function copySelection(t: Tab) {
     const text = t.term.getSelection();
@@ -680,6 +716,7 @@ form.addEventListener('keydown', ev => {
 function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.type !== 'keydown') return false;
     if (ev.key === 'F1' && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) return true;
+    if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
     return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCV]$/i.test(ev.key);
 }
@@ -700,6 +737,9 @@ window.addEventListener('keydown', ev => {
     if (ev.key === 'Tab') return cycleTab(ev.shiftKey ? -1 : 1);
     if (ev.key === 'PageDown') return cycleTab(1);
     if (ev.key === 'PageUp') return cycleTab(-1);
+    if (ev.key === '=' || ev.key === '+') return setFontSize(settings.fontSize + 1);
+    if (ev.key === '-') return setFontSize(settings.fontSize - 1);
+    if (ev.key === '0') return setFontSize(DEFAULT_FONT);
     switch (key) {
         case 'C':
             if (t) copySelection(t);

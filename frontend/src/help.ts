@@ -41,6 +41,13 @@ const TEXT: Record<Lang, HelpText> = {
                 ],
             },
             {
+                title: '화면',
+                rows: [
+                    ['Ctrl+휠 / Ctrl+= / Ctrl+-', '글꼴 크게 / 작게 (모든 탭, 크기 기억)'],
+                    ['Ctrl+0', '글꼴 크기 기본값(15)'],
+                ],
+            },
+            {
                 title: '접속',
                 rows: [
                     ['Alt+C / Alt+A / Esc', '접속 창에서 Connect / Cancel / 닫기'],
@@ -94,6 +101,13 @@ const TEXT: Record<Lang, HelpText> = {
                     ['Right-click', 'Paste (Shift+right-click in programs that use the mouse)'],
                     ['Ctrl+Shift+C / Ctrl+Shift+V', 'Copy / Paste'],
                     ['Multi-line paste', 'Asks before pasting (can be turned off)'],
+                ],
+            },
+            {
+                title: 'View',
+                rows: [
+                    ['Ctrl+Wheel / Ctrl+= / Ctrl+-', 'Larger / smaller font (all tabs, remembered)'],
+                    ['Ctrl+0', 'Default font size (15)'],
                 ],
             },
             {
