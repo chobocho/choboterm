@@ -38,6 +38,9 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 네트워크가 끊기면 3·5·10·20·30초 간격으로 최대 10번 다시 연결합니다. 화면 내용은 그대로 둡니다. `Enter`로 바로 연결, `Esc`로 취소합니다.
   - `exit`처럼 서버가 정상적으로 끝낸 연결은 다시 연결하지 않습니다.
 - **설정 창**: `Ctrl+Shift+O` 또는 탭 바 오른쪽 ⚙ 버튼. 글꼴 크기, 여러 줄 붙여넣기 확인, 연결 유지 간격(0 = 끄기), 자동 재접속을 바꿉니다.
+- **매크로**: `Ctrl+Shift+M`으로 매크로 창을 열어 자주 쓰는 명령을 저장해 두고 보냅니다(목록에서 `Enter` / 더블클릭).
+  - 매크로마다 `F2`~`F12`, `Shift+F1`~`F12`, `Ctrl+F1`~`F12` 중 하나를 지정하면 그 키로 바로 보냅니다. 지정하지 않은 키는 mc, htop 같은 프로그램에 그대로 전달됩니다.
+  - 내용의 줄바꿈은 `Enter`로 보내고, `\t`(Tab), `\e`(Esc), `\xHH`(예: `\x03` = Ctrl+C), `\\`(역슬래시)를 쓸 수 있습니다.
 - **창 위치 기억**: 창 크기·위치·최대화 상태를 닫을 때 저장해 다음 실행 때 그대로 엽니다. 모니터를 뺀 경우처럼 저장된 위치가 화면 밖이면 보이는 곳으로 옮깁니다.
 - **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 Telnet만, 암호화해서 저장합니다.
 
@@ -58,6 +61,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Ctrl+휠` / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | 글꼴 크게 / 작게 / 기본값 |
 | `Ctrl+Shift+S` | 스크롤백 검색 |
 | `Ctrl+Shift+O` | 설정 창 |
+| `Ctrl+Shift+M` | 매크로 창 (매크로에 지정한 F키로 바로 보내기) |
 | `Ctrl+클릭` | 화면의 URL을 브라우저에서 열기 |
 | `Ctrl+Shift+C` / `Ctrl+Shift+V` | 복사 / 붙여넣기 (마우스 선택 = 복사, 우클릭 = 붙여넣기) |
 | `Ctrl+C` / `Ctrl+X` (Zmodem 전송 중) | 전송 취소 |
@@ -151,6 +155,7 @@ go test ./...
 | `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
 | `frontend/src/search.ts` | 스크롤백 검색 막대 |
 | `frontend/src/prefs.ts` | 설정 창 |
+| `frontend/src/macros.ts` | 매크로 창, 매크로 단축키, 이스케이프 처리 |
 | `frontend/src/paste.ts` | 여러 줄 붙여넣기 확인 창 |
 | `frontend/src/settings.ts` | 설정 읽기 / 저장 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |

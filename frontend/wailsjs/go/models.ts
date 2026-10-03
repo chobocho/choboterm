@@ -76,6 +76,22 @@ export namespace main {
 	        this.pass = source["pass"];
 	    }
 	}
+	export class Macro {
+	    name: string;
+	    key: string;
+	    text: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Macro(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.key = source["key"];
+	        this.text = source["text"];
+	    }
+	}
 	export class WindowState {
 	    left: number;
 	    top: number;
@@ -101,6 +117,7 @@ export namespace main {
 	    pasteNoConfirm: boolean;
 	    keepAlive: number;
 	    autoReconnect: boolean;
+	    macros: Macro[];
 	    window?: WindowState;
 	
 	    static createFrom(source: any = {}) {
@@ -113,6 +130,7 @@ export namespace main {
 	        this.pasteNoConfirm = source["pasteNoConfirm"];
 	        this.keepAlive = source["keepAlive"];
 	        this.autoReconnect = source["autoReconnect"];
+	        this.macros = this.convertValues(source["macros"], Macro);
 	        this.window = this.convertValues(source["window"], WindowState);
 	    }
 	

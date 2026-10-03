@@ -723,6 +723,141 @@ html, body {
     outline: 1px solid #0078d7;
 }
 
+/* ---- Macro window ---- */
+
+.dialog.macros {
+    width: min(640px, calc(100vw - 32px));
+    outline: none;
+}
+
+.macros .body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.macros .cols {
+    display: flex;
+    gap: 12px;
+    height: min(300px, calc(100vh - 160px));
+}
+
+.macros .left {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 220px;
+}
+
+#mList {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #7a7a7a;
+    outline: none;
+}
+
+#mList:focus {
+    border-color: #0078d7;
+}
+
+#mList li {
+    display: flex;
+    gap: 8px;
+    padding: 3px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: default;
+}
+
+#mList li .key {
+    flex: 0 0 58px;
+    color: #0063b1;
+    font: 12px Consolas, monospace;
+    line-height: 18px;
+}
+
+#mList li.sel {
+    background: #0078d7;
+    color: #fff;
+}
+
+#mList li.sel .key {
+    color: #dbe9f7;
+}
+
+#mList li.empty {
+    color: #888;
+}
+
+.macros .listbtns {
+    display: flex;
+    gap: 6px;
+}
+
+.macros .listbtns button {
+    flex: 1;
+    height: 24px;
+    border: 1px solid #adadad;
+    background: #e1e1e1;
+    font: inherit;
+    cursor: pointer;
+}
+
+.macros .right {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    align-items: center;
+    gap: 8px 6px;
+    min-width: 0;
+}
+
+.macros .right.disabled {
+    opacity: 0.5;
+}
+
+#mText {
+    align-self: stretch;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding: 4px;
+    border: 1px solid #7a7a7a;
+    font: 13px Consolas, "D2Coding", "Malgun Gothic", monospace;
+    resize: none;
+    outline: none;
+}
+
+#mText:focus {
+    border-color: #0078d7;
+}
+
+.macros label[for="mText"] {
+    align-self: start;
+    padding-top: 3px;
+}
+
+.macros .hint {
+    grid-column: 2;
+    color: #777;
+    /* Malgun Gothic draws the backslash as a won sign. */
+    font: 12px "Segoe UI", "Malgun Gothic", sans-serif;
+}
+
+.macros .buttons {
+    margin-top: 0;
+}
+
+.macros .buttons #mSend {
+    outline: 1px solid #0078d7;
+}
+
 /* ---- Multi-line paste confirmation ---- */
 
 .dialog.paste {

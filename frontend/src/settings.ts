@@ -3,13 +3,20 @@
 import {GetSettings, SaveSettings} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 
-export let settings: main.Settings = main.Settings.createFrom({fontSize: 15, pasteNoConfirm: false});
+export let settings: main.Settings = main.Settings.createFrom({
+    fontSize: 15,
+    pasteNoConfirm: false,
+    keepAlive: 60,
+    autoReconnect: true,
+    macros: [],
+});
 
 let timer = 0;
 
 export async function loadSettings() {
     try {
         settings = await GetSettings();
+        settings.macros ??= [];
     } catch {
         // Keep the defaults.
     }

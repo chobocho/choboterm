@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -19,16 +20,17 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 	file := useTempSettings(t)
 	a := NewApp()
 
-	if s := a.GetSettings(); s != defaultSettings() {
+	if s := a.GetSettings(); !reflect.DeepEqual(s, defaultSettings()) {
 		t.Fatalf("defaults = %+v", s)
 	}
 	s := a.GetSettings()
 	s.FontSize = 18
 	s.PasteNoConfirm = true
+	s.Macros = []Macro{{Name: "목록", Key: "F5", Text: "ls -al\n"}}
 	if err := a.SaveSettings(s); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.GetSettings(); got != s || got.Window != nil {
+	if got := a.GetSettings(); !reflect.DeepEqual(got, s) || got.Window != nil {
 		t.Fatalf("got %+v, want %+v", got, s)
 	}
 
@@ -46,10 +48,11 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 	}
 
 	// A file from an older version keeps defaults for fields it doesn't have.
-	if err := os.WriteFile(file, []byte(`{"pasteNoConfirm":true}`), 0o600); err != nil {
+	if err := os.WriteFile(file, []byte(`{"pasteNoConfirm":true,"macros":null}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.GetSettings(); got.FontSize != 15 || !got.PasteNoConfirm {
+	got := a.GetSettings()
+	if got.FontSize != 15 || got.KeepAlive != 60 || !got.AutoReconnect || !got.PasteNoConfirm || got.Macros == nil {
 		t.Fatalf("partial file: %+v", got)
 	}
 
@@ -57,7 +60,7 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 	if err := os.WriteFile(file, []byte(`{`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.GetSettings(); got != defaultSettings() {
+	if got := a.GetSettings(); !reflect.DeepEqual(got, defaultSettings()) {
 		t.Fatalf("broken file: %+v", got)
 	}
 }

@@ -8,6 +8,7 @@ import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
 import {openPrefs, prefsOpen} from './prefs';
+import {expandMacro, macroForKey, macrosOpen, openMacros} from './macros';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
@@ -802,25 +803,42 @@ function showPrefs() {
 
 $<HTMLButtonElement>('prefsBtn').addEventListener('click', showPrefs);
 
+// ---- Macros ----
+
+function sendMacro(t: Tab, m: main.Macro) {
+    if (t.state !== 'on') return toast('연결되어 있지 않습니다');
+    const text = expandMacro(m.text);
+    if (text) Send(t.id, text);
+}
+
+function showMacros() {
+    if (modalOpen()) return;
+    openMacros(m => active && sendMacro(active, m), focusActive);
+}
+
 // ---- Shortcuts ----
 
 /** A window that takes all keys until it is closed. */
 function modalOpen() {
-    return pasteConfirmOpen() || prefsOpen();
+    return pasteConfirmOpen() || prefsOpen() || macrosOpen();
 }
 
 function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.type !== 'keydown') return false;
     if (ev.key === 'F1' && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) return true;
+    if (macroForKey(ev)) return true;
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSO]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOM]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
     if (!isAppShortcut(ev)) return;
     const t = active;
     const key = ev.key.toUpperCase();
+    const macro = macroForKey(ev);
+    // In the file window F5 refreshes; dialogs keep their keys too.
+    if (macro && (t?.dialog || filesOpen() || helpOpen() || modalOpen())) return;
     // Copy / paste belong to the terminal; in a text box they keep their usual meaning.
     const el = ev.target;
     const typing = el instanceof HTMLInputElement ||
@@ -829,6 +847,7 @@ window.addEventListener('keydown', ev => {
     ev.preventDefault();
     ev.stopPropagation();
     if (modalOpen()) return;
+    if (macro) return t && sendMacro(t, macro);
     if (ev.key === 'F1') return toggleHelp(focusActive);
     // Other shortcuts wait until the help window is closed.
     if (helpOpen()) return;
@@ -851,6 +870,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'O':
             showPrefs();
+            break;
+        case 'M':
+            showMacros();
             break;
         case 'T':
         case 'N':

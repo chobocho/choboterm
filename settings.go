@@ -17,8 +17,19 @@ type Settings struct {
 	KeepAlive int `json:"keepAlive"`
 	// AutoReconnect reconnects a tab whose connection broke.
 	AutoReconnect bool `json:"autoReconnect"`
+	// Macros are texts sent to the terminal, optionally bound to a key.
+	Macros []Macro `json:"macros"`
 	// Window is the main window's last position, kept by the Go side only.
 	Window *WindowState `json:"window,omitempty"`
+}
+
+// Macro is a named text sent to the terminal. Key is "" or a function key
+// such as "F5", "Shift+F5" or "Ctrl+F5". The frontend turns line breaks in
+// Text into Enter and understands a few backslash escapes.
+type Macro struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
+	Text string `json:"text"`
 }
 
 // WindowState is the main window's restored bounds (screen pixels) and
@@ -36,7 +47,7 @@ func (w WindowState) valid() bool {
 }
 
 func defaultSettings() Settings {
-	return Settings{FontSize: 15, KeepAlive: 60, AutoReconnect: true}
+	return Settings{FontSize: 15, KeepAlive: 60, AutoReconnect: true, Macros: []Macro{}}
 }
 
 var settingsMu sync.Mutex
@@ -69,6 +80,9 @@ func readSettings() Settings {
 	}
 	if json.Unmarshal(data, &s) != nil {
 		return defaultSettings()
+	}
+	if s.Macros == nil {
+		s.Macros = []Macro{} // the page expects a list, not null
 	}
 	return s
 }

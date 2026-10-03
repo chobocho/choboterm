@@ -152,6 +152,40 @@
     </div>
 </div>
 
+<div id="macrosOverlay" class="overlay modal" hidden>
+    <div class="dialog macros" id="macros" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title">매크로</span>
+            <button type="button" class="close" id="macrosX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div class="cols">
+                <div class="left">
+                    <ul id="mList" tabindex="0"></ul>
+                    <div class="listbtns">
+                        <button type="button" id="mAdd" title="Insert">+ 추가</button>
+                        <button type="button" id="mDel" title="Delete">삭제</button>
+                    </div>
+                </div>
+                <div class="right" id="mForm">
+                    <label for="mName">이름</label>
+                    <input id="mName" spellcheck="false" autocomplete="off"/>
+                    <label for="mKey">단축키</label>
+                    <select id="mKey"></select>
+                    <label for="mText">내용</label>
+                    <textarea id="mText" spellcheck="false"></textarea>
+                    <div class="hint">줄바꿈 = Enter · \t Tab · \e Esc · \x03 Ctrl+C · \\ 역슬래시</div>
+                </div>
+            </div>
+            <div class="buttons">
+                <button type="button" id="mSend" title="Enter (목록) / Ctrl+Enter">보내기</button>
+                <button type="button" id="mClose">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="helpOverlay" class="overlay modal help" hidden>
     <div class="dialog help" id="help" tabindex="-1">
         <div class="titlebar">

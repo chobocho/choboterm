@@ -247,5 +247,14 @@
   <li>설정 창 추가(prefs.ts, Ctrl+Shift+O / 탭 바 ⚙): 글꼴 크기, 여러 줄 붙여넣기 확인, 연결 유지 간격(0~3600초), 자동 재접속</li>
   <li>테스트: keepalive_test.go (SSH exit vs 끊김, keepalive 응답/무응답, 무응답 3회 시 탭 종료, 정상 종료는 lost 아님, Telnet NOP). 에코 서버 + Edge 자동 점검으로 RST 끊김→카운트다운→재연결, Esc 취소, quit 시 재접속 안 함, 설정 저장 확인</li>
 </ul>
+
+<h2>2026-10-03 — 매크로</h2>
+<ul>
+  <li>Settings.Macros(이름, 단축키, 내용) 추가, 없으면 빈 목록으로 정규화. 설정 테스트를 reflect.DeepEqual로 변경</li>
+  <li>매크로 창(macros.ts, Ctrl+Shift+M): 목록 + 이름/단축키/내용 편집, 추가(Insert)/삭제(Delete), 보내기(Enter·더블클릭·Ctrl+Enter). 편집 즉시 저장</li>
+  <li>단축키: F2~F12, Shift+F1~F12, Ctrl+F1~F12 중 선택(다른 매크로가 쓰는 키는 비활성). 지정된 키만 가로채고 나머지 F키는 프로그램으로 전달. 접속 창·파일 창(F5 새로 고침)에서는 가로채지 않음</li>
+  <li>내용: 줄바꿈 = Enter, \t \e \xHH \ 이스케이프</li>
+  <li>검증: Edge 자동 점검 — F5/Ctrl+F2 매크로 전송, 미지정 F6은 ESC[17~로 통과, 목록 Enter 전송, 저장 확인. expandMacro 결과 확인</li>
+</ul>
 </body>
 </html>
