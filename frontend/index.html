@@ -13,6 +13,16 @@
 <div id="terms"></div>
 <div id="toast" hidden></div>
 
+<div id="search" hidden>
+    <input id="searchInput" placeholder="검색" spellcheck="false" autocomplete="off"/>
+    <span id="searchCount"></span>
+    <button type="button" id="searchCase" title="대소문자 구분 (Alt+C)">Aa</button>
+    <button type="button" id="searchRegex" title="정규식 (Alt+R)">.*</button>
+    <button type="button" id="searchPrev" title="위로 (Enter)">↑</button>
+    <button type="button" id="searchNext" title="아래로 (Shift+Enter)">↓</button>
+    <button type="button" id="searchClose" title="닫기 (Esc)">✕</button>
+</div>
+
 <ul id="tabMenu" class="menu" hidden>
     <li data-act="reconnect">다시 연결</li>
     <li data-act="duplicate">복제 (새 탭으로 같은 서버 접속)</li>

@@ -32,6 +32,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 여러 줄을 붙여넣을 때는 줄마다 명령이 실행될 수 있으므로 먼저 내용을 보여 주고 확인을 받습니다. "다시 묻지 않기"로 끌 수 있습니다.
   - mc, htop처럼 마우스를 쓰는 프로그램에서는 Shift+우클릭으로 붙여넣습니다.
 - **글꼴 크기**: `Ctrl+휠`, `Ctrl+=` / `Ctrl+-`로 바꾸고 `Ctrl+0`으로 되돌립니다. 모든 탭에 적용되고 다음 실행 때도 유지됩니다.
+- **스크롤백 검색**: `Ctrl+Shift+S`로 검색 막대를 엽니다. 입력하는 대로 가장 최근 출력부터 찾고, 모든 결과를 강조합니다. `Enter`는 위로(이전 출력), `Shift+Enter`는 아래로, `Alt+C`는 대소문자 구분, `Alt+R`은 정규식입니다.
 - **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 Telnet만, 암호화해서 저장합니다.
 
 X11 포워딩은 지원하지 않습니다.
@@ -49,6 +50,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Ctrl+Shift+E` | UTF-8 ↔ EUC-KR 전환 |
 | `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP) |
 | `Ctrl+휠` / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | 글꼴 크게 / 작게 / 기본값 |
+| `Ctrl+Shift+S` | 스크롤백 검색 |
 | `Ctrl+Shift+C` / `Ctrl+Shift+V` | 복사 / 붙여넣기 (마우스 선택 = 복사, 우클릭 = 붙여넣기) |
 | `Ctrl+C` / `Ctrl+X` (Zmodem 전송 중) | 전송 취소 |
 | `F1` | 도움말 열기 / 닫기 (도움말 창에서 `Alt+L`로 한국어 ↔ English 전환) |
@@ -138,6 +140,7 @@ go test ./...
 | `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
 | `frontend/src/files.ts` | 파일 전송 창, 진행률 상자 |
 | `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
+| `frontend/src/search.ts` | 스크롤백 검색 막대 |
 | `frontend/src/paste.ts` | 여러 줄 붙여넣기 확인 창 |
 | `frontend/src/settings.ts` | 설정 읽기 / 저장 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |

@@ -215,5 +215,13 @@
   <li>모든 탭에 적용, settings.json에 저장해 다음 실행 때 유지. 바꿀 때 화면 위쪽에 '글꼴 크기 N' 알림 표시</li>
   <li>Ctrl+휠은 터미널 스크롤로 넘어가지 않도록 가로챔</li>
 </ul>
+
+<h2>2026-10-03 — 스크롤백 검색</h2>
+<ul>
+  <li>@xterm/addon-search 0.16 추가, 탭마다 SearchAddon, 검색 막대는 하나(search.ts)</li>
+  <li>Ctrl+Shift+S로 열기(선택한 글자가 있으면 미리 채움). 입력하는 대로 가장 최근 출력부터 위로 검색, 전체 결과 강조와 'n/전체' 표시</li>
+  <li>Enter 위로 / Shift+Enter 아래로, Alt+C 대소문자 구분, Alt+R 정규식(잘못된 정규식 표시), Esc 닫기. 탭을 바꾸면 새 탭에서 같은 검색어로 다시 검색</li>
+  <li>입력칸에서 Ctrl+Shift+C/V는 터미널이 아닌 입력칸의 기본 동작을 따르도록 수정</li>
+</ul>
 </body>
 </html>

@@ -6,6 +6,7 @@ import {FitAddon} from '@xterm/addon-fit';
 import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
+import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
@@ -27,6 +28,7 @@ interface Tab {
     id: number;
     term: Terminal;
     fit: FitAddon;
+    search: ReturnType<typeof attachSearch>;
     pane: HTMLDivElement;
     el: HTMLDivElement;
     label: HTMLSpanElement;
@@ -95,6 +97,7 @@ function createTab(): Tab {
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
+    const search = attachSearch(term);
     loadUnicodeWidths(term);
     term.unicode.activeVersion = NARROW;
     term.attachCustomKeyEventHandler(ev => !isAppShortcut(ev));
@@ -117,7 +120,7 @@ function createTab(): Tab {
     el.append(dot, label, x);
     tabsEl.appendChild(el);
 
-    const t: Tab = {id, term, fit, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8'};
+    const t: Tab = {id, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8'};
     tabs.set(id, t);
 
     term.onData(data => {
@@ -256,6 +259,7 @@ function activate(t: Tab) {
         t.el.scrollIntoView({block: 'nearest', inline: 'nearest'});
         // Each tab keeps its own Connect dialog and file window.
         showFilesFor(t.id);
+        switchSearch(t.search);
         if (t.dialog) loadDialog(t);
         else hideDialog();
     }
@@ -282,6 +286,7 @@ function cycleTab(step: number) {
 
 function closeTab(t: Tab) {
     forgetFiles(t.id);
+    if (t === active) closeSearch();
     if (t.dialog && t === active) hideDialog();
     t.dialog = undefined;
     const list = orderedTabs();
@@ -718,15 +723,18 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.key === 'F1' && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) return true;
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCV]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVS]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
     if (!isAppShortcut(ev)) return;
     const t = active;
     const key = ev.key.toUpperCase();
-    // Copy / paste belong to the terminal; in a dialog's text box they keep their usual meaning.
-    if ((key === 'C' || key === 'V') && (t?.dialog || filesOpen() || helpOpen() || pasteConfirmOpen())) return;
+    // Copy / paste belong to the terminal; in a text box they keep their usual meaning.
+    const el = ev.target;
+    const typing = el instanceof HTMLInputElement ||
+        (el instanceof HTMLTextAreaElement && !el.classList.contains('xterm-helper-textarea'));
+    if ((key === 'C' || key === 'V') && (typing || t?.dialog || filesOpen() || helpOpen() || pasteConfirmOpen())) return;
     ev.preventDefault();
     ev.stopPropagation();
     if (pasteConfirmOpen()) return;
@@ -746,6 +754,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'V':
             if (t) pasteClipboard(t);
+            break;
+        case 'S':
+            if (t && !t.dialog && !filesOpen()) openSearch(t.search, focusActive);
             break;
         case 'T':
         case 'N':
