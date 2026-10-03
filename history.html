@@ -25,7 +25,14 @@
   <li>설정: logAuto(접속마다 자동 기록), logRaw, logDir(찾아보기 = 폴더 선택 창). 바인딩 StartLog/StopLog/LogPath/ShowLogs(탐색기에서 파일 선택)/ChooseLogDir, 이벤트 log:changed</li>
   <li>UI: Ctrl+Shift+L 시작/중지, 탭 우클릭 메뉴 '로그 기록 시작/중지'·'로그 폴더 열기', 기록 중인 탭 이름 앞 빨간 점과 툴팁에 경로, 설정 창 '세션 로그' 항목. 도움말·README·소개 페이지 갱신</li>
   <li>테스트: sessionlog_test.go(일반 텍스트 변환 12가지, 파일 이름, pump 연동·구분선·탭 닫기, 원본 모드·중지 후 미기록). Edge 자동 점검: 메뉴/단축키 시작·중지, 자동 기록 후 재접속, 끊기 구분선, 설정 창 배치 확인. 사용자 settings.json/hosts.json은 점검 후 복원</li>
-  <li>커밋은 하지 않음</li>
+  <li>커밋 4ddb9e0 (main)</li>
+</ul>
+
+<h2>2026-10-03 — V0.1.2 릴리스</h2>
+<ul>
+  <li>버전 0.1.1 → 0.1.2 (main.go AppVersion, wails.json productVersion, README 제목)</li>
+  <li>build.bat으로 테스트 → wails build -clean → release\choboterm.exe (12.9MB, SHA-256 035d96a6...). 실행 파일에 'choboterm V0.1.2' 포함 확인</li>
+  <li>소개 페이지(docs/index.html)는 세션 로그 커밋에서 이미 갱신. GitHub Release v0.1.2 생성(새 기능: 세션 로그)</li>
 </ul>
 </body>
 </html>
