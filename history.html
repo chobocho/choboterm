@@ -34,5 +34,14 @@
   <li>build.bat으로 테스트 → wails build -clean → release\choboterm.exe (12.9MB, SHA-256 035d96a6...). 실행 파일에 'choboterm V0.1.2' 포함 확인</li>
   <li>소개 페이지(docs/index.html)는 세션 로그 커밋에서 이미 갱신. GitHub Release v0.1.2 생성(새 기능: 세션 로그)</li>
 </ul>
+<h2>2026-10-04 — ~/.ssh/config 이름으로 접속 + V0.1.3 릴리스</h2>
+<ul>
+  <li>sshconfig.go: kevinburke/ssh_config로 ~/.ssh/config 해석. Host 칸의 'pusan', 'ssh pusan', 'ssh -p 2222 -l me pusan', 'user@host'를 해석(LookupSSH), config Host 이름 목록(GetSSHConfigHosts)</li>
+  <li>Connect: ssh 명령줄이면 Host/Port/Login을 덮어쓰고, 접속은 HostName으로, 탭·기록·포워딩에는 별칭을 남김. Login이 비면 config User. IdentityFile 키를 기본 키보다 먼저 시도(%h %r %u %d ~ 치환)</li>
+  <li>일반 호스트는 'Host *' 설정을 적용해 Port를 바꾸지 않음(Telnet/FTP 보호). ssh 명령줄일 때만 패턴 항목 적용. ProxyJump·Match 미지원</li>
+  <li>접속 창: Host 포커스 시 노란 툴팁(입력 예, 등록된 이름 / 별칭이면 user@주소:포트), placeholder, ▼ 목록에 'ssh config' 항목 추가, 변경·Connect 시 Port/Login 자동 채움</li>
+  <li>F1 도움말(한/영)·README·소개 페이지 갱신. 테스트 sshconfig_test.go(명령줄 파싱, 별칭·패턴, 키 경로, 인프로세스 SSH 서버로 'ssh 별칭' 접속). Edge 헤드리스+CDP로 툴팁·목록 화면 확인</li>
+  <li>버전 0.1.2 → 0.1.3, build.bat 빌드, GitHub Release v0.1.3</li>
+</ul>
 </body>
 </html>

@@ -13,7 +13,7 @@
   "info": {
     "companyName": "chobocho",
     "productName": "choboterm",
-    "productVersion": "0.1.2",
+    "productVersion": "0.1.3",
     "copyright": "Copyright (c) 2026 chobocho",
     "comments": "SSH / Telnet / FTP terminal"
   }
