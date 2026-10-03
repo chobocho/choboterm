@@ -163,5 +163,15 @@
   <li>검증: 판별 테스트(SSH/FTP 단일·여러 줄 인사말/Telnet IAC/배너/무응답, 나뉘어 도착한 인사말, 읽은 바이트 재생) 통과. 사용자 테스트 서버(Termux OpenSSH, 8022)에 App.Connect로 실제 접속 → ssh 판별, 명령 실행, stty size로 창 크기 반영, SFTP 목록, known_hosts의 [host]:8022 항목까지 확인(LiveSSH 테스트, 접속 정보는 환경변수로만 전달하고 코드·기록에 남기지 않음)</li>
   <li>참고: 새로 빌드한 테스트 실행 파일이 처음 네트워크에 접속할 때 Windows 보안 검사로 수십 초 지연되는 현상이 있었음(코드 문제 아님, 두 번째 실행부터 0.5초)</li>
 </ul>
+
+<h2>2026-10-03 — "호스트 키가 known_hosts와 다릅니다" 오판 수정</h2>
+<ul>
+  <li>(이전 기록 보충) 프로토콜 자동 판별 커밋 6821987 푸시 완료</li>
+  <li>증상: 192.168.0.21:8022 SSH 접속 시 "호스트 키가 known_hosts와 다릅니다 (중간자 공격 가능성)"</li>
+  <li>원인: known_hosts 4번째 줄의 ed25519 키는 서버 키와 동일. 서버는 rsa/ecdsa/ed25519 키를 모두 갖고 있는데 Go SSH 라이브러리가 ecdsa를 먼저 요청 → 저장된 키와 종류가 달라 knownhosts가 KeyError(Want=ed25519)를 돌려줌 → 변경으로 오판</li>
+  <li>수정(ssh.go): known_hosts에 이미 있는 키 종류로 HostKeyAlgorithms를 지정(OpenSSH와 같은 방식, 임시 probe 키로 저장된 키 목록 조회, ssh-rsa는 rsa-sha2-512/256 포함). knownHosts 구조체로 정리</li>
+  <li>진짜로 키가 바뀐 경우 오류에 받은 키 종류·지문, 저장된 파일·줄 번호와 해결 방법(그 줄 삭제)을 표시. 접속 창 오류는 줄바꿈 표시(white-space: pre-line)</li>
+  <li>검증: 로컬 SSH 서버(ecdsa+ed25519, known_hosts엔 ed25519만)로 재현 테스트 — 수정 전 실패/수정 후 통과 확인, 진짜 키 변경 시 오류·줄 번호 테스트, ssh-rsa 알고리즘 매핑 테스트. 실제 서버에 사용자 known_hosts의 ed25519 줄만 넣은 임시 known_hosts로 두 번 접속 성공(사용자 ~/.ssh/known_hosts는 변경하지 않음)</li>
+</ul>
 </body>
 </html>

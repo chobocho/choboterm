@@ -77,6 +77,7 @@ func TestDialDetect(t *testing.T) {
 //	CHOBOTERM_SSH_TEST=host:port CHOBOTERM_SSH_USER=user CHOBOTERM_SSH_PASS=secret go test -run LiveSSH -v
 //
 // The host key is accepted into a temporary known_hosts, not ~/.ssh.
+// CHOBOTERM_SSH_KNOWN_HOSTS=<file> seeds that temporary known_hosts.
 func TestLiveSSH(t *testing.T) {
 	addr := os.Getenv("CHOBOTERM_SSH_TEST")
 	if addr == "" {
@@ -89,6 +90,15 @@ func TestLiveSSH(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("HOME", home)
+	// Optionally start from an existing known_hosts (e.g. one written by OpenSSH).
+	if src := os.Getenv("CHOBOTERM_SSH_KNOWN_HOSTS"); src != "" {
+		data, err := os.ReadFile(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		os.Mkdir(home+"/.ssh", 0o700)
+		os.WriteFile(home+"/.ssh/known_hosts", data, 0o600)
+	}
 	orig := historyFile
 	historyFile = func() (string, error) { return home + "/hosts.json", nil }
 	defer func() { historyFile = orig }()

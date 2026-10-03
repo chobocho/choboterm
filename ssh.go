@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"time"
 
@@ -39,7 +42,7 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, conn net.Conn) (Sessi
 		return nil, errors.New("SSH 접속에는 Login이 필요합니다")
 	}
 
-	hostKeyCallback, err := knownHostsCallback(confirm)
+	kh, err := loadKnownHosts(confirm)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +50,7 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, conn net.Conn) (Sessi
 	cfg := &ssh.ClientConfig{
 		User:            req.Login,
 		Auth:            authMethods(req.Pass),
-		HostKeyCallback: hostKeyCallback,
+		HostKeyCallback: kh.check,
 		Timeout:         10 * time.Second,
 	}
 
@@ -57,6 +60,10 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, conn net.Conn) (Sessi
 			return nil, fmt.Errorf("SSH 접속 실패: %w", err)
 		}
 	}
+	// Ask for the key type we already trust, as OpenSSH does. Otherwise the
+	// server may offer e.g. its ECDSA key while known_hosts holds its Ed25519
+	// key, which would look like a changed key.
+	cfg.HostKeyAlgorithms = kh.algorithmsFor(addr, conn.RemoteAddr())
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, cfg)
 	if err != nil {
 		conn.Close()
@@ -140,9 +147,15 @@ func authMethods(pass string) []ssh.AuthMethod {
 	return methods
 }
 
-// knownHostsCallback verifies host keys against ~/.ssh/known_hosts.
-// Unknown hosts are confirmed by the user and appended; changed keys are rejected.
-func knownHostsCallback(confirm hostKeyConfirmer) (ssh.HostKeyCallback, error) {
+// knownHosts verifies host keys against ~/.ssh/known_hosts. Unknown hosts are
+// confirmed by the user and appended; changed keys are rejected.
+type knownHosts struct {
+	path    string
+	lookup  ssh.HostKeyCallback
+	confirm hostKeyConfirmer
+}
+
+func loadKnownHosts(confirm hostKeyConfirmer) (*knownHosts, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -156,30 +169,66 @@ func knownHostsCallback(confirm hostKeyConfirmer) (ssh.HostKeyCallback, error) {
 	} else {
 		return nil, err
 	}
-
-	check, err := knownhosts.New(path)
+	lookup, err := knownhosts.New(path)
 	if err != nil {
 		return nil, err
 	}
+	return &knownHosts{path: path, lookup: lookup, confirm: confirm}, nil
+}
 
-	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-		err := check(hostname, remote, key)
-		var keyErr *knownhosts.KeyError
-		if err == nil || !errors.As(err, &keyErr) {
-			return err
+// probeKey is a throwaway key used to ask known_hosts which keys it holds for a host.
+var probeKey = func() ssh.PublicKey {
+	pub, _, _ := ed25519.GenerateKey(rand.Reader)
+	k, _ := ssh.NewPublicKey(pub)
+	return k
+}()
+
+// algorithmsFor returns the host key algorithms matching the keys known for
+// addr, or nil (library defaults) for an unknown host.
+func (k *knownHosts) algorithmsFor(addr string, remote net.Addr) []string {
+	var keyErr *knownhosts.KeyError
+	if err := k.lookup(addr, remote, probeKey); !errors.As(err, &keyErr) {
+		return nil
+	}
+	var algos []string
+	add := func(names ...string) {
+		for _, n := range names {
+			if !slices.Contains(algos, n) {
+				algos = append(algos, n)
+			}
 		}
-		if len(keyErr.Want) > 0 {
-			return fmt.Errorf("호스트 키가 known_hosts와 다릅니다 (중간자 공격 가능성): %s", path)
+	}
+	for _, w := range keyErr.Want {
+		if t := w.Key.Type(); t == ssh.KeyAlgoRSA {
+			add(ssh.KeyAlgoRSASHA512, ssh.KeyAlgoRSASHA256, ssh.KeyAlgoRSA)
+		} else {
+			add(t)
 		}
-		if !confirm(hostname, ssh.FingerprintSHA256(key)) {
-			return errors.New("사용자가 호스트 키를 거부했습니다")
-		}
-		f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		_, err = fmt.Fprintln(f, knownhosts.Line([]string{knownhosts.Normalize(hostname)}, key))
+	}
+	return algos
+}
+
+func (k *knownHosts) check(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	err := k.lookup(hostname, remote, key)
+	var keyErr *knownhosts.KeyError
+	if err == nil || !errors.As(err, &keyErr) {
 		return err
-	}, nil
+	}
+	if len(keyErr.Want) > 0 {
+		w := keyErr.Want[0]
+		return fmt.Errorf("호스트 키가 known_hosts에 저장된 키와 다릅니다. 서버를 다시 설치했거나 중간자 공격일 수 있습니다.\n"+
+			"받은 키: %s %s\n저장된 키: %s %d번째 줄 (%s)\n"+
+			"서버를 신뢰할 수 있으면 그 줄을 지우고 다시 접속하세요.",
+			key.Type(), ssh.FingerprintSHA256(key), w.Filename, w.Line, w.Key.Type())
+	}
+	if !k.confirm(hostname, ssh.FingerprintSHA256(key)) {
+		return errors.New("사용자가 호스트 키를 거부했습니다")
+	}
+	f, err := os.OpenFile(k.path, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = fmt.Fprintln(f, knownhosts.Line([]string{knownhosts.Normalize(hostname)}, key))
+	return err
 }
