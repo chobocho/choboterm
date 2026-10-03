@@ -4,3 +4,4 @@ frontend/dist
 /choboterm.exe
 .idea/
 __pycache__/
+release/

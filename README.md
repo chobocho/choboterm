@@ -61,6 +61,8 @@ wails dev     # 개발 모드 (핫 리로드)
 wails build   # build/bin/choboterm.exe 생성
 ```
 
+`build.bat`을 실행하면 테스트 → `wails build` → `release\choboterm.exe` 복사까지 한 번에 합니다. (`release` 폴더는 git에 올리지 않습니다.)
+
 ## 테스트
 
 ```sh
