@@ -171,6 +171,8 @@ html, body {
     left: 4px;
     right: 4px;
     bottom: 4px;
+    /* Keep xterm's z-indexed layers (WebGL canvases) below dialogs and menus. */
+    isolation: isolate;
 }
 
 #terms .term {

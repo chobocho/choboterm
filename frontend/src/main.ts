@@ -1,10 +1,12 @@
+import {dbg} from './debug';
 import '@xterm/xterm/css/xterm.css';
 import './style.css';
 
 import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
 import {WebLinksAddon} from '@xterm/addon-web-links';
-import {fontFamily, loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
+import {WebglAddon} from '@xterm/addon-webgl';
+import {ambiguousFontReady, fontFamily, loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
 import {openPrefs, prefsOpen} from './prefs';
@@ -101,6 +103,38 @@ function applyEncoding(t: Tab, name: string) {
     if (t.term.unicode.versions.includes(wanted)) t.term.unicode.activeVersion = wanted;
 }
 
+// Software WebGL (SwiftShader, when the GPU is blocked) is slower than the DOM renderer.
+const hardwareWebgl = (() => {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) return false;
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    dbg(`webgl renderer: ${renderer || '(unknown)'}`);
+    return !/swiftshader|software|llvmpipe/i.test(renderer);
+})();
+
+// The default DOM renderer rebuilds a span per styled run on every frame, which makes
+// full-screen TUIs with many colors (sc-im, htop...) stutter; draw with WebGL instead.
+function useWebgl(term: Terminal) {
+    if (!hardwareWebgl) {
+        dbg('webgl skipped: no hardware WebGL');
+        return;
+    }
+    try {
+        const webgl = new WebglAddon();
+        // GPU reset or too many contexts: drop back to the DOM renderer.
+        webgl.onContextLoss(() => {
+            dbg('webgl context lost; back to DOM renderer');
+            webgl.dispose();
+        });
+        term.loadAddon(webgl);
+        dbg('webgl renderer loaded');
+    } catch (e) {
+        console.warn('WebGL renderer unavailable; using the DOM renderer', e);
+    }
+}
+
 function createTab(): Tab {
     const id = nextId++;
 
@@ -130,7 +164,11 @@ function createTab(): Tab {
     loadUnicodeWidths(term);
     term.unicode.activeVersion = NARROW;
     term.attachCustomKeyEventHandler(ev => !isAppShortcut(ev));
+    dbg(`tab ${id} open`);
     term.open(pane);
+    useWebgl(term);
+    term.onData(d => dbg(`tab ${id} onData ${JSON.stringify(d)}`));
+    term.onRender(({start, end}) => dbg(`tab ${id} render rows ${start}-${end}`));
 
     const el = document.createElement('div');
     el.className = 'tab';
@@ -504,13 +542,21 @@ async function toggleEncoding(t: Tab) {
 
 new ResizeObserver(() => active?.fit.fit()).observe(termsEl);
 
+// WebGL caches glyphs, so redraw them once the ambiguous-width face has arrived.
+// (Not on every 'loadingdone': redrawing can load fonts again and loop forever.)
+ambiguousFontReady.then(() => {
+    dbg(`ambiguous font ready; clearing texture atlas of ${tabs.size} tab(s)`);
+    tabs.forEach(t => t.term.clearTextureAtlas());
+});
+
 EventsOn('term:data', (id: number, b64: string) => {
     const t = tabs.get(id);
     if (!t) return;
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    t.term.write(bytes);
+    const t0 = performance.now();
+    t.term.write(bytes, () => dbg(`tab ${id} wrote ${bytes.length} bytes in ${Math.round(performance.now() - t0)}ms`));
     if (t !== active) t.el.classList.add('activity');
 });
 

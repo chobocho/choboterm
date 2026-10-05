@@ -14,6 +14,14 @@ export function Connect(arg1, arg2) {
   return window['go']['main']['App']['Connect'](arg1, arg2);
 }
 
+export function DebugEnabled() {
+  return window['go']['main']['App']['DebugEnabled']();
+}
+
+export function DebugLog(arg1) {
+  return window['go']['main']['App']['DebugLog'](arg1);
+}
+
 export function Disconnect(arg1) {
   return window['go']['main']['App']['Disconnect'](arg1);
 }

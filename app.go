@@ -104,6 +104,7 @@ func (a *App) startup(ctx context.Context) {
 
 // domReady shows the window at its saved position the first time the page loads.
 func (a *App) domReady(ctx context.Context) {
+	debugf("dom ready")
 	a.shown.Do(func() {
 		if w := loadSettings().Window; w != nil {
 			restoreWindowBounds(*w)
@@ -345,6 +346,7 @@ func (t *tab) pump(sess Session) {
 	)
 	flush := func() {
 		if len(pending) > 0 {
+			debugf("tab %d emit %d bytes", t.id, len(pending))
 			t.log.write(pending)
 			t.emit("term:data", base64.StdEncoding.EncodeToString(pending))
 			pending = pending[:0]
@@ -441,6 +443,7 @@ func (a *App) Send(tabID int, data string) {
 	if sess == nil {
 		return
 	}
+	debugf("tab %d send %q", tabID, data)
 	if t.zmodemActive() {
 		// Keyboard input is not sent during a transfer; Ctrl+C / Ctrl+X cancel it.
 		if strings.ContainsAny(data, "\x03\x18") {
@@ -468,6 +471,7 @@ func (a *App) Resize(tabID, cols, rows int) {
 	if t == nil {
 		return
 	}
+	debugf("tab %d resize %dx%d", tabID, cols, rows)
 	if sess := t.session(); sess != nil && cols > 0 && rows > 0 {
 		_ = sess.Resize(cols, rows)
 	}

@@ -126,4 +126,8 @@ const ambiguousFace = new FontFace(
     {unicodeRange: AMBIGUOUS.map(([s, e]) => (s === e ? `U+${hex(s)}` : `U+${hex(s)}-${hex(e)}`)).join(', ')},
 );
 (document.fonts as unknown as Set<FontFace>).add(ambiguousFace);
-ambiguousFace.load().catch(() => console.warn('No legacy Korean font found for ambiguous-width symbols'));
+/** Resolves (never rejects) once the ambiguous-width face has loaded or failed. */
+export const ambiguousFontReady: Promise<void> = ambiguousFace.load().then(
+    () => undefined,
+    () => console.warn('No legacy Korean font found for ambiguous-width symbols'),
+);

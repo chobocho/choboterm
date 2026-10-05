@@ -8,6 +8,10 @@ export function CloseTab(arg1:number):Promise<void>;
 
 export function Connect(arg1:number,arg2:main.ConnectRequest):Promise<string>;
 
+export function DebugEnabled():Promise<boolean>;
+
+export function DebugLog(arg1:string):Promise<void>;
+
 export function Disconnect(arg1:number):Promise<void>;
 
 export function FileCancel(arg1:number):Promise<void>;
