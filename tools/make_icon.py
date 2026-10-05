@@ -1,6 +1,6 @@
 """Renders the choboterm app icon (1024px PNG + multi-size ICO).
 
-The mark is a "CT" monogram: a bold sunset-gradient "C" (Chobo) wrapping a
+The mark is a "CT" monogram: a bold sky-blue gradient "C" (Chobo) wrapping a
 "T" (Term) whose stem is a terminal block cursor.
 
 Usage: python tools/make_icon.py build/appicon.png build/windows/icon.ico preview.png
@@ -13,8 +13,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageChops
 S = 4                      # supersampling factor
 N = 1024 * S
 
-ORANGE = (255, 150, 50)
-PINK = (255, 46, 136)
+SKY_LIGHT = (140, 220, 255)
+SKY_DEEP = (30, 144, 230)
 MINT = (94, 234, 212, 255)
 WHITE = (250, 247, 255, 255)
 
@@ -71,7 +71,7 @@ def render(simple=False):
     """simple=True: thicker strokes and a lone cursor, for 16-32px."""
     img = Image.new("RGBA", (N, N), (0, 0, 0, 0))
 
-    # Squircle body: deep ink-violet, so the warm C pops.
+    # Squircle body: deep ink-violet, so the sky-blue C pops.
     body = rounded_mask((64, 64, 960, 960), 220)
     img.paste(vertical_gradient((44, 22, 78, 255), (14, 8, 30, 255)), (0, 0), body)
 
@@ -79,10 +79,10 @@ def render(simple=False):
         c = arc_mask(512, 512, 380, 200, 84)
     else:
         c = arc_mask(512, 512, 352, 232, 76)
-    grad = diagonal_gradient(ORANGE, PINK)
+    grad = diagonal_gradient(SKY_LIGHT, SKY_DEEP)
 
-    # Soft warm glow under the C.
-    glow = Image.new("RGBA", (N, N), PINK + (0,))
+    # Soft blue glow under the C.
+    glow = Image.new("RGBA", (N, N), SKY_DEEP + (0,))
     glow.putalpha(c.filter(ImageFilter.GaussianBlur(px(36))).point(lambda a: int(a * 0.55)))
     img = Image.alpha_composite(img, glow)
 
