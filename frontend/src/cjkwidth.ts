@@ -93,3 +93,37 @@ export function loadUnicodeWidths(term: Terminal) {
         },
     });
 }
+
+/** Terminal fonts offered in the settings. legacy fonts draw ambiguous-width symbols full-width. */
+export const FONTS: ReadonlyArray<{name: string; label: string; legacy?: boolean}> = [
+    {name: 'D2Coding', label: 'D2Coding'},
+    {name: 'GulimChe', label: '굴림체', legacy: true},
+    {name: 'DotumChe', label: '돋움체', legacy: true},
+    {name: 'BatangChe', label: '바탕체', legacy: true},
+    {name: 'GungsuhChe', label: '궁서체', legacy: true},
+    {name: 'Consolas', label: 'Consolas'},
+];
+
+const FALLBACK = '"D2Coding", "Consolas", "Malgun Gothic", monospace';
+
+/** The CSS font-family for a chosen font, in wide (EUC-KR) or narrow mode. */
+export function fontFamily(name: string, wide: boolean): string {
+    const chosen = FONTS.find(f => f.name === name) ?? FONTS[0];
+    // A modern font draws ambiguous symbols half-width; borrow them from a legacy font.
+    const amb = wide && !chosen.legacy ? `"${AMBIGUOUS_FONT}", ` : '';
+    return `${amb}"${chosen.name}", ${FALLBACK}`;
+}
+
+// Font for ambiguous-width characters in EUC-KR mode. D2Coding draws ▒─■ etc. as
+// half-width glyphs, so a 2-column cell shows a gap; legacy Korean fixed fonts
+// (GulimChe and friends, which Zterm uses) draw them full-width.
+const AMBIGUOUS_FONT = 'ChoboAmbiguous';
+
+const hex = (cp: number) => cp.toString(16).toUpperCase();
+const ambiguousFace = new FontFace(
+    AMBIGUOUS_FONT,
+    ['GulimChe', '굴림체', 'DotumChe', '돋움체', 'BatangChe', '바탕체'].map(n => `local("${n}")`).join(', '),
+    {unicodeRange: AMBIGUOUS.map(([s, e]) => (s === e ? `U+${hex(s)}` : `U+${hex(s)}-${hex(e)}`)).join(', ')},
+);
+(document.fonts as unknown as Set<FontFace>).add(ambiguousFace);
+ambiguousFace.load().catch(() => console.warn('No legacy Korean font found for ambiguous-width symbols'));

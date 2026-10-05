@@ -5,6 +5,8 @@ import {main} from '../wailsjs/go/models';
 
 export let settings: main.Settings = main.Settings.createFrom({
     fontSize: 15,
+    fontUtf8: 'D2Coding',
+    fontEucKr: 'GulimChe',
     pasteNoConfirm: false,
     keepAlive: 60,
     autoReconnect: true,

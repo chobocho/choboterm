@@ -2,12 +2,18 @@
 
 import {saveSettings, settings} from './settings';
 import {ChooseLogDir} from '../wailsjs/go/main/App';
+import {FONTS} from './cjkwidth';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 const overlay = $<HTMLDivElement>('prefsOverlay');
 const panel = $<HTMLDivElement>('prefs');
 const fontSize = $<HTMLInputElement>('pFont');
+const fontUtf8 = $<HTMLSelectElement>('pFontUtf8');
+const fontEucKr = $<HTMLSelectElement>('pFontEucKr');
+for (const sel of [fontUtf8, fontEucKr]) {
+    for (const f of FONTS) sel.add(new Option(f.label, f.name));
+}
 const keepAlive = $<HTMLInputElement>('pKeepAlive');
 const autoReconnect = $<HTMLInputElement>('pReconnect');
 const pasteConfirm = $<HTMLInputElement>('pPaste');
@@ -28,6 +34,8 @@ export function openPrefs(apply: () => void, close: () => void) {
     onApply = apply;
     onClose = close;
     fontSize.value = String(settings.fontSize);
+    fontUtf8.value = settings.fontUtf8;
+    fontEucKr.value = settings.fontEucKr;
     keepAlive.value = String(settings.keepAlive);
     autoReconnect.checked = settings.autoReconnect;
     pasteConfirm.checked = !settings.pasteNoConfirm;
@@ -66,6 +74,8 @@ function apply() {
     if (ka === undefined) return;
     saveSettings(s => {
         s.fontSize = font;
+        s.fontUtf8 = fontUtf8.value;
+        s.fontEucKr = fontEucKr.value;
         s.keepAlive = ka;
         s.autoReconnect = autoReconnect.checked;
         s.pasteNoConfirm = !pasteConfirm.checked;

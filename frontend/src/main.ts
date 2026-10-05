@@ -4,7 +4,7 @@ import './style.css';
 import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
 import {WebLinksAddon} from '@xterm/addon-web-links';
-import {loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
+import {fontFamily, loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
 import {openPrefs, prefsOpen} from './prefs';
@@ -85,10 +85,18 @@ function welcome(t: Tab) {
     t.term.write('Ctrl+Shift+E: UTF-8 ↔ EUC-KR · Ctrl+Shift+F: 파일 전송 · Ctrl+Shift+D: 연결 끊기\x1b[0m\r\n');
 }
 
+function applyFontFamily(t: Tab) {
+    const wide = t.encoding === 'EUC-KR';
+    const font = fontFamily(wide ? settings.fontEucKr : settings.fontUtf8, wide);
+    if (t.term.options.fontFamily !== font) t.term.options.fontFamily = font;
+}
+
 // EUC-KR screens assume ambiguous-width symbols (─│■○ etc.) take 2 columns.
 function applyEncoding(t: Tab, name: string) {
     t.encoding = name;
-    const wanted = name === 'EUC-KR' ? WIDE : NARROW;
+    const wide = name === 'EUC-KR';
+    const wanted = wide ? WIDE : NARROW;
+    applyFontFamily(t);
     // Never let a missing width provider break connecting.
     if (t.term.unicode.versions.includes(wanted)) t.term.unicode.activeVersion = wanted;
 }
@@ -102,7 +110,7 @@ function createTab(): Tab {
     termsEl.appendChild(pane);
 
     const term = new Terminal({
-        fontFamily: '"D2Coding", "Consolas", "Malgun Gothic", monospace',
+        fontFamily: fontFamily(settings.fontUtf8, false),
         fontSize: settings.fontSize,
         cursorBlink: true,
         scrollback: 5000,
@@ -231,7 +239,10 @@ function setFontSize(n: number) {
 
 function applyFontSize() {
     // Hidden tabs are fitted again when they are activated.
-    for (const t of tabs.values()) t.term.options.fontSize = settings.fontSize;
+    for (const t of tabs.values()) {
+        t.term.options.fontSize = settings.fontSize;
+        applyFontFamily(t);
+    }
     active?.fit.fit();
 }
 

@@ -232,6 +232,8 @@ export namespace main {
 	}
 	export class Settings {
 	    fontSize: number;
+	    fontUtf8: string;
+	    fontEucKr: string;
 	    pasteNoConfirm: boolean;
 	    keepAlive: number;
 	    autoReconnect: boolean;
@@ -248,6 +250,8 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.fontSize = source["fontSize"];
+	        this.fontUtf8 = source["fontUtf8"];
+	        this.fontEucKr = source["fontEucKr"];
 	        this.pasteNoConfirm = source["pasteNoConfirm"];
 	        this.keepAlive = source["keepAlive"];
 	        this.autoReconnect = source["autoReconnect"];

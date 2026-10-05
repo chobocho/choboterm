@@ -43,5 +43,20 @@
   <li>F1 도움말(한/영)·README·소개 페이지 갱신. 테스트 sshconfig_test.go(명령줄 파싱, 별칭·패턴, 키 경로, 인프로세스 SSH 서버로 'ssh 별칭' 접속). Edge 헤드리스+CDP로 툴팁·목록 화면 확인</li>
   <li>버전 0.1.2 → 0.1.3, build.bat 빌드, GitHub Release v0.1.3</li>
 </ul>
+<h2>2026-10-05 — EUC-KR 모호폭 기호(▒ 등) 틈 문제 수정</h2>
+<ul>
+  <li>증상: BBS 상단 바의 ▒ 패턴이 Zterm처럼 꽉 차지 않고 "▒ ▒ ▒"처럼 사이가 벌어져 보임</li>
+  <li>원인: EUC-KR 모드에서 ▒은 2칸 폭이지만 D2Coding 글리프는 반각 → xterm DOM 렌더러가 자간(letter-spacing)으로 2칸을 채워 틈이 생김</li>
+  <li>수정: cjkwidth.ts에 모호폭 문자 범위만(unicode-range) 굴림체/돋움체/바탕체(local)로 그리는 FontFace "ChoboAmbiguous" 등록. applyEncoding에서 EUC-KR일 때만 글꼴 목록 맨 앞에 추가 (UTF-8은 기존 그대로)</li>
+  <li>확인: GulimChe의 ▒ ─ ■ · 폭 = 1024(ASCII 512의 2배, 전각). tsc/vite 빌드 통과</li>
+</ul>
+<h2>2026-10-05 — 설정에 글꼴 선택 추가</h2>
+<ul>
+  <li>설정 창(화면)에 "글꼴 (UTF-8)", "글꼴 (EUC-KR)" 선택 추가: D2Coding / 굴림체 / 돋움체 / 바탕체 / 궁서체 / Consolas</li>
+  <li>기본값: UTF-8 = D2Coding, EUC-KR = 굴림체(GulimChe) → Zterm과 같은 모양</li>
+  <li>EUC-KR에서 D2Coding·Consolas 같은 현대 글꼴을 고르면 ▒─■ 등 모호폭 기호만 굴림체로 대체(ChoboAmbiguous), 굴림체류는 자체 전각 기호 사용</li>
+  <li>settings.go(fontUtf8/fontEucKr, 기존 설정 파일은 기본값 적용), models.ts, settings.ts, prefs.ts, index.html, cjkwidth.ts(FONTS, fontFamily), main.ts(applyFontFamily — 인코딩 전환·설정 적용 시 탭별 적용)</li>
+  <li>go test / tsc·vite 빌드 통과</li>
+</ul>
 </body>
 </html>

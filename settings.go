@@ -11,6 +11,9 @@ import (
 type Settings struct {
 	// FontSize is the terminal font size in pixels.
 	FontSize int `json:"fontSize"`
+	// FontUTF8 and FontEUCKR are the terminal font families for each encoding.
+	FontUTF8  string `json:"fontUtf8"`
+	FontEUCKR string `json:"fontEucKr"`
 	// PasteNoConfirm skips the confirmation before pasting several lines.
 	PasteNoConfirm bool `json:"pasteNoConfirm"`
 	// KeepAlive is the keepalive interval in seconds for SSH and Telnet (0 = off).
@@ -53,7 +56,7 @@ func (w WindowState) valid() bool {
 }
 
 func defaultSettings() Settings {
-	return Settings{FontSize: 15, KeepAlive: 60, AutoReconnect: true, Macros: []Macro{}}
+	return Settings{FontSize: 15, FontUTF8: "D2Coding", FontEUCKR: "GulimChe", KeepAlive: 60, AutoReconnect: true, Macros: []Macro{}}
 }
 
 var settingsMu sync.Mutex
