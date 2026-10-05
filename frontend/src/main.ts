@@ -56,6 +56,9 @@ interface Tab {
     reconnecting?: boolean;
     // Session log file while logging is on.
     log?: string;
+    // Input waiting for the Send call in flight (see sendInput).
+    outbox: string;
+    sending: boolean;
 }
 
 // Connect dialog contents saved per tab, so switching tabs keeps them.
@@ -187,11 +190,11 @@ function createTab(): Tab {
     el.append(dot, label, x);
     tabsEl.appendChild(el);
 
-    const t: Tab = {id, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8'};
+    const t: Tab = {id, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false};
     tabs.set(id, t);
 
     term.onData(data => {
-        if (t.state === 'on') Send(t.id, data);
+        if (t.state === 'on') sendInput(t, data);
         else if (t.reconnecting) return;
         else if (t.retry) {
             if (data === '\r') retryNow(t);
@@ -564,6 +567,7 @@ EventsOn('term:data', (id: number, b64: string) => {
 EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
     const t = tabs.get(id);
     if (!t) return;
+    dbg(`tab ${id} term:closed "${msg}" lost=${lost} autoReconnect=${settings.autoReconnect}`);
     forgetFiles(t.id);
     forwardsTabClosed(t.id);
     setState(t, 'idle');
@@ -984,12 +988,33 @@ function showPrefs() {
 
 $<HTMLButtonElement>('prefsBtn').addEventListener('click', showPrefs);
 
+// Wails runs each Go call on its own goroutine, so calls made back to back can
+// reach the server out of order (e.g. replies to a burst of terminal queries).
+// One Send at a time keeps the order; input typed meanwhile goes in the next one.
+async function sendInput(t: Tab, data: string) {
+    t.outbox += data;
+    if (t.sending) return;
+    t.sending = true;
+    try {
+        while (t.outbox) {
+            const chunk = t.outbox;
+            t.outbox = '';
+            await Send(t.id, chunk);
+        }
+    } catch (e) {
+        t.outbox = '';
+        dbg(`tab ${t.id} send failed: ${e}`);
+    } finally {
+        t.sending = false;
+    }
+}
+
 // ---- Macros ----
 
 function sendMacro(t: Tab, m: main.Macro) {
     if (t.state !== 'on') return toast('연결되어 있지 않습니다');
     const text = expandMacro(m.text);
-    if (text) Send(t.id, text);
+    if (text) sendInput(t, text);
 }
 
 function showMacros() {

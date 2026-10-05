@@ -37,11 +37,13 @@ func (s *sshSession) Read(p []byte) (int, error) {
 		go func() { done <- s.session.Wait() }()
 		select {
 		case werr := <-done:
+			debugf("ssh output EOF; session.Wait: %v", werr)
 			var missing *ssh.ExitMissingError
 			if errors.As(werr, &missing) {
 				err = errConnLost
 			}
 		case <-time.After(5 * time.Second):
+			debugf("ssh output EOF; session.Wait timed out")
 		}
 	}
 	return n, err
@@ -143,6 +145,7 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, conn net.Conn, keys [
 		return nil, fmt.Errorf("셸 시작 실패: %w", err)
 	}
 
+	go func() { debugf("ssh connection to %s ended: %v", req.Host, client.Wait()) }()
 	return &sshSession{client: client, session: session, stdin: stdin, stdout: stdout}, nil
 }
 

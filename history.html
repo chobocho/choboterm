@@ -5,6 +5,20 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-05 — 접속 종료 에러 진단 로그 추가</h2>
+<ul>
+  <li>release\debug_.log 분석: vim 종료 후 Ctrl+D(로그아웃) → 19바이트 출력 → 약 3초 뒤 종료 메시지 출력. Go 종료 경로에 로그가 없어 어떤 에러로 끝났는지 확인 불가</li>
+  <li>진단 로그 추가: ssh EOF 시 session.Wait 결과/타임아웃(ssh.go), 읽기 종료 에러·최종 메시지와 lost 여부, keepalive 실패, 64바이트 이하 출력 내용(app.go), 프론트 term:closed 수신·autoReconnect 값(main.ts)</li>
+  <li>wails build 후 release\choboterm.exe 갱신. 사용자 재현 로그 대기 중</li>
+  <li>재현 로그(release\debug_2.log로 보관) 분석: 로그아웃이 아니라 vi(nvim으로 보임)를 종료 후 다시 실행한 직후 서버가 채널을 exit-status 없이 닫음 → "네트워크 연결이 끊어졌습니다"(lost=true) → 자동 재접속. 앱이 직접 닫은 흔적은 없음</li>
+  <li>별도 버그 발견: 터미널 응답(onData)이 Wails 호출마다 다른 goroutine에서 처리되어 서버로 가는 순서가 뒤바뀜(예: \x1b[?2048;0$y가 맨 뒤로)</li>
+  <li>TCP 연결 자체가 끊겼는지 알기 위해 client.Wait() 종료 로그 추가 후 재빌드</li>
+  <li>3차 재현(debug_3.log): 끊김 없음. 대신 nvim 시작 시 응답 전송 후 서버 출력이 약 10초 멈췄다가 화면이 그려짐. Ctrl+D 로그아웃은 exit-status 정상 수신(lost=false)</li>
+  <li>수정: frontend sendInput 추가 — Send 호출을 한 번에 하나씩 순서대로 보내고, 그동안 들어온 입력은 다음 호출에 합쳐 보냄(키 입력·매크로 모두 적용). 재빌드 후 release exe 갱신, 재확인 대기</li>
+  <li>4차 재현(release\debug.log): 응답 순서는 정상으로 확인(같은 묶음이 한 번에 순서대로 전송). 그래도 한 번은 12초 멈춤. 빠른 실행과 느린 실행에서 주고받은 바이트가 완전히 동일 → 멈춤은 서버 쪽 nvim 시작 과정(직전 nvim 종료 1초 후 재실행)으로 판단, choboterm 원인 아님</li>
+  <li>서버 쪽 확인 권장: nvim --startuptime, Windows Terminal ssh로 동일 재현 여부, 끊김 당시 서버 로그(journalctl/dmesg OOM)</li>
+</ul>
+
 <h2>2026-10-05 — README 스크린샷 갱신</h2>
 <ul>
   <li>docs/screen_shot.png를 V0.1.6 새 아이콘 화면으로 다시 캡처(타이틀바·접속 창에 CT 아이콘)</li>

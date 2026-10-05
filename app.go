@@ -299,6 +299,7 @@ func (t *tab) keepAlive(sess Session, every time.Duration) {
 			misses = 0
 			continue
 		}
+		debugf("tab %d keepalive failed: %v", t.id, err)
 		if misses++; misses < keepAliveMisses {
 			continue
 		}
@@ -351,7 +352,11 @@ func (t *tab) pump(sess Session) {
 	flush := func() {
 		if len(pending) > 0 {
 			lastEmit = time.Now()
-			debugf("tab %d emit %d bytes", t.id, len(pending))
+			if len(pending) <= 64 {
+				debugf("tab %d emit %d bytes %q", t.id, len(pending), pending)
+			} else {
+				debugf("tab %d emit %d bytes", t.id, len(pending))
+			}
 			t.log.write(pending)
 			t.emit("term:data", base64.StdEncoding.EncodeToString(pending))
 			pending = pending[:0]
@@ -392,6 +397,7 @@ func (t *tab) pump(sess Session) {
 				pending = append(pending, t.codec.Decode(held)...)
 				flush()
 				err := <-readErr
+				debugf("tab %d read ended: %v", t.id, err)
 				t.mu.Lock()
 				current := t.sess == sess
 				if current {
@@ -414,6 +420,7 @@ func (t *tab) pump(sess Session) {
 					} else if lost {
 						msg = "연결이 끊어졌습니다: " + err.Error()
 					}
+					debugf("tab %d closed: %q lost=%v", t.id, msg, lost)
 					t.log.mark(msg)
 					t.emit("term:closed", msg, lost)
 				}
