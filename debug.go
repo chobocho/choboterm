@@ -8,23 +8,22 @@ import (
 	"time"
 )
 
-// Debug log: set CHOBOTERM_DEBUG=1, or create %AppData%\choboterm\debug.on, to write
-// frontend and backend diagnostics to %AppData%\choboterm\debug.log (overwritten on each start).
+// Debug log: set CHOBOTERM_DEBUG=1, or put a file named debug.on next to the exe, to write
+// frontend and backend diagnostics to debug.log next to the exe (overwritten on each start).
 var debugLog struct {
 	mu sync.Mutex
 	f  *os.File
 }
 
 func init() {
-	dir, err := os.UserConfigDir()
+	exe, err := os.Executable()
 	if err != nil {
 		return
 	}
-	dir = filepath.Join(dir, "choboterm")
+	dir := filepath.Dir(exe)
 	if _, err := os.Stat(filepath.Join(dir, "debug.on")); err != nil && os.Getenv("CHOBOTERM_DEBUG") == "" {
 		return
 	}
-	_ = os.MkdirAll(dir, 0o755)
 	debugLog.f, _ = os.Create(filepath.Join(dir, "debug.log"))
 	debugf("debug log started, version %s", AppVersion)
 }

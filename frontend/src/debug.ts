@@ -1,4 +1,4 @@
-// Diagnostics for CHOBOTERM_DEBUG=1: lines go to %AppData%\choboterm\debug.log via the Go side.
+// Diagnostics for CHOBOTERM_DEBUG=1 or debug.on next to the exe: lines go to debug.log next to the exe via the Go side.
 // Messages logged before the Go side answers are buffered, then sent or dropped.
 
 import {DebugEnabled, DebugLog} from '../wailsjs/go/main/App';
