@@ -317,6 +317,8 @@ func (t *tab) keepAlive(sess Session, every time.Duration) {
 
 // pump reads session output and emits it to the frontend in batches,
 // so that bulk output (e.g. cat of a large file) doesn't flood the event bridge.
+// Output arriving after a quiet spell (a key echo) is sent at once; only output
+// within flushInterval of the previous emit waits for the ticker.
 func (t *tab) pump(sess Session) {
 	chunks := make(chan []byte, 64)
 	readErr := make(chan error, 1)
@@ -336,16 +338,19 @@ func (t *tab) pump(sess Session) {
 	}()
 
 	const maxBatch = 256 * 1024
-	ticker := time.NewTicker(16 * time.Millisecond)
+	const flushInterval = 16 * time.Millisecond
+	ticker := time.NewTicker(flushInterval)
 	defer ticker.Stop()
 	var (
-		pending []byte
-		held    []byte      // possible start of a ZMODEM sequence split across reads
-		zmIn    chan []byte // non-nil while a ZMODEM transfer owns the stream
-		zmDone  chan []byte // receives unconsumed bytes when the transfer ends
+		pending  []byte
+		held     []byte      // possible start of a ZMODEM sequence split across reads
+		zmIn     chan []byte // non-nil while a ZMODEM transfer owns the stream
+		zmDone   chan []byte // receives unconsumed bytes when the transfer ends
+		lastEmit time.Time
 	)
 	flush := func() {
 		if len(pending) > 0 {
+			lastEmit = time.Now()
 			debugf("tab %d emit %d bytes", t.id, len(pending))
 			t.log.write(pending)
 			t.emit("term:data", base64.StdEncoding.EncodeToString(pending))
@@ -415,7 +420,7 @@ func (t *tab) pump(sess Session) {
 				return
 			}
 			handle(c)
-			if len(pending) >= maxBatch {
+			if len(pending) >= maxBatch || time.Since(lastEmit) >= flushInterval {
 				flush()
 			}
 		case left := <-zmDone: // nil channel (never ready) unless a transfer is running
