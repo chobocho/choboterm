@@ -5,6 +5,12 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-05 — V0.1.5 릴리스</h2>
+<ul>
+  <li>버전 0.1.4 → 0.1.5 (main.go, wails.json, README.md). 포함: WebGL 렌더러(sc-im 등 버벅임 개선), 접속 창 가림 수정, exe 폴더 debug.on 디버그 로그</li>
+  <li>go test 통과, wails build 후 release\choboterm.exe 갱신. main에 커밋(작업 브랜치 없음, 머지 불필요), push·GitHub 릴리스는 안 함</li>
+</ul>
+
 <h2>2026-10-05 — sc-im 등 전체 화면 TUI 버벅임 개선</h2>
 <ul>
   <li>원인: xterm.js 렌더러 애드온이 없어 기본 DOM 렌더러 사용. 색·속성이 많은 화면을 매 프레임 span으로 다시 만들어 느림</li>
@@ -22,6 +28,8 @@
   <li>수정: style.css #terms에 isolation: isolate → xterm 레이어를 터미널 영역 안에 가둠. headless Edge elementFromPoint로 확인: 수정 전 CANVAS.xterm-link-layer, 수정 후 INPUT#host / BUTTON#ok</li>
   <li>debug.on 삭제(디버그 기본 꺼짐, 기능은 남겨 둠). build\bin·release exe 재빌드</li>
   <li>사용자 확인: 정상 동작. go test 통과 후 커밋 8c3e97b (main)</li>
+  <li>디버그 켜는 방법 변경: %AppData%\choboterm\debug.on → exe와 같은 폴더의 debug.on(os.Executable 기준). CHOBOTERM_DEBUG=1도 유지. 로그 위치도 exe와 같은 폴더의 debug.log로 변경. build\bin에 debug.on 두고 실행해 build\bin\debug.log 생성 확인 후 둘 다 삭제, release exe 갱신</li>
+  <li>정리: %AppData%\choboterm\debug.log(이전 위치 로그)와 임시 폴더의 CDP·캡처 테스트 스크립트/이미지 삭제</li>
 </ul>
 
 <h2>2026-10-05 — 가벼움 점검 (V0.1.4 실측)</h2>

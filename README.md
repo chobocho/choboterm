@@ -1,4 +1,4 @@
-# choboterm V0.1.4
+# choboterm V0.1.5
 
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows용 SSH / Telnet / FTP 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다.
