@@ -5,6 +5,12 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-05 — V0.1.7 릴리스</h2>
+<ul>
+  <li>버전 0.1.6 → 0.1.7 (main.go, wails.json, README.md). 포함: 터미널 입력 순서 보장(sendInput), 접속 종료 진단 로그</li>
+  <li>go test 통과, wails build -clean 후 release\choboterm.exe 갱신. main push(GitHub Pages 재빌드), GitHub 릴리스 v0.1.7 생성, v0.1.6 릴리스·태그 삭제</li>
+</ul>
+
 <h2>2026-10-05 — 접속 종료 에러 진단 로그 추가</h2>
 <ul>
   <li>release\debug_.log 분석: vim 종료 후 Ctrl+D(로그아웃) → 19바이트 출력 → 약 3초 뒤 종료 메시지 출력. Go 종료 경로에 로그가 없어 어떤 에러로 끝났는지 확인 불가</li>
