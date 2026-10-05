@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-05 — 앱 아이콘 교체 (CT 모노그램)</h2>
+<ul>
+  <li>기존 아이콘(파란 화면 + "&gt;_")이 흔한 터미널 아이콘 같아 ChoboTerm을 드러내는 "CT" 모노그램으로 교체</li>
+  <li>디자인: 짙은 보라 둥근 사각형 위에 주황→분홍 그라데이션의 굵은 "C"(Chobo), 그 안에 흰 가로획 + 민트 블록 커서 세로획의 "T"(Term). 16~32px은 C + 커서 블록만 그린 단순판</li>
+  <li>tools/make_icon.py 재작성 후 build/appicon.png, build/windows/icon.ico 재생성, docs/icon.png(256), docs/favicon.png·frontend/src/assets/icon.png(64) 갱신. build.bat(go test 통과, wails build -clean)로 build\bin, release\choboterm.exe에 새 아이콘 반영</li>
+</ul>
+
 <h2>2026-10-05 — V0.1.6 릴리스</h2>
 <ul>
   <li>버전 0.1.5 → 0.1.6 (main.go, wails.json, README.md). 포함: 키 에코 지연 감소(출력 묶음 개선)</li>

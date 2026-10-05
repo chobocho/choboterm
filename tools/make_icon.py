@@ -1,13 +1,22 @@
 """Renders the choboterm app icon (1024px PNG + multi-size ICO).
 
+The mark is a "CT" monogram: a bold sunset-gradient "C" (Chobo) wrapping a
+"T" (Term) whose stem is a terminal block cursor.
+
 Usage: python tools/make_icon.py build/appicon.png build/windows/icon.ico preview.png
 Requires Pillow.
 """
+import math
 import sys
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
 S = 4                      # supersampling factor
 N = 1024 * S
+
+ORANGE = (255, 150, 50)
+PINK = (255, 46, 136)
+MINT = (94, 234, 212, 255)
+WHITE = (250, 247, 255, 255)
 
 
 def px(v):
@@ -31,63 +40,74 @@ def vertical_gradient(top, bottom):
     return g.resize((N, N))
 
 
-def stroke_poly(draw, pts, width, fill):
-    w = px(width)
-    p = [(px(x), px(y)) for x, y in pts]
-    draw.line(p, fill=fill, width=w, joint="curve")
-    r = w // 2
-    for x, y in (p[0], p[-1]):
-        draw.ellipse([x - r, y - r, x + r, y + r], fill=fill)
+def diagonal_gradient(a, b):
+    """Top-left a -> bottom-right b."""
+    small = Image.new("RGBA", (256, 256))
+    for y in range(256):
+        for x in range(256):
+            small.putpixel((x, y), lerp(a, b, (x + y) / 510) + (255,))
+    return small.resize((N, N), Image.BILINEAR)
+
+
+def arc_mask(cx, cy, r_out, r_in, gap_deg):
+    """Thick ring with a gap centred on the right side, with round caps."""
+    m = Image.new("L", (N, N), 0)
+    d = ImageDraw.Draw(m)
+    half = gap_deg / 2
+    d.pieslice([px(cx - r_out), px(cy - r_out), px(cx + r_out), px(cy + r_out)],
+               start=half, end=360 - half, fill=255)
+    d.ellipse([px(cx - r_in), px(cy - r_in), px(cx + r_in), px(cy + r_in)], fill=0)
+    # Round caps at both ends of the stroke.
+    rc = (r_out - r_in) / 2
+    rm = (r_out + r_in) / 2
+    for a in (half, -half):
+        x = cx + rm * math.cos(math.radians(a))
+        y = cy + rm * math.sin(math.radians(a))
+        d.ellipse([px(x - rc), px(y - rc), px(x + rc), px(y + rc)], fill=255)
+    return m
 
 
 def render(simple=False):
-    """simple=True: no inner screen and a bigger glyph, for 16-32px."""
+    """simple=True: thicker strokes and a lone cursor, for 16-32px."""
     img = Image.new("RGBA", (N, N), (0, 0, 0, 0))
 
-    # Squircle body: deep blue gradient, like the old PC-communication blue screens.
-    body_box = (64, 64, 960, 960)
-    body = rounded_mask(body_box, 210)
-    top, bottom = ((30, 64, 175, 255), (10, 15, 45, 255)) if simple else ((37, 99, 235, 255), (17, 24, 72, 255))
-    img.paste(vertical_gradient(top, bottom), (0, 0), body)
+    # Squircle body: deep ink-violet, so the warm C pops.
+    body = rounded_mask((64, 64, 960, 960), 220)
+    img.paste(vertical_gradient((44, 22, 78, 255), (14, 8, 30, 255)), (0, 0), body)
 
     if simple:
-        glyph = Image.new("RGBA", (N, N), (0, 0, 0, 0))
-        gd = ImageDraw.Draw(glyph)
-        mint = (94, 234, 212, 255)
-        stroke_poly(gd, [(250, 318), (500, 512), (250, 706)], 140, mint)
-        gd.rounded_rectangle([px(570), px(636), px(820), px(746)], radius=px(30), fill=mint)
-        img = Image.alpha_composite(img, glyph)
-        return img.resize((1024, 1024), Image.LANCZOS)
+        c = arc_mask(512, 512, 380, 200, 84)
+    else:
+        c = arc_mask(512, 512, 352, 232, 76)
+    grad = diagonal_gradient(ORANGE, PINK)
 
-    # Inner screen with a soft border.
-    screen_box = (150, 190, 874, 834)
-    border = rounded_mask((140, 180, 884, 844), 96)
-    img.paste((96, 165, 250, 90), (0, 0), ImageChops.multiply(border, body))
-    screen = rounded_mask(screen_box, 86)
-    img.paste(vertical_gradient((10, 18, 48, 255), (4, 8, 26, 255)), (0, 0), screen)
+    # Soft warm glow under the C.
+    glow = Image.new("RGBA", (N, N), PINK + (0,))
+    glow.putalpha(c.filter(ImageFilter.GaussianBlur(px(36))).point(lambda a: int(a * 0.55)))
+    img = Image.alpha_composite(img, glow)
 
-    # Faint scanlines on the screen.
-    lines = Image.new("L", (N, N), 0)
-    ld = ImageDraw.Draw(lines)
-    for y in range(190, 834, 14):
-        ld.rectangle([0, px(y), N, px(y + 5)], fill=22)
-    img.paste((120, 180, 255, 255), (0, 0), ImageChops.multiply(lines, screen))
+    layer = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+    layer.paste(grad, (0, 0), c)
+    img = Image.alpha_composite(img, layer)
 
-    # Prompt glyph ">_" in mint, drawn as strokes so it stays crisp at 16px.
     glyph = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glyph)
-    mint = (94, 234, 212, 255)
-    stroke_poly(gd, [(300, 372), (468, 512), (300, 652)], 92, mint)
-    gd.rounded_rectangle([px(540), px(616), px(736), px(696)], radius=px(26), fill=mint)
-
-    glow = glyph.filter(ImageFilter.GaussianBlur(px(30)))
-    glow.putalpha(glow.getchannel("A").point(lambda a: int(a * 0.85)))
-    img = Image.alpha_composite(img, glow)
+    if simple:
+        # Just the cursor block inside the C.
+        gd.rounded_rectangle([px(440), px(380), px(584), px(644)], radius=px(18), fill=MINT)
+    else:
+        # "T": white crossbar + mint block-cursor stem.
+        gd.rounded_rectangle([px(372), px(372), px(652), px(436)], radius=px(16), fill=WHITE)
+        gd.rounded_rectangle([px(470), px(456), px(554), px(652)], radius=px(12), fill=MINT)
+        cglow = glyph.filter(ImageFilter.GaussianBlur(px(22)))
+        cglow.putalpha(cglow.getchannel("A").point(lambda a: int(a * 0.6)))
+        img = Image.alpha_composite(img, cglow)
     img = Image.alpha_composite(img, glyph)
 
-    # Glossy highlight on the upper half of the body.
+    # Subtle top sheen on the body.
     hl = Image.new("L", (N, N), 0)
-    ImageDraw.Draw(hl).ellipse([px(-200), px(-560), px(1224), px(420)], fill=22)
+    ImageDraw.Draw(hl).ellipse([px(-200), px(-600), px(1224), px(380)], fill=16)
+    hl = hl.filter(ImageFilter.GaussianBlur(px(40)))
     img.paste((255, 255, 255, 255), (0, 0), ImageChops.multiply(hl, body))
 
     return img.resize((1024, 1024), Image.LANCZOS)
