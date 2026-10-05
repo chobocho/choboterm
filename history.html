@@ -21,6 +21,7 @@
   <li><b>먹통 원인 확정</b>: 로그상 페이지는 정상(60fps), 키도 xterm에 도착. 그러나 시작 시 뜨는 접속 창 위치의 클릭이 모두 CANVAS.xterm-link-layer로 감 → WebGL 애드온의 z-index 붙은 캔버스가 z-index 없는 .overlay(접속 창) 위에 쌓여 입력을 가로챔. 포커스가 터미널로 가고, 미접속 상태라 Enter 외 키는 무반응 → 먹통처럼 보임</li>
   <li>수정: style.css #terms에 isolation: isolate → xterm 레이어를 터미널 영역 안에 가둠. headless Edge elementFromPoint로 확인: 수정 전 CANVAS.xterm-link-layer, 수정 후 INPUT#host / BUTTON#ok</li>
   <li>debug.on 삭제(디버그 기본 꺼짐, 기능은 남겨 둠). build\bin·release exe 재빌드</li>
+  <li>사용자 확인: 정상 동작. go test 통과 후 커밋 8c3e97b (main)</li>
 </ul>
 
 <h2>2026-10-05 — 가벼움 점검 (V0.1.4 실측)</h2>
