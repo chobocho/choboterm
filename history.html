@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-08 — 파일 전송 창을 터미널 현재 폴더에서 열기</h2>
+<ul>
+  <li>요청: Ctrl+Shift+F 파일 전송 창이 항상 루트(시작 폴더)에서 열림 → 셸의 현재 폴더에서 열기</li>
+  <li>프론트(main.ts): 커서 줄 프롬프트에서 경로 추출(user@host:~/src$, ~/src $, [u@h /var/log]$ 등, 첫 번째 "경로+프롬프트 기호") → OSC 7(file://host/path, registerOscHandler) → 창 제목(onTitleChange, "user@host: ~/src") 순. SSH 탭만</li>
+  <li>Go FileStartDir: ~ 를 원격 $HOME(exec printf "$HOME", 실패 시 SFTP 시작 폴더)으로 바꾸고, 절대 경로이며 목록을 읽을 수 있는 폴더일 때만 반환. 실패하면 홈 폴더에서 열고 상태줄에 안내</li>
+  <li>테스트: TestFileStartDir(~, ~/하위, .., 파일, 없는 폴더, 상대 경로, ~user). go test ./..., tsc, wails build 통과. GUI 동작은 사용자 확인 대기</li>
+</ul>
+
 <h2>2026-10-08 — 텍스트 편집기 (2단계) 추가</h2>
 <ul>
   <li>파일 전송 창 F4 / 우클릭 "편집", 또는 뷰어의 "편집" 버튼으로 편집 모드. Ctrl+S / "저장" 버튼으로 서버에 바로 저장, Ctrl+Z 되돌리기(history), Tab 입력, 찾기·바꾸기</li>

@@ -547,3 +547,55 @@ func (t *tab) fileClose() {
 		_ = fs.Close()
 	}
 }
+
+// FileStartDir turns the shell's folder seen in the terminal (from the prompt,
+// the window title or OSC 7) into an absolute remote path. Returns "" if it
+// can't be resolved or isn't a folder that can be listed.
+func (a *App) FileStartDir(tabID int, dir string) string {
+	t := a.findTab(tabID)
+	if t == nil {
+		return ""
+	}
+	if strings.HasPrefix(dir, "~") {
+		rest := dir[1:]
+		if rest != "" && rest[0] != '/' {
+			return "" // ~user
+		}
+		home := t.remoteHome()
+		if home == "" {
+			return ""
+		}
+		dir = home + rest
+	}
+	if !path.IsAbs(dir) {
+		return ""
+	}
+	dir = path.Clean(dir)
+	if err := t.withFS(func(fs RemoteFS) error {
+		_, err := fs.List(dir)
+		return err
+	}); err != nil {
+		return ""
+	}
+	return dir
+}
+
+// remoteHome is the login user's home folder: $HOME from the shell, or the
+// file system's start folder when commands can't be run.
+func (t *tab) remoteHome() string {
+	if sess, _ := t.session().(*sshSession); sess != nil {
+		if s, err := sess.client.NewSession(); err == nil {
+			out, err := s.Output(`printf '%s' "$HOME"`)
+			s.Close()
+			if home := t.codec.DecodeString(string(out)); err == nil && path.IsAbs(home) {
+				return home
+			}
+		}
+	}
+	var home string
+	_ = t.withFS(func(fs RemoteFS) (err error) {
+		home, err = fs.Getwd()
+		return err
+	})
+	return home
+}

@@ -7,6 +7,7 @@ import {
     FileMkdir,
     FileOpen,
     FileRename,
+    FileStartDir,
     FileUpload,
     FileUploadPaths,
     FileView,
@@ -363,19 +364,22 @@ async function mkdir(v: View) {
 
 /**
  * Opens (or shows again) the file transfer window for a tab's connection.
+ * It starts in startDir (the shell's folder, may be "~/...") if that exists,
+ * otherwise in the home folder.
  * Throws if the connection doesn't support file access (e.g. Telnet).
  */
-export async function openFiles(tabId: number, host: string, opts: {onClose?: () => void} = {}) {
+export async function openFiles(tabId: number, host: string, opts: {startDir?: string; onClose?: () => void} = {}) {
     const existing = views.get(tabId);
     if (existing) {
         if (activeTab() === tabId) show(existing);
         return;
     }
     const res = await FileOpen(tabId);
+    const start = opts.startDir ? await FileStartDir(tabId, opts.startDir) : '';
     const v: View = {
         tabId,
         heading: `파일 전송 (${res.protocol}) - ${host}`,
-        cwd: res.home || '/',
+        cwd: start || res.home || '/',
         entries: [],
         selected: -1,
         picked: new Set(),
@@ -391,6 +395,7 @@ export async function openFiles(tabId: number, host: string, opts: {onClose?: ()
         panel.focus();
     }
     await load(v, v.cwd);
+    if (opts.startDir && !start && !v.status) setStatus(v, `터미널의 현재 폴더(${opts.startDir})를 열 수 없어 홈 폴더를 엽니다`);
 }
 
 /** Shows the file window of tabId if it has one, otherwise hides the window. */

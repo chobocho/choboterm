@@ -60,6 +60,9 @@ interface Tab {
     // Input waiting for the Send call in flight (see sendInput).
     outbox: string;
     sending: boolean;
+    // The shell's folder as reported by OSC 7, and the window title it set.
+    osc7?: string;
+    title?: string;
 }
 
 // Connect dialog contents saved per tab, so switching tabs keeps them.
@@ -193,6 +196,20 @@ function createTab(): Tab {
 
     const t: Tab = {id, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false};
     tabs.set(id, t);
+
+    // Shells can report their folder as OSC 7 file://host/path (e.g. with vte.sh).
+    term.parser.registerOscHandler(7, data => {
+        const m = /^file:\/\/[^/]*(\/.*)$/.exec(data);
+        if (m) {
+            try {
+                t.osc7 = decodeURIComponent(m[1]);
+            } catch {
+                t.osc7 = m[1];
+            }
+        }
+        return true;
+    });
+    term.onTitleChange(title => (t.title = title));
 
     term.onData(data => {
         if (t.state === 'on') sendInput(t, data);
@@ -527,10 +544,31 @@ function disconnect(t: Tab) {
     t.term.write('\r\n\x1b[33m[연결을 끊었습니다] Enter: 다시 접속\x1b[0m\r\n');
 }
 
+/** The folder in the prompt at the cursor: "user@host:~/src$", "~/src $", "[/etc]#"... */
+function promptDir(term: Terminal): string {
+    const buf = term.buffer.active;
+    const line = buf.getLine(buf.baseY + buf.cursorY)?.translateToString(true, 0, buf.cursorX) ?? '';
+    // The first path followed by a prompt sign; later ones belong to the typed command.
+    const m = /(~[^\s$#%>:]*|\/[^\s$#%>:\])]*)[\])]?\s?[$#%>](?:\s|$)/.exec(line);
+    return m ? m[1] : '';
+}
+
+/** The folder in a window title like "user@host: ~/src". */
+function titleDir(title = ''): string {
+    const m = /(?:^|[:\s])(~[^\s]*|\/[^\s]*)\s*$/.exec(title);
+    return m ? m[1] : '';
+}
+
+/** Where the shell is, as far as the terminal can tell ("" if unknown). */
+function shellDir(t: Tab): string {
+    if (t.proto !== 'ssh') return '';
+    return promptDir(t.term) || t.osc7 || titleDir(t.title);
+}
+
 async function openFilesFor(t: Tab) {
     if (t.state === 'idle' || !t.req || t.dialog) return;
     try {
-        await openFiles(t.id, t.req.host, {onClose: () => focusActive()});
+        await openFiles(t.id, t.req.host, {startDir: shellDir(t), onClose: () => focusActive()});
     } catch (e) {
         notice(t, String(e));
     }

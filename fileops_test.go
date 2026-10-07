@@ -145,3 +145,38 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 		t.Fatal("deleting a missing file succeeded")
 	}
 }
+
+func TestFileStartDir(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{"d/sub/a.txt": "a"})
+	client, err := ssh.Dial("tcp", startSFTPServer(t, root), &ssh.ClientConfig{
+		User: "test", HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	a := NewApp()
+	a.hooks.emit = func(string, ...interface{}) {}
+	a.getTab(1).sess = &sshSession{client: client}
+	res, err := a.FileOpen(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wd := res.Home
+	// The test server runs no commands, so ~ falls back to the SFTP start folder.
+	for in, want := range map[string]string{
+		"~":                 wd,
+		"~/d/sub/":          wd + "/d/sub",
+		wd + "/d/../d":      wd + "/d",
+		wd + "/d/sub/a.txt": "", // a file
+		wd + "/missing":     "",
+		"d":                 "", // relative
+		"~other/d":          "",
+	} {
+		if got := a.FileStartDir(1, in); got != want {
+			t.Errorf("FileStartDir(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

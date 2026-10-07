@@ -66,6 +66,10 @@ export function FileSaveText(arg1, arg2) {
   return window['go']['main']['App']['FileSaveText'](arg1, arg2);
 }
 
+export function FileStartDir(arg1, arg2) {
+  return window['go']['main']['App']['FileStartDir'](arg1, arg2);
+}
+
 export function FileUpload(arg1, arg2) {
   return window['go']['main']['App']['FileUpload'](arg1, arg2);
 }
