@@ -1,5 +1,9 @@
 // F1 help window, switchable between Korean and English.
 
+import {BrowserOpenURL} from '../wailsjs/runtime/runtime';
+
+const REPO = 'https://github.com/chobocho/choboterm';
+
 type Lang = 'ko' | 'en';
 
 interface Section {
@@ -13,6 +17,7 @@ interface HelpText {
     close: string;
     sections: Section[];
     notes: string[];
+    links: {title: string; rows: [string, string][]}; // [label, url]
 }
 
 const TEXT: Record<Lang, HelpText> = {
@@ -92,6 +97,14 @@ const TEXT: Record<Lang, HelpText> = {
             '접속 기록: %AppData%\\choboterm\\hosts.json',
             '세션 로그: 기본으로 문서\\choboterm\\logs에 "호스트_포트_날짜_시간.log"로 저장됩니다.',
         ],
+        links: {
+            title: '링크',
+            rows: [
+                ['릴리스 페이지', `${REPO}/releases/latest`],
+                ['라이선스 (MIT)', `${REPO}/blob/main/LICENSE`],
+                ['서드파티 라이선스', `${REPO}/blob/main/THIRD_PARTY_NOTICES.txt`],
+            ],
+        },
     },
     en: {
         title: 'Help',
@@ -169,6 +182,14 @@ const TEXT: Record<Lang, HelpText> = {
             'Connection history: %AppData%\\choboterm\\hosts.json',
             'Session logs: saved as "host_port_date_time.log" in Documents\\choboterm\\logs by default.',
         ],
+        links: {
+            title: 'Links',
+            rows: [
+                ['Releases', `${REPO}/releases/latest`],
+                ['License (MIT)', `${REPO}/blob/main/LICENSE`],
+                ['Third-party licenses', `${REPO}/blob/main/THIRD_PARTY_NOTICES.txt`],
+            ],
+        },
     },
 };
 
@@ -230,6 +251,26 @@ function render() {
         ul.append(li);
     }
     content.append(ul);
+
+    // Links open in the default browser.
+    const h = document.createElement('h3');
+    h.textContent = t.links.title;
+    const table = document.createElement('table');
+    for (const [label, url] of t.links.rows) {
+        const tr = table.insertRow();
+        const k = tr.insertCell();
+        k.className = 'key';
+        k.textContent = label;
+        const a = document.createElement('a');
+        a.href = url;
+        a.textContent = url.replace('https://', '');
+        a.addEventListener('click', ev => {
+            ev.preventDefault();
+            BrowserOpenURL(url);
+        });
+        tr.insertCell().append(a);
+    }
+    content.append(h, table);
 }
 
 export function helpOpen() {

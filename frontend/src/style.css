@@ -910,6 +910,11 @@ html, body {
     font-size: 12px;
 }
 
+#helpContent a {
+    color: #0063b1;
+    word-break: break-all;
+}
+
 #helpContent ul {
     margin: 10px 0 0;
     padding-left: 18px;
