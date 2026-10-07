@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -39,6 +41,25 @@ func (w *limitWriter) Write(b []byte) (int, error) {
 type ViewResult struct {
 	Data      string `json:"data"` // base64
 	Truncated bool   `json:"truncated"`
+	// The file as listed right before reading; the editor checks it again
+	// before saving, to notice changes made by someone else.
+	Size    int64  `json:"size"`
+	ModTime string `json:"modTime"`
+}
+
+// statRemote finds p in its folder's listing (RemoteFS has no Stat).
+func statRemote(fs RemoteFS, p string) (FileEntry, error) {
+	list, err := fs.List(path.Dir(p))
+	if err != nil {
+		return FileEntry{}, err
+	}
+	name := path.Base(p)
+	for _, e := range list {
+		if e.Name == name {
+			return e, nil
+		}
+	}
+	return FileEntry{}, fmt.Errorf("파일이 없습니다: %s", p)
 }
 
 // FileView downloads up to viewLimit bytes of remotePath for the text viewer.
@@ -50,6 +71,16 @@ func (a *App) FileView(tabID int, remotePath string, size int64) (ViewResult, er
 	total := size
 	if total > int64(viewLimit) {
 		total = int64(viewLimit)
+	}
+	var st FileEntry
+	if err := t.withFS(func(fs RemoteFS) (err error) {
+		st, err = statRemote(fs, remotePath)
+		return err
+	}); err != nil {
+		return ViewResult{}, err
+	}
+	if st.IsDir {
+		return ViewResult{}, errors.New("폴더는 열 수 없습니다")
 	}
 	w := &limitWriter{max: viewLimit}
 	err := t.transfer(path.Base(remotePath), total, false, func(fs RemoteFS, p *progress) error {
@@ -65,7 +96,77 @@ func (a *App) FileView(tabID int, remotePath string, size int64) (ViewResult, er
 	return ViewResult{
 		Data:      base64.StdEncoding.EncodeToString(w.buf),
 		Truncated: w.full,
+		Size:      st.Size,
+		ModTime:   st.ModTime,
 	}, nil
+}
+
+// TextSave is the editor's request to write a remote file.
+type TextSave struct {
+	Path     string `json:"path"`
+	Text     string `json:"text"`
+	Encoding string `json:"encoding"`
+	// What the file looked like when it was opened or last saved.
+	Size    int64  `json:"size"`
+	ModTime string `json:"modTime"`
+	// Overwrite even if the file changed on the server meanwhile.
+	IgnoreConflict bool `json:"ignoreConflict"`
+	// Save even if some characters don't exist in Encoding (they become '?').
+	AllowLossy bool `json:"allowLossy"`
+}
+
+// TextSaveResult says whether the file was written, and if not, why.
+type TextSaveResult struct {
+	Saved    bool `json:"saved"`
+	Conflict bool `json:"conflict"` // the file changed on the server
+	Bad      int  `json:"bad"`      // characters missing from the encoding
+	// The file after saving, for the next conflict check.
+	Size    int64  `json:"size"`
+	ModTime string `json:"modTime"`
+	// The bytes written (base64), so the viewer can decode them again.
+	Data string `json:"data"`
+}
+
+// FileSaveText writes the editor's text to a remote file in the requested encoding.
+// It doesn't write if characters would be lost or the file changed on the
+// server, unless the request allows it.
+func (a *App) FileSaveText(tabID int, req TextSave) (TextSaveResult, error) {
+	t := a.findTab(tabID)
+	if t == nil {
+		return TextSaveResult{}, errors.New("연결되어 있지 않습니다")
+	}
+	out, bad := encodeText(req.Text, req.Encoding)
+	if bad > 0 && !req.AllowLossy {
+		return TextSaveResult{Bad: bad}, nil
+	}
+	if !req.IgnoreConflict {
+		var st FileEntry
+		err := t.withFS(func(fs RemoteFS) (err error) {
+			st, err = statRemote(fs, req.Path)
+			return err
+		})
+		if err != nil {
+			return TextSaveResult{}, err
+		}
+		if st.Size != req.Size || st.ModTime != req.ModTime {
+			return TextSaveResult{Conflict: true, Bad: bad}, nil
+		}
+	}
+	size := int64(len(out))
+	err := t.transfer(path.Base(req.Path), size, true, func(fs RemoteFS, p *progress) error {
+		return fs.Upload(req.Path, progressReader{bytes.NewReader(out), p}, size)
+	})
+	if err != nil {
+		return TextSaveResult{}, err
+	}
+	res := TextSaveResult{Saved: true, Bad: bad, Size: size, Data: base64.StdEncoding.EncodeToString(out)}
+	_ = t.withFS(func(fs RemoteFS) error {
+		if st, err := statRemote(fs, req.Path); err == nil {
+			res.Size, res.ModTime = st.Size, st.ModTime
+		}
+		return nil
+	})
+	return res, nil
 }
 
 // encodeText converts UTF-8 text to enc. Characters missing from CP949

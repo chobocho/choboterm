@@ -294,9 +294,57 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class TextSave {
+	    path: string;
+	    text: string;
+	    encoding: string;
+	    size: number;
+	    modTime: string;
+	    ignoreConflict: boolean;
+	    allowLossy: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TextSave(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.text = source["text"];
+	        this.encoding = source["encoding"];
+	        this.size = source["size"];
+	        this.modTime = source["modTime"];
+	        this.ignoreConflict = source["ignoreConflict"];
+	        this.allowLossy = source["allowLossy"];
+	    }
+	}
+	export class TextSaveResult {
+	    saved: boolean;
+	    conflict: boolean;
+	    bad: number;
+	    size: number;
+	    modTime: string;
+	    data: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TextSaveResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.saved = source["saved"];
+	        this.conflict = source["conflict"];
+	        this.bad = source["bad"];
+	        this.size = source["size"];
+	        this.modTime = source["modTime"];
+	        this.data = source["data"];
+	    }
+	}
 	export class ViewResult {
 	    data: string;
 	    truncated: boolean;
+	    size: number;
+	    modTime: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ViewResult(source);
@@ -306,6 +354,8 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.data = source["data"];
 	        this.truncated = source["truncated"];
+	        this.size = source["size"];
+	        this.modTime = source["modTime"];
 	    }
 	}
 

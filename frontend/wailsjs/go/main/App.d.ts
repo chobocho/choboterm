@@ -32,6 +32,8 @@ export function FileOpen(arg1:number):Promise<main.FileOpenResult>;
 
 export function FileRename(arg1:number,arg2:string,arg3:string,arg4:string):Promise<void>;
 
+export function FileSaveText(arg1:number,arg2:main.TextSave):Promise<main.TextSaveResult>;
+
 export function FileUpload(arg1:number,arg2:string):Promise<number>;
 
 export function FileUploadPaths(arg1:number,arg2:string,arg3:Array<string>):Promise<number>;

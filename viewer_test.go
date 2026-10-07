@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -72,5 +74,64 @@ func TestEncodeText(t *testing.T) {
 	out, bad = encodeText("a😀b😀", EncodingEUCKR)
 	if string(out) != "a?b?" || bad != 2 {
 		t.Fatalf("euc-kr missing: %q %d", out, bad)
+	}
+}
+
+func TestFileSaveTextOverSFTP(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{"a.txt": "old"})
+	client, err := ssh.Dial("tcp", startSFTPServer(t, root), &ssh.ClientConfig{
+		User: "test", HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	a := NewApp()
+	a.hooks.emit = func(string, ...interface{}) {}
+	a.getTab(1).sess = &sshSession{client: client}
+	res, err := a.FileOpen(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := res.Home + "/a.txt"
+	v, err := a.FileView(1, p, 3)
+	if err != nil || v.Size != 3 || v.ModTime == "" {
+		t.Fatalf("view: %+v, %v", v, err)
+	}
+
+	// Saved in EUC-KR.
+	req := TextSave{Path: p, Text: "한글\r\n", Encoding: EncodingEUCKR, Size: v.Size, ModTime: v.ModTime}
+	r, err := a.FileSaveText(1, req)
+	if err != nil || !r.Saved || r.Size != 6 {
+		t.Fatalf("save: %+v, %v", r, err)
+	}
+	want, _ := korean.EUCKR.NewEncoder().String("한글\r\n")
+	if b, _ := os.ReadFile(filepath.Join(root, "a.txt")); string(b) != want {
+		t.Fatalf("file = % x", b)
+	}
+
+	// Characters missing from EUC-KR need permission.
+	req.Text, req.Size, req.ModTime = "😀", r.Size, r.ModTime
+	if r, err = a.FileSaveText(1, req); err != nil || r.Saved || r.Bad != 1 {
+		t.Fatalf("lossy: %+v, %v", r, err)
+	}
+
+	// Someone else changed the file: not overwritten unless asked.
+	writeFiles(t, root, map[string]string{"a.txt": "changed elsewhere"})
+	req.Text = "mine"
+	if r, err = a.FileSaveText(1, req); err != nil || r.Saved || !r.Conflict {
+		t.Fatalf("conflict: %+v, %v", r, err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(root, "a.txt")); string(b) != "changed elsewhere" {
+		t.Fatalf("overwritten: %q", b)
+	}
+	req.IgnoreConflict = true
+	if r, err = a.FileSaveText(1, req); err != nil || !r.Saved {
+		t.Fatalf("forced: %+v, %v", r, err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(root, "a.txt")); string(b) != "mine" {
+		t.Fatalf("forced file = %q", b)
 	}
 }

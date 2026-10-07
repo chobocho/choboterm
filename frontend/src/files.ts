@@ -271,22 +271,27 @@ function viewable(v: View): main.FileEntry | undefined {
     return list.length === 1 && !list[0].isDir ? list[0] : undefined;
 }
 
-/** Opens the selected file in the text viewer. */
-function viewFile(v: View) {
+/** Opens the selected file in the text viewer (edit: in edit mode). */
+function viewFile(v: View, edit = false) {
     const e = viewable(v);
     if (!e) return;
-    const path = joinPath(v.cwd, e.name);
+    const dir = v.cwd;
+    const path = joinPath(dir, e.name);
     return run(v, async () => {
         const res = await FileView(v.tabId, path, e.size);
         const data = Uint8Array.from(atob(res.data), c => c.charCodeAt(0));
         openViewer({
+            tabId: v.tabId,
             name: e.name,
             path,
-            size: Math.max(e.size, data.length),
             data,
             truncated: res.truncated,
+            size: res.size,
+            modTime: res.modTime,
+            // Show the new size and date in the list.
+            onSaved: () => views.get(v.tabId) === v && !v.busy && v.cwd === dir && load(v, dir, [e.name]),
             onClose: () => v === current && panel.focus(),
-        });
+        }, edit);
     });
 }
 
@@ -477,6 +482,9 @@ panel.addEventListener('keydown', ev => {
         case 'F3':
             viewFile(v);
             break;
+        case 'F4':
+            viewFile(v, true);
+            break;
         case 'F7':
             mkdir(v);
             break;
@@ -504,6 +512,7 @@ function showMenu(x: number, y: number) {
     enable('open', list.length > 0);
     enable('rename', !!one);
     enable('view', !!viewable(v));
+    enable('edit', !!viewable(v));
     enable('delete', list.length > 0);
     enable('mkdir', true);
     enable('upload', true);
@@ -537,6 +546,9 @@ menu.addEventListener('click', ev => {
         }
         case 'view':
             viewFile(v);
+            break;
+        case 'edit':
+            viewFile(v, true);
             break;
         case 'rename':
             rename(v);

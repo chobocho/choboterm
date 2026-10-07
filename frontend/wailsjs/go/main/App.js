@@ -62,6 +62,10 @@ export function FileRename(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['FileRename'](arg1, arg2, arg3, arg4);
 }
 
+export function FileSaveText(arg1, arg2) {
+  return window['go']['main']['App']['FileSaveText'](arg1, arg2);
+}
+
 export function FileUpload(arg1, arg2) {
   return window['go']['main']['App']['FileUpload'](arg1, arg2);
 }

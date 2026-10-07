@@ -817,6 +817,43 @@ html, body {
     outline: 1px solid #0078d7;
 }
 
+.viewer .toolbar button {
+    height: 22px;
+    padding: 0 12px;
+    border: 1px solid #adadad;
+    background: #e1e1e1;
+    font: inherit;
+    cursor: pointer;
+}
+
+.viewer .toolbar button:hover:not(:disabled) {
+    background: #e5f1fb;
+    border-color: #0078d7;
+}
+
+.viewer .toolbar button:disabled {
+    color: #888;
+    cursor: default;
+}
+
+/* In edit mode Save is the default button, and the text area shows it's editable. */
+.viewer.editing .buttons #vClose {
+    outline: none;
+}
+
+.viewer.editing .buttons #vSaveRemote:not(:disabled) {
+    outline: 1px solid #0078d7;
+}
+
+.viewer.editing #vText {
+    border-color: #0078d7;
+}
+
+/* Save is only for edit mode. */
+.viewer:not(.editing) #vSaveRemote {
+    display: none;
+}
+
 /* ---- Help window (F1) ---- */
 
 /* Above the other windows; covers the whole app. */

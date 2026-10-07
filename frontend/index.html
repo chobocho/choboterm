@@ -107,7 +107,7 @@
                 <button type="button" id="fDelete" title="Delete">삭제</button>
                 <span class="gap"></span>
                 <button type="button" id="fUpload" title="파일을 목록으로 끌어 놓아도 됩니다">업로드...</button>
-                <button type="button" id="fView" title="F3">보기</button>
+                <button type="button" id="fView" title="보기 F3 · 편집 F4">보기</button>
                 <button type="button" id="fDownload" title="Enter">다운로드</button>
                 <button type="button" id="fClose">닫기</button>
             </div>
@@ -268,6 +268,7 @@
 <ul id="fMenu" class="menu" hidden>
     <li data-act="open">다운로드</li>
     <li data-act="view">보기 (F3)</li>
+    <li data-act="edit">편집 (F4)</li>
     <li data-act="rename">이름 바꾸기 (F2)</li>
     <li data-act="delete">삭제 (Delete)</li>
     <li class="sep"></li>
@@ -292,6 +293,7 @@
                     <option value="EUC-KR">EUC-KR (CP949)</option>
                 </select>
                 <label class="check"><input type="checkbox" id="vWrap"/> 줄 바꿈</label>
+                <button type="button" id="vEdit" title="편집 모드로 바꿉니다 (파일 전송 창에서 F4로 바로 열 수도 있습니다)">편집</button>
                 <span class="gap"></span>
                 <span id="vInfo"></span>
             </div>
@@ -302,9 +304,10 @@
                     <option value="UTF-8">UTF-8</option>
                     <option value="EUC-KR">EUC-KR (CP949)</option>
                 </select>
-                <button type="button" id="vSave" title="보이는 내용을 고른 인코딩으로 바꿔 내 PC에 저장합니다">변환해서 저장...</button>
+                <button type="button" id="vSave" title="보이는 내용을 고른 인코딩으로 바꿔 내 PC에 저장합니다">PC에 변환 저장...</button>
                 <span class="gap"></span>
-                <span class="hint">Ctrl+F 찾기 · Esc 닫기</span>
+                <span class="hint">Ctrl+F 찾기 · Ctrl+Z 되돌리기 · Esc 닫기</span>
+                <button type="button" id="vSaveRemote" title="서버에 저장 (Ctrl+S). 인코딩·줄바꿈·BOM은 원래대로 유지합니다" disabled>저장</button>
                 <button type="button" id="vClose">닫기</button>
             </div>
         </div>
