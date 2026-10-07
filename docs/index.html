@@ -127,6 +127,15 @@
             padding-bottom: 6px;
         }
 
+        .shot {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+        }
+
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -228,6 +237,11 @@ login: guest
     </header>
 
     <section>
+        <h2>화면</h2>
+        <img class="shot" src="screen_shot.png" alt="choboterm 실행 화면" loading="lazy"/>
+    </section>
+
+    <section>
         <h2>기능</h2>
         <ul class="features">
             <li><b>SSH · Telnet · FTP</b><span>22/23/21번 포트는 바로, 다른 포트는 서버 응답으로 자동 판별 (예: Termux 8022)</span></li>
@@ -241,8 +255,10 @@ login: guest
             <li><b>연결 유지 · 자동 재접속</b><span>쉬는 연결이 끊기지 않게 keepalive, 네트워크가 끊기면 화면을 그대로 두고 다시 연결</span></li>
             <li><b>매크로</b><span>자주 쓰는 명령을 저장해 두고 창이나 F키로 바로 보내기</span></li>
             <li><b>세션 로그</b><span>받은 출력을 파일에 계속 저장 (접속할 때 자동 시작, 일반 텍스트 또는 원본)</span></li>
-            <li><b>편한 파일 창</b><span>여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더</span></li>
+            <li><b>편한 파일 창</b><span>셸의 현재 폴더에서 바로 열림. 여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더</span></li>
+            <li><b>원격 파일 보기 · 편집</b><span>F3 / F4로 받지 않고 바로 열기. UTF-8 · EUC-KR 자동 판별, 찾기·바꾸기, Ctrl+S로 서버에 저장 (인코딩·줄바꿈 유지, 충돌 확인)</span></li>
             <li><b>복사 · 붙여넣기</b><span>선택하면 복사, 우클릭으로 붙여넣기. 여러 줄은 실행 전에 확인</span></li>
+            <li><b>GPU 가속 화면</b><span>WebGL로 그려 htop · vim 같은 TUI도 끊김 없이. 창 제목에 ⚡GPU / 🐢CPU 표시</span></li>
             <li><b>검색 · 글꼴 · 링크</b><span>스크롤백 검색, Ctrl+휠 글꼴 크기, Ctrl+클릭으로 URL 열기, 창 위치 기억</span></li>
         </ul>
     </section>
@@ -254,6 +270,7 @@ login: guest
             <tr><td><kbd>Ctrl+Tab</kbd> / <kbd>Ctrl+Shift+Tab</kbd></td><td>다음 / 이전 탭</td></tr>
             <tr><td><kbd>Ctrl+Shift+W</kbd></td><td>탭 닫기</td></tr>
             <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>파일 전송 창 (SFTP / SCP / FTP)</td></tr>
+            <tr><td><kbd>F3</kbd> / <kbd>F4</kbd> (파일 창)</td><td>원격 텍스트 파일 보기 / 편집 (<kbd>Ctrl+S</kbd> 서버에 저장)</td></tr>
             <tr><td><kbd>Ctrl+Shift+E</kbd></td><td>UTF-8 ↔ EUC-KR</td></tr>
             <tr><td><kbd>Ctrl+Shift+D</kbd></td><td>연결 끊기</td></tr>
             <tr><td><kbd>Ctrl+Shift+C</kbd> / <kbd>Ctrl+Shift+V</kbd></td><td>복사 / 붙여넣기 (마우스 선택 = 복사, 우클릭 = 붙여넣기)</td></tr>
@@ -275,7 +292,9 @@ login: guest
     </section>
 
     <footer>
-        MIT License · <a href="https://github.com/chobocho/choboterm">github.com/chobocho/choboterm</a>
+        <a href="https://github.com/chobocho/choboterm/blob/main/LICENSE">MIT License</a> ·
+        <a href="https://github.com/chobocho/choboterm/blob/main/THIRD_PARTY_NOTICES.txt">서드파티 라이선스</a> ·
+        <a href="https://github.com/chobocho/choboterm">github.com/chobocho/choboterm</a>
     </footer>
 </main>
 <script>
