@@ -79,7 +79,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Alt+C` / `Alt+A` / `Esc` | 접속 창에서 Connect / Cancel / 닫기 |
 | `Ctrl+Shift+D` | 연결 끊기 (탭은 유지) |
 | `Ctrl+Shift+E` | UTF-8 ↔ EUC-KR 전환 |
-| `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP) |
+| `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP / FTP) |
 | `Ctrl+휠` / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | 글꼴 크게 / 작게 / 기본값 |
 | `Ctrl+Shift+S` | 스크롤백 검색 |
 | `Ctrl+Shift+O` | 설정 창 |
