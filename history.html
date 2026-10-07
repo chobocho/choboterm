@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-08 — 창 제목에 GPU 가속 여부 표시</h2>
+<ul>
+  <li>창 제목 오른쪽 끝에 현재 탭의 렌더러 표시: ⚡GPU(WebGL 애드온 사용) / 🐢CPU(하드웨어 WebGL 없음·로드 실패·컨텍스트 손실로 DOM 렌더러)</li>
+  <li>main.ts: useWebgl이 사용 여부를 반환하고 컨텍스트 손실 시 콜백으로 tab.gpu=false 후 제목 갱신. updateTitle에서 표시</li>
+  <li>tsc, wails build 통과. GUI 확인 대기</li>
+</ul>
+
 <h2>2026-10-08 — 파일 전송 창을 터미널 현재 폴더에서 열기</h2>
 <ul>
   <li>요청: Ctrl+Shift+F 파일 전송 창이 항상 루트(시작 폴더)에서 열림 → 셸의 현재 폴더에서 열기</li>

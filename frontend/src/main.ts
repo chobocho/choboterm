@@ -63,6 +63,8 @@ interface Tab {
     // The shell's folder as reported by OSC 7, and the window title it set.
     osc7?: string;
     title?: string;
+    // Drawn by the GPU (WebGL renderer) rather than the DOM renderer.
+    gpu: boolean;
 }
 
 // Connect dialog contents saved per tab, so switching tabs keeps them.
@@ -123,10 +125,11 @@ const hardwareWebgl = (() => {
 
 // The default DOM renderer rebuilds a span per styled run on every frame, which makes
 // full-screen TUIs with many colors (sc-im, htop...) stutter; draw with WebGL instead.
-function useWebgl(term: Terminal) {
+// Returns true if the GPU (WebGL) renderer is in use; onLost runs if it is dropped later.
+function useWebgl(term: Terminal, onLost: () => void): boolean {
     if (!hardwareWebgl) {
         dbg('webgl skipped: no hardware WebGL');
-        return;
+        return false;
     }
     try {
         const webgl = new WebglAddon();
@@ -134,11 +137,14 @@ function useWebgl(term: Terminal) {
         webgl.onContextLoss(() => {
             dbg('webgl context lost; back to DOM renderer');
             webgl.dispose();
+            onLost();
         });
         term.loadAddon(webgl);
         dbg('webgl renderer loaded');
+        return true;
     } catch (e) {
         console.warn('WebGL renderer unavailable; using the DOM renderer', e);
+        return false;
     }
 }
 
@@ -173,7 +179,10 @@ function createTab(): Tab {
     term.attachCustomKeyEventHandler(ev => !isAppShortcut(ev));
     dbg(`tab ${id} open`);
     term.open(pane);
-    useWebgl(term);
+    const gpu = useWebgl(term, () => {
+        t.gpu = false;
+        if (t === active) updateTitle();
+    });
     term.onData(d => dbg(`tab ${id} onData ${JSON.stringify(d)}`));
     term.onRender(({start, end}) => dbg(`tab ${id} render rows ${start}-${end}`));
 
@@ -194,7 +203,7 @@ function createTab(): Tab {
     el.append(dot, label, x);
     tabsEl.appendChild(el);
 
-    const t: Tab = {id, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false};
+    const t: Tab = {id, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false, gpu};
     tabs.set(id, t);
 
     // Shells can report their folder as OSC 7 file://host/path (e.g. with vte.sh).
@@ -436,6 +445,8 @@ function updateTitle() {
         title += t.state === 'ftp' ? ` - ftp://${where}` : ` - ${where}`;
         title += ` [${t.encoding}]`;
     }
+    // At the right end: whether this tab is drawn with GPU acceleration.
+    if (t) title += t.gpu ? '  ⚡GPU' : '  🐢CPU';
     WindowSetTitle(title);
 }
 
