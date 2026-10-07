@@ -198,3 +198,5 @@ go test ./...
 ## 라이선스
 
 [MIT](LICENSE)
+
+choboterm.exe에 포함된 서드파티 소프트웨어(Wails, xterm.js, CodeMirror, Go 라이브러리 등)의 라이선스 전문은 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)에 있습니다. 의존성을 바꾼 뒤에는 `python tools/gen_notices.py`로 다시 만듭니다.

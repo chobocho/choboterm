@@ -8,7 +8,9 @@
 <h2>2026-10-08 — 버전 0.1.8</h2>
 <ul>
   <li>버전 0.1.7 → 0.1.8 (main.go, wails.json, README.md). 포함: 텍스트 뷰어·편집기(F3/F4), 파일 전송 창을 셸 현재 폴더에서 열기, 창 제목 GPU 표시</li>
-  <li>go test 통과, wails build -clean 후 release\choboterm.exe 갱신. push·GitHub 릴리스는 사용자 확인 대기</li>
+  <li>go test 통과, wails build -clean 후 release\choboterm.exe 갱신</li>
+  <li>서드파티 라이선스 고지 추가: THIRD_PARTY_NOTICES.txt(Go 표준 라이브러리, Go 모듈 22개, npm 패키지 19개 — CodeMirror·lezer·xterm.js 등 전문), 생성 스크립트 tools/gen_notices.py, README 라이선스 절에 안내. 릴리스에 exe와 함께 첨부</li>
+  <li>main push(GitHub Pages 재빌드), GitHub 릴리스 v0.1.8 생성(choboterm.exe + THIRD_PARTY_NOTICES.txt), v0.1.7 릴리스·태그 삭제</li>
 </ul>
 
 <h2>2026-10-08 — 창 제목에 GPU 가속 여부 표시</h2>
