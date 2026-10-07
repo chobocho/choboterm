@@ -5,6 +5,17 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-08 — 텍스트 뷰어 (1단계) 추가</h2>
+<ul>
+  <li>파일 전송 창에서 F3 / "보기" 버튼 / 우클릭 "보기"로 원격 파일을 읽기 전용 CodeMirror 6 뷰어로 엶 (frontend/src/viewer.ts, index.html, style.css)</li>
+  <li>Go: FileView(앞 10MB만 받고 다운로드 중단, 진행률·취소는 기존 transfer 재사용), TextSaveAs(UTF-8/EUC-KR로 변환해 로컬 저장, CP949에 없는 글자는 ?로 바꾸고 개수 보고) — viewer.go</li>
+  <li>인코딩: 원본 바이트를 보관하고 프론트 TextDecoder로 디코딩. 유효한 UTF-8이면 UTF-8, 아니면 EUC-KR(CP949) 자동 판별. 드롭다운으로 강제 지정 시 다시 받지 않고 즉시 재디코딩. 잘린 파일 끝의 끊긴 UTF-8 바이트는 제외</li>
+  <li>깨진 글자(U+FFFD) 개수와 바이너리 파일(NUL 포함) 안내, 줄 바꿈 토글, Ctrl+F 찾기, Esc 닫기. 뷰어는 모달로 처리(main.ts modalOpen)</li>
+  <li>테스트: viewer_test.go(SFTP 전체/잘림/중단 후 연결 유지, encodeText), ftp_test.go에 다운로드 중단 후 연결 유지 검사 추가(pyftpdlib로 실행해 통과). go test ./..., tsc, wails build 통과. GUI 동작은 사용자 확인 대기</li>
+  <li>수정: Ctrl+F 찾기 패널이 깨짐 — 대화상자 공통 규칙(.body input 너비 100%, 높이 22px)이 CodeMirror 검색창 입력·체크박스에 적용된 탓. #vText .cm-search 전용 스타일로 한 줄 배치, 찾기 패널 문구 한글화(EditorState.phrases)</li>
+  <li>README, F1 도움말에 F3 보기 추가. npm 의존성 @codemirror/state·view·commands·search 추가(MIT), 번들 약 870KB</li>
+</ul>
+
 <h2>2026-10-05 — V0.1.7 릴리스</h2>
 <ul>
   <li>버전 0.1.6 → 0.1.7 (main.go, wails.json, README.md). 포함: 터미널 입력 순서 보장(sendInput), 접속 종료 진단 로그</li>

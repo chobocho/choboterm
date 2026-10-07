@@ -77,4 +77,17 @@ func TestFTPRoundTrip(t *testing.T) {
 	if !bytes.Equal(buf.Bytes(), payload) {
 		t.Fatalf("round trip mismatch: %d bytes", buf.Len())
 	}
+
+	// Stopping a download early (the text viewer's size limit) must leave the
+	// connection usable.
+	lw := &limitWriter{max: 1000}
+	if err := fs.Download(wd+"/sub/올림.bin", lw); !lw.full || !bytes.Equal(lw.buf, payload[:1000]) {
+		t.Fatalf("early stop: full=%v len=%d, %v", lw.full, len(lw.buf), err)
+	}
+	if _, err := fs.List(wd); err != nil {
+		t.Fatalf("list after early stop: %v", err)
+	}
+	if err := fs.Remove(wd+"/sub/올림.bin", false); err != nil {
+		t.Fatal(err)
+	}
 }

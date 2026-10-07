@@ -9,10 +9,12 @@ import {
     FileRename,
     FileUpload,
     FileUploadPaths,
+    FileView,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {EventsOn, OnFileDrop} from '../wailsjs/runtime/runtime';
 import {ask, askText} from './dialog';
+import {openViewer, viewerOpen} from './viewer';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -27,6 +29,7 @@ const upBtn = $<HTMLButtonElement>('fUp');
 const refreshBtn = $<HTMLButtonElement>('fRefresh');
 const uploadBtn = $<HTMLButtonElement>('fUpload');
 const downloadBtn = $<HTMLButtonElement>('fDownload');
+const viewBtn = $<HTMLButtonElement>('fView');
 const mkdirBtn = $<HTMLButtonElement>('fMkdir');
 const renameBtn = $<HTMLButtonElement>('fRename');
 const deleteBtn = $<HTMLButtonElement>('fDelete');
@@ -102,6 +105,7 @@ function paintButtons(v: View) {
     for (const b of [upBtn, refreshBtn, uploadBtn, mkdirBtn]) b.disabled = v.busy;
     downloadBtn.disabled = deleteBtn.disabled = v.busy || n === 0;
     renameBtn.disabled = v.busy || n !== 1;
+    viewBtn.disabled = v.busy || !viewable(v);
 }
 
 function paintStatus(v: View) {
@@ -241,7 +245,7 @@ async function run(v: View, op: () => Promise<void>) {
         setStatus(v, String(err));
     } finally {
         setBusy(v, false);
-        if (v === current) panel.focus();
+        if (v === current && !viewerOpen()) panel.focus();
     }
 }
 
@@ -258,6 +262,31 @@ function download(v: View) {
         // Several entries or a folder: pick a folder to save into.
         const res = await FileDownloadMany(v.tabId, v.cwd, list);
         if (res.dir) setStatus(v, `${res.count}개 파일을 저장했습니다: ${res.dir}`, true);
+    });
+}
+
+/** The one selected entry if it is a file the viewer can open. */
+function viewable(v: View): main.FileEntry | undefined {
+    const list = pickedEntries(v);
+    return list.length === 1 && !list[0].isDir ? list[0] : undefined;
+}
+
+/** Opens the selected file in the text viewer. */
+function viewFile(v: View) {
+    const e = viewable(v);
+    if (!e) return;
+    const path = joinPath(v.cwd, e.name);
+    return run(v, async () => {
+        const res = await FileView(v.tabId, path, e.size);
+        const data = Uint8Array.from(atob(res.data), c => c.charCodeAt(0));
+        openViewer({
+            name: e.name,
+            path,
+            size: Math.max(e.size, data.length),
+            data,
+            truncated: res.truncated,
+            onClose: () => v === current && panel.focus(),
+        });
     });
 }
 
@@ -392,6 +421,7 @@ upBtn.addEventListener('click', () => current && load(current, parentPath(curren
 refreshBtn.addEventListener('click', () => current && load(current, current.cwd));
 uploadBtn.addEventListener('click', () => current && upload(current));
 downloadBtn.addEventListener('click', () => current && download(current));
+viewBtn.addEventListener('click', () => current && viewFile(current));
 mkdirBtn.addEventListener('click', () => current && mkdir(current));
 renameBtn.addEventListener('click', () => current && rename(current));
 deleteBtn.addEventListener('click', () => current && remove(current));
@@ -444,6 +474,9 @@ panel.addEventListener('keydown', ev => {
         case 'F2':
             rename(v);
             break;
+        case 'F3':
+            viewFile(v);
+            break;
         case 'F7':
             mkdir(v);
             break;
@@ -470,6 +503,7 @@ function showMenu(x: number, y: number) {
     menu.querySelector('[data-act="open"]')!.textContent = one?.isDir ? '열기' : '다운로드';
     enable('open', list.length > 0);
     enable('rename', !!one);
+    enable('view', !!viewable(v));
     enable('delete', list.length > 0);
     enable('mkdir', true);
     enable('upload', true);
@@ -501,6 +535,9 @@ menu.addEventListener('click', ev => {
             else download(v);
             break;
         }
+        case 'view':
+            viewFile(v);
+            break;
         case 'rename':
             rename(v);
             break;

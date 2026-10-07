@@ -674,6 +674,149 @@ html, body {
     outline: none;
 }
 
+/* ---- Text viewer (CodeMirror) ---- */
+
+.dialog.viewer {
+    display: flex;
+    flex-direction: column;
+    width: min(960px, calc(100vw - 32px));
+    height: calc(100vh - 48px);
+    outline: none;
+}
+
+.viewer .body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.viewer .toolbar,
+.viewer .buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viewer .toolbar select,
+.viewer .buttons select {
+    width: auto;
+}
+
+.viewer .gap {
+    flex: 1;
+}
+
+#vInfo,
+.viewer .hint {
+    color: #555;
+    font-size: 12px;
+}
+
+#vText {
+    flex: 1;
+    min-height: 0;
+    border: 1px solid #7a7a7a;
+    background: #fff;
+}
+
+#vText .cm-editor {
+    height: 100%;
+    font-size: 13px;
+}
+
+#vText .cm-editor.cm-focused {
+    outline: none;
+}
+
+#vText .cm-scroller {
+    font-family: "D2Coding", Consolas, "Malgun Gothic", monospace;
+    line-height: 1.4;
+}
+
+/* The search panel: undo the dialog's input rules (.body input is 100% wide). */
+#vText .cm-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 6px 28px 6px 8px;
+    background: #f5f5f5;
+    font: 12px "Malgun Gothic", "Segoe UI", sans-serif;
+}
+
+#vText .cm-search br {
+    display: none;
+}
+
+#vText .cm-search input,
+#vText .cm-search button {
+    width: auto;
+    height: 22px;
+    margin: 0;
+    font: inherit;
+}
+
+#vText .cm-search .cm-textfield {
+    width: 240px;
+    padding: 1px 4px;
+    border: 1px solid #7a7a7a;
+}
+
+#vText .cm-search .cm-button {
+    padding: 0 10px;
+    border: 1px solid #adadad;
+    background: #e1e1e1;
+    background-image: none;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+#vText .cm-search .cm-button:hover {
+    background: #e5f1fb;
+    border-color: #0078d7;
+}
+
+#vText .cm-search label {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+#vText .cm-search input[type=checkbox] {
+    width: 13px;
+    height: 13px;
+}
+
+#vText .cm-search button[name=close] {
+    top: 6px;
+    right: 8px;
+    height: auto;
+    font-size: 16px;
+}
+
+#vText .cm-gutters {
+    background: #f5f5f5;
+    border-right: 1px solid #ddd;
+    color: #888;
+}
+
+.viewer .buttons {
+    margin-top: 0;
+}
+
+.viewer .buttons button {
+    min-width: 0;
+    padding: 0 12px;
+}
+
+.viewer .buttons #vClose {
+    outline: 1px solid #0078d7;
+}
+
 /* ---- Help window (F1) ---- */
 
 /* Above the other windows; covers the whole app. */

@@ -70,6 +70,10 @@ export function FileUploadPaths(arg1, arg2, arg3) {
   return window['go']['main']['App']['FileUploadPaths'](arg1, arg2, arg3);
 }
 
+export function FileView(arg1, arg2, arg3) {
+  return window['go']['main']['App']['FileView'](arg1, arg2, arg3);
+}
+
 export function ForwardAdd(arg1, arg2) {
   return window['go']['main']['App']['ForwardAdd'](arg1, arg2);
 }
@@ -132,4 +136,8 @@ export function StartLog(arg1) {
 
 export function StopLog(arg1) {
   return window['go']['main']['App']['StopLog'](arg1);
+}
+
+export function TextSaveAs(arg1, arg2, arg3) {
+  return window['go']['main']['App']['TextSaveAs'](arg1, arg2, arg3);
 }

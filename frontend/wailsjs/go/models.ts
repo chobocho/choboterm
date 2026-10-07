@@ -210,6 +210,20 @@ export namespace main {
 	        this.fromConfig = source["fromConfig"];
 	    }
 	}
+	export class SaveResult {
+	    path: string;
+	    bad: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SaveResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.bad = source["bad"];
+	    }
+	}
 	export class WindowState {
 	    left: number;
 	    top: number;
@@ -279,6 +293,20 @@ export namespace main {
 		    }
 		    return a;
 		}
+	}
+	export class ViewResult {
+	    data: string;
+	    truncated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ViewResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.data = source["data"];
+	        this.truncated = source["truncated"];
+	    }
 	}
 
 }

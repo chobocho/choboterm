@@ -36,6 +36,8 @@ export function FileUpload(arg1:number,arg2:string):Promise<number>;
 
 export function FileUploadPaths(arg1:number,arg2:string,arg3:Array<string>):Promise<number>;
 
+export function FileView(arg1:number,arg2:string,arg3:number):Promise<main.ViewResult>;
+
 export function ForwardAdd(arg1:number,arg2:main.Forward):Promise<main.ForwardStatus>;
 
 export function ForwardList(arg1:number):Promise<Array<main.ForwardStatus>>;
@@ -67,3 +69,5 @@ export function ShowLogs(arg1:number):Promise<void>;
 export function StartLog(arg1:number):Promise<string>;
 
 export function StopLog(arg1:number):Promise<void>;
+
+export function TextSaveAs(arg1:string,arg2:string,arg3:string):Promise<main.SaveResult>;

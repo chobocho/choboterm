@@ -1,7 +1,7 @@
 # choboterm V0.1.7
 
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows용 SSH / Telnet / FTP 터미널입니다.
-Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다.
+Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다. 텍스트 뷰어는 [CodeMirror 6](https://codemirror.net)(MIT)을 씁니다.
 
 **[⬇ 최신 버전 다운로드 (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · [소개 페이지](https://chobocho.github.io/choboterm/) · [모든 버전](https://github.com/chobocho/choboterm/releases)
 
@@ -31,6 +31,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 여러 개나 폴더를 받을 때는 저장할 폴더를 고르면 하위 폴더까지 받습니다. 같은 이름이 있으면 `이름 (1)`로 저장합니다.
   - Windows 탐색기에서 파일·폴더를 목록으로 끌어 놓으면 업로드합니다(폴더는 하위까지).
   - `Delete` 삭제(폴더는 안의 내용까지, 확인 후), `F2` 이름 바꾸기, `F7` 새 폴더, 우클릭 메뉴
+  - `F3` 보기: 원격 텍스트 파일을 받지 않고 바로 엽니다(읽기 전용, 앞 10MB까지). UTF-8 / EUC-KR(CP949)을 자동으로 판별하고, 글자가 깨지면 인코딩을 직접 골라 다시 읽습니다. `Ctrl+F` 찾기, 줄 바꿈 켜기·끄기, 보이는 내용을 UTF-8 또는 EUC-KR로 바꿔 내 PC에 저장할 수 있습니다.
   - 서버에 SFTP가 없으면(Dropbear, 공유기, 임베디드 장비 등) 자동으로 SCP로 바꿔 씁니다. 이때 폴더 목록은 `ls`로 가져옵니다.
 - **Zmodem**: 터미널에서 `sz 파일` / `rz`를 실행하면 자동으로 전송합니다. 원격 서버에 lrzsz가 설치되어 있어야 합니다.
 - **EUC-KR (CP949)**: 접속 창의 Code에서 선택하거나 접속 중 `Ctrl+Shift+E`로 전환합니다.
@@ -87,7 +88,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Ctrl+C` / `Ctrl+X` (Zmodem 전송 중) | 전송 취소 |
 | `F1` | 도움말 열기 / 닫기 (도움말 창에서 `Alt+L`로 한국어 ↔ English 전환) |
 
-파일 전송 창: `↑` `↓` `Home` `End`로 선택(`Shift`로 범위), `Ctrl+클릭`·`Ctrl+A`로 여러 개 선택, `Enter`/더블클릭으로 폴더 열기·다운로드, `Backspace` 상위 폴더, `F5` 새로 고침, `Delete` 삭제, `F2` 이름 바꾸기, `F7` 새 폴더, `Esc` 닫기
+파일 전송 창: `↑` `↓` `Home` `End`로 선택(`Shift`로 범위), `Ctrl+클릭`·`Ctrl+A`로 여러 개 선택, `Enter`/더블클릭으로 폴더 열기·다운로드, `Backspace` 상위 폴더, `F3` 보기, `F5` 새로 고침, `Delete` 삭제, `F2` 이름 바꾸기, `F7` 새 폴더, `Esc` 닫기
 
 ## 파일 저장 위치
 
@@ -174,6 +175,7 @@ go test ./...
 | `secret_windows.go` | 비밀번호 암호화 (Windows DPAPI) |
 | `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
 | `frontend/src/files.ts` | 파일 전송 창(여러 개 선택, 끌어 놓기 업로드, 삭제·이름 바꾸기·새 폴더), 진행률 상자 |
+| `frontend/src/viewer.ts` / `viewer.go` | 텍스트 뷰어(CodeMirror, 인코딩 자동 판별·강제 지정, 변환 저장) |
 | `frontend/src/dialog.ts` | 확인 / 이름 입력 창 |
 | `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
 | `frontend/src/search.ts` | 스크롤백 검색 막대 |

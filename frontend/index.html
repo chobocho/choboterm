@@ -107,6 +107,7 @@
                 <button type="button" id="fDelete" title="Delete">삭제</button>
                 <span class="gap"></span>
                 <button type="button" id="fUpload" title="파일을 목록으로 끌어 놓아도 됩니다">업로드...</button>
+                <button type="button" id="fView" title="F3">보기</button>
                 <button type="button" id="fDownload" title="Enter">다운로드</button>
                 <button type="button" id="fClose">닫기</button>
             </div>
@@ -266,6 +267,7 @@
 
 <ul id="fMenu" class="menu" hidden>
     <li data-act="open">다운로드</li>
+    <li data-act="view">보기 (F3)</li>
     <li data-act="rename">이름 바꾸기 (F2)</li>
     <li data-act="delete">삭제 (Delete)</li>
     <li class="sep"></li>
@@ -273,6 +275,41 @@
     <li data-act="upload">업로드...</li>
     <li data-act="refresh">새로 고침 (F5)</li>
 </ul>
+
+<div id="viewerOverlay" class="overlay modal" hidden>
+    <div class="dialog viewer" id="viewer" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title" id="viewerTitle">보기</span>
+            <button type="button" class="close" id="viewerX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div class="toolbar">
+                <label for="vEnc">인코딩</label>
+                <select id="vEnc" title="글자가 깨지면 다른 인코딩으로 바꿔 보세요">
+                    <option value="auto">자동</option>
+                    <option value="UTF-8">UTF-8</option>
+                    <option value="EUC-KR">EUC-KR (CP949)</option>
+                </select>
+                <label class="check"><input type="checkbox" id="vWrap"/> 줄 바꿈</label>
+                <span class="gap"></span>
+                <span id="vInfo"></span>
+            </div>
+            <div id="vText"></div>
+            <div class="error" id="vError"></div>
+            <div class="buttons">
+                <select id="vSaveEnc" title="저장할 인코딩">
+                    <option value="UTF-8">UTF-8</option>
+                    <option value="EUC-KR">EUC-KR (CP949)</option>
+                </select>
+                <button type="button" id="vSave" title="보이는 내용을 고른 인코딩으로 바꿔 내 PC에 저장합니다">변환해서 저장...</button>
+                <span class="gap"></span>
+                <span class="hint">Ctrl+F 찾기 · Esc 닫기</span>
+                <button type="button" id="vClose">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="askOverlay" class="overlay modal ask" hidden>
     <div class="dialog ask" id="ask" tabindex="-1">
