@@ -44,7 +44,7 @@ function isLocal(host: string): boolean {
     return LOCAL_SHELL.test(host.trim());
 }
 
-// A tab bar entry. It shows one or more panes (split with Ctrl+Shift+R / B);
+// A tab bar entry. It shows one or more panes (split with Ctrl+Shift+\ / -);
 // each pane is a Tab with its own connection and its own entry in the chip.
 interface Group {
     box: HTMLDivElement;  // the panes' layout in #terms
@@ -435,6 +435,17 @@ function focusPane(dx: number, dy: number) {
 }
 
 const ARROWS: Record<string, [number, number]> = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]};
+
+/**
+ * Ctrl+Shift+\ (a "|": side by side) and Ctrl+Shift+- (one above the other) split
+ * the pane, as in tmux. By physical key, so ₩ on Korean keyboards works too.
+ */
+function splitKey(ev: KeyboardEvent): SplitDir | undefined {
+    if (!ev.ctrlKey || !ev.shiftKey || ev.altKey) return undefined;
+    if (ev.code === 'Backslash' || ev.code === 'IntlYen') return 'row';
+    if (ev.code === 'Minus') return 'col';
+    return undefined;
+}
 
 /** Alt+arrow moves between panes, but only in a split tab; otherwise the program gets it. */
 function isPaneKey(ev: KeyboardEvent): boolean {
@@ -1333,8 +1344,8 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (macroForKey(ev)) return true;
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
-    if (isPaneKey(ev)) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLRB]$/i.test(ev.key);
+    if (isPaneKey(ev) || splitKey(ev)) return true;
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPL]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
@@ -1363,6 +1374,8 @@ window.addEventListener('keydown', ev => {
     if (ev.key === '=' || ev.key === '+') return setFontSize(settings.fontSize + 1);
     if (ev.key === '-') return setFontSize(settings.fontSize - 1);
     if (ev.key === '0') return setFontSize(DEFAULT_FONT);
+    const dir = splitKey(ev);
+    if (dir) return t && splitTab(t, dir);
     if (isPaneKey(ev)) {
         if (!t?.dialog && !filesOpen()) focusPane(...ARROWS[ev.key]);
         return;
@@ -1402,12 +1415,7 @@ window.addEventListener('keydown', ev => {
         case 'E':
             if (t) toggleEncoding(t);
             break;
-        case 'R':
-            if (t) splitTab(t, 'row');
-            break;
-        case 'B':
-            if (t) splitTab(t, 'col');
-            break;
+
         case 'F':
             if (t) openFilesFor(t);
             break;
