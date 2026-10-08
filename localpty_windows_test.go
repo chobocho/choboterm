@@ -137,7 +137,7 @@ func TestLocalCommand(t *testing.T) {
 		"CMD.EXE":          "cmd.exe",
 		"powershell":       "powershell.exe -NoLogo",
 		"wsl -d Ubuntu":    "wsl.exe -d Ubuntu",
-		"pusan":            "",
+		"busan":            "",
 		"ssh -p 22 me@cmd": "",
 	} {
 		got, ok := localCommand(host)

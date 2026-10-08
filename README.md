@@ -26,7 +26,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - **2단계 인증(OTP)**: 서버가 keyboard-interactive로 묻는 `Verification code:`, `One-time password:`, Duo 같은 질문은 서버가 보낸 그대로 창에 보여 주고 답을 보냅니다. 첫 `Password:` 질문은 접속 창의 Pass로 자동으로 답합니다. Pass를 비워 두면 비밀번호도 창에서 묻습니다.
   - **SSH 에이전트**: Windows용 OpenSSH 에이전트(`ssh-agent` 서비스), PuTTY의 Pageant, `SSH_AUTH_SOCK`에 올려 둔 키를 먼저 씁니다. 따로 설정할 것은 없습니다.
   - **암호 걸린 개인키**: 서버가 그 키를 받아들일 때만 암호를 묻습니다(맞지 않는 서버에서는 묻지 않음). 한 번 푼 키는 choboterm을 끌 때까지 기억해 다시 연결·분할 창·자동 재접속 때 다시 묻지 않습니다. 공개키가 들어 있지 않은 옛 PEM 키는 옆의 `.pub` 파일을 쓰고, 그것도 없으면 접속할 때 바로 묻습니다(취소하면 그 키는 건너뜀).
-  - **`~/.ssh/config` 이름으로 접속**: Host 칸에 config에 적어 둔 이름(예: `pusan`)이나 명령처럼 `ssh pusan`, `ssh -p 2222 user@pusan`을 입력하면 `HostName` / `Port` / `User` / `IdentityFile`을 읽어 Port와 Login을 채우고 접속합니다. 탭 이름과 접속 기록에는 `pusan`이 남습니다.
+  - **`~/.ssh/config` 이름으로 접속**: Host 칸에 config에 적어 둔 이름(예: `busan`)이나 명령처럼 `ssh busan`, `ssh -p 2222 user@busan`을 입력하면 `HostName` / `Port` / `User` / `IdentityFile`을 읽어 Port와 Login을 채우고 접속합니다. 탭 이름과 접속 기록에는 `busan`이 남습니다.
     - Host 칸에 포커스를 두면 툴팁으로 입력 예와 등록된 이름을 보여 주고, config 이름을 입력하면 실제 접속할 `user@주소:포트`를 보여 줍니다. config의 이름들은 ▼ 목록에도 `ssh config`로 표시됩니다.
     - `IdentityFile`의 키를 먼저 시도하고, 안 되면 기본 키와 비밀번호를 씁니다. `Host *.corp` 같은 패턴 항목도 적용합니다. `ProxyJump`, `Match`는 아직 지원하지 않습니다.
   - `~/.ssh/known_hosts`로 호스트 키 확인. 처음 접속하는 호스트는 지문을 보여 주고 신뢰할지 묻고, 키가 바뀐 호스트는 차단합니다.

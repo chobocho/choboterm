@@ -71,7 +71,7 @@ const TEXT: Record<Lang, HelpText> = {
                     ['포트', '22 = SSH, 21 = FTP, 23 = Telnet, 그 밖의 포트는 자동 판별'],
                     ['Host에 cmd · powershell · wsl', '이 PC의 셸(cmd, PowerShell, pwsh, WSL)을 탭에서 열기. "wsl -d Ubuntu"처럼 인자도 가능. ▼ 목록에 "로컬 셸"로 표시'],
                     ['SSH 로그인 질문', 'OTP·인증 코드 같은 서버 질문, 암호 걸린 개인키의 암호는 창으로 물어봄. Pass를 비우면 비밀번호도 물어봄. 에이전트(OpenSSH·Pageant) 키는 자동 사용'],
-                    ['Host에 ssh config 이름', '~/.ssh/config의 Host 이름(예: pusan)이나 "ssh pusan", "ssh -p 2222 user@pusan"을 쓰면 HostName·Port·User·IdentityFile을 읽어 접속. ▼ 목록에도 표시'],
+                    ['Host에 ssh config 이름', '~/.ssh/config의 Host 이름(예: busan)이나 "ssh busan", "ssh -p 2222 user@busan"을 쓰면 HostName·Port·User·IdentityFile을 읽어 접속. ▼ 목록에도 표시'],
                 ],
             },
             {
@@ -160,7 +160,7 @@ const TEXT: Record<Lang, HelpText> = {
                     ['Port', '22 = SSH, 21 = FTP, 23 = Telnet, others are auto-detected'],
                     ['cmd · powershell · wsl in Host', 'Opens a shell on this PC (cmd, PowerShell, pwsh, WSL) in the tab. Arguments work too ("wsl -d Ubuntu"). Listed as "local shell" under ▼'],
                     ['SSH login questions', 'One-time codes and other server questions, and passphrases of encrypted keys, are asked in a window. With Pass empty the password is asked too. Agent keys (OpenSSH, Pageant) are used automatically'],
-                    ['ssh config name in Host', 'Type a Host name from ~/.ssh/config (e.g. pusan), "ssh pusan" or "ssh -p 2222 user@pusan" to use its HostName, Port, User and IdentityFile. Also listed under ▼'],
+                    ['ssh config name in Host', 'Type a Host name from ~/.ssh/config (e.g. busan), "ssh busan" or "ssh -p 2222 user@busan" to use its HostName, Port, User and IdentityFile. Also listed under ▼'],
                 ],
             },
             {

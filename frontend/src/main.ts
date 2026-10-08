@@ -1078,7 +1078,7 @@ function applyEntry(e: Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encodin
 
 /**
  * Fills Port/Login from ~/.ssh/config when the Host field holds a config
- * name ("pusan") or an ssh command line ("ssh -p 2222 me@pusan"); the field
+ * name ("busan") or an ssh command line ("ssh -p 2222 me@busan"); the field
  * keeps just the name. Values the user set after that are left alone.
  */
 async function resolveHost() {
@@ -1116,8 +1116,8 @@ function showTip(r?: main.SSHTarget) {
         tipLine(`→ ${user}${r.hostName || r.host}:${r.port || 22}`);
     } else {
         tipLine('주소 또는 ~/.ssh/config의 Host 이름', 'head');
-        tipLine('예) pusan · ssh pusan');
-        tipLine('     ssh -p 2222 user@pusan', 'pre');
+        tipLine('예) busan · ssh busan');
+        tipLine('     ssh -p 2222 user@busan', 'pre');
         tipLine('이 PC의 셸: cmd · powershell · wsl (wsl -d Ubuntu)');
         if (configHosts.length > 0) {
             const names = configHosts.slice(0, 6).map(c => c.host).join(', ');

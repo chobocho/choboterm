@@ -11,7 +11,7 @@ import (
 )
 
 // SSHTarget is what the Host field means: a name from ~/.ssh/config
-// ("pusan") or an ssh command line ("ssh -p 2222 me@pusan").
+// ("busan") or an ssh command line ("ssh -p 2222 me@busan").
 type SSHTarget struct {
 	Host       string `json:"host"`       // name to keep in the Host field (the alias, not its HostName)
 	Port       int    `json:"port"`       // 0: leave the Port field as it is

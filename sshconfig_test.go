@@ -11,11 +11,11 @@ import (
 )
 
 const testSSHConfig = `
-Host pusan
+Host busan
     HostName 10.0.0.5
     User chobo
     Port 2222
-    IdentityFile ~/.ssh/pusan_key
+    IdentityFile ~/.ssh/busan_key
 
 Host seoul seoul2
     HostName %h.example.com
@@ -42,16 +42,16 @@ func TestParseSSHCommand(t *testing.T) {
 		port            int
 		ok              bool
 	}{
-		{"ssh pusan", "pusan", "", 0, true},
-		{"ssh me@pusan", "pusan", "me", 0, true},
-		{"ssh -p 2200 -l me pusan", "pusan", "me", 2200, true},
-		{"ssh -p2200 pusan", "pusan", "", 2200, true},
-		{"ssh -i key -o X=1 pusan -p 99", "pusan", "", 99, true},
-		{"ssh.exe -v pusan uptime", "pusan", "", 0, true},
-		{"SSH pusan", "pusan", "", 0, true},
-		{"pusan", "", "", 0, false},
+		{"ssh busan", "busan", "", 0, true},
+		{"ssh me@busan", "busan", "me", 0, true},
+		{"ssh -p 2200 -l me busan", "busan", "me", 2200, true},
+		{"ssh -p2200 busan", "busan", "", 2200, true},
+		{"ssh -i key -o X=1 busan -p 99", "busan", "", 99, true},
+		{"ssh.exe -v busan uptime", "busan", "", 0, true},
+		{"SSH busan", "busan", "", 0, true},
+		{"busan", "", "", 0, false},
 		{"ssh", "", "", 0, false},
-		{"sshd pusan", "", "", 0, false},
+		{"sshd busan", "", "", 0, false},
 	}
 	for _, c := range cases {
 		host, login, port, ok := parseSSHCommand(c.in)
@@ -67,9 +67,9 @@ func TestLookupSSHTarget(t *testing.T) {
 		in   string
 		want SSHTarget
 	}{
-		{"pusan", SSHTarget{Host: "pusan", Port: 2222, Login: "chobo", HostName: "10.0.0.5", FromConfig: true}},
-		{"ssh pusan", SSHTarget{Host: "pusan", Port: 2222, Login: "chobo", HostName: "10.0.0.5", FromConfig: true}},
-		{"ssh -p 22 root@pusan", SSHTarget{Host: "pusan", Port: 22, Login: "root", HostName: "10.0.0.5", FromConfig: true}},
+		{"busan", SSHTarget{Host: "busan", Port: 2222, Login: "chobo", HostName: "10.0.0.5", FromConfig: true}},
+		{"ssh busan", SSHTarget{Host: "busan", Port: 2222, Login: "chobo", HostName: "10.0.0.5", FromConfig: true}},
+		{"ssh -p 22 root@busan", SSHTarget{Host: "busan", Port: 22, Login: "root", HostName: "10.0.0.5", FromConfig: true}},
 		{"seoul2", SSHTarget{Host: "seoul2", Port: 22, HostName: "seoul2.example.com", FromConfig: true}},
 		// Not an alias: plain hosts stay untouched (they may be Telnet/FTP).
 		{"db.corp", SSHTarget{Host: "db.corp"}},
@@ -89,22 +89,22 @@ func TestLookupSSHTarget(t *testing.T) {
 
 func TestConfigAliases(t *testing.T) {
 	got := configAliases(parseTestConfig(t))
-	if want := []string{"pusan", "seoul", "seoul2"}; !slices.Equal(got, want) {
+	if want := []string{"busan", "seoul", "seoul2"}; !slices.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
 
 func TestSSHDialHostAndKeys(t *testing.T) {
 	cfg := parseTestConfig(t)
-	if got := sshDialHost(cfg, "pusan"); got != "10.0.0.5" {
+	if got := sshDialHost(cfg, "busan"); got != "10.0.0.5" {
 		t.Errorf("dial host: %q", got)
 	}
 	if got := sshDialHost(cfg, "other"); got != "other" {
 		t.Errorf("dial host: %q", got)
 	}
 	home, _ := os.UserHomeDir()
-	want := []string{filepath.Join(home, ".ssh", "pusan_key"), filepath.Join(home, ".ssh", "common")}
-	if got := sshIdentityFiles(cfg, "pusan", "chobo"); !slices.Equal(got, want) {
+	want := []string{filepath.Join(home, ".ssh", "busan_key"), filepath.Join(home, ".ssh", "common")}
+	if got := sshIdentityFiles(cfg, "busan", "chobo"); !slices.Equal(got, want) {
 		t.Errorf("keys: got %v, want %v", got, want)
 	}
 }
@@ -120,7 +120,7 @@ func TestLoadSSHConfigFile(t *testing.T) {
 
 	sshConfigPath = func() string { return p }
 	hosts := (&App{}).GetSSHConfigHosts()
-	if len(hosts) != 3 || hosts[0] != (SSHConfigHost{Host: "pusan", HostName: "10.0.0.5", Port: 2222, Login: "chobo"}) {
+	if len(hosts) != 3 || hosts[0] != (SSHConfigHost{Host: "busan", HostName: "10.0.0.5", Port: 2222, Login: "chobo"}) {
 		t.Errorf("hosts: %+v", hosts)
 	}
 

@@ -77,7 +77,7 @@ function paintPreview() {
         }
         preview.appendChild(div);
     };
-    line([['user@pusan', p[10]], [':'], ['~/src', p[12]], ['$ ls -l']]);
+    line([['user@busan', p[10]], [':'], ['~/src', p[12]], ['$ ls -l']]);
     line([['drwxr-xr-x  '], ['docs', p[12]], ['  '], ['run.sh', p[10]], ['  '], ['a.tar.gz', p[9]], ['  '], ['link', p[14]]]);
     line([['오류: ', p[1]], ['경고 ', p[3]], ['완료', p[2]]]);
     const sw = document.createElement('div');
