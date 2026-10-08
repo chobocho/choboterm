@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>choboterm 작업 기록</title></head>
+<body>
+<h1>choboterm 작업 기록</h1>
+<p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
+
+<h2>2026-10-08 — 분할 단축키 변경</h2>
+<ul>
+  <li>Ctrl+Shift+R / Ctrl+Shift+B → Ctrl+Shift+&#92; (오른쪽, | 모양) / Ctrl+Shift+- (아래), tmux와 같은 기호. Ctrl+Shift+R은 WebView2의 새로 고침 단축키와 겹칠 수 있어서 바꿈</li>
+  <li>물리 키(ev.code: Backslash / IntlYen / Minus)로 판별해 한국어 키보드의 ₩ 키도 동작. Ctrl+-(글꼴 작게)와 겹치지 않음 확인</li>
+  <li>탭 메뉴·도움말·README 갱신. Edge(Playwright)로 새 키 분할, Ctrl+Shift+R 무반응, 글꼴 크기 변화 없음 확인</li>
+</ul>
+
+<h2>2026-10-08 — 로컬 셸 탭 (cmd / PowerShell / WSL)</h2>
+<ul>
+  <li>Host에 cmd · powershell · pwsh · wsl(인자 허용: "wsl -d Ubuntu")을 쓰면 이 PC의 셸을 탭에서 실행. Windows 의사 콘솔(ConPTY) 사용 — localpty_windows.go(CreatePseudoConsole + CreateProcess, 종료 감지 후 콘솔 닫기로 출력 EOF), localshell.go(이름 → 명령줄, 설치된 셸 목록 GetLocalShells)</li>
+  <li>Connect에서 로컬 셸이면 포트 검사 전에 connectLocal로 분기. 항상 UTF-8, 사용자 폴더에서 시작, 기록에는 포트 0으로 저장. 세션 시작 공통부를 tab.start로 분리</li>
+  <li>화면: Host 입력 중 "로컬 셸" 표시, ▼ 목록에 설치된 셸 추가, 탭 이름은 셸 이름, 창 제목 "- wsl (로컬)", 파일 전송 창·인코딩 전환은 안내만 표시</li>
+  <li>테스트: cmd 실행·종료(EOF), 입력·크기 변경·탭 닫기, App.Connect로 한글 echo와 exit 후 term:closed·기록 확인, 명령줄 판별. PowerShell·WSL도 이 PC에서 실행 확인. wails build 통과, 화면은 Edge(Playwright)로 확인</li>
+</ul>
+
+<h2>2026-10-08 — keyboard-interactive 질문 (OTP · 2단계 인증)</h2>
+<ul>
+  <li>예전에는 keyboard-interactive의 숨김 질문에 모두 비밀번호를 넣어서, OTP를 묻는 서버에 로그인할 수 없었음</li>
+  <li>이제 첫 번째 "Password:" 류 단독 숨김 질문만 접속 창의 Pass로 자동 응답하고, 나머지(Verification code, One-time password, Duo 등)는 서버의 안내문·질문 그대로 로그인 질문 창에 표시(보이는/숨김 입력 구분). 취소하면 접속 취소</li>
+  <li>"One-time password", "일회용 암호", code/token/otp가 들어간 질문은 비밀번호로 보지 않음(asksPassword)</li>
+  <li>Pass를 비우면 keyboard-interactive에서 비밀번호도 묻고, password 방식만 받는 서버에는 PasswordCallback으로 물어봄</li>
+  <li>테스트: OTP 서버(비밀번호 자동 + 코드 질문, Pass 없이 둘 다 질문, 취소), password 전용 서버, asksPassword 판별. 도움말·README 갱신</li>
+</ul>
+
+<h2>2026-10-08 — SSH 에이전트 · 암호 걸린 개인키</h2>
+<ul>
+  <li>SSH 에이전트의 키로 인증: SSH_AUTH_SOCK(명명된 파이프 또는 Unix 소켓), Windows OpenSSH 에이전트(\.\pipe\openssh-ssh-agent), Pageant(WM_COPYDATA + 공유 메모리). 에이전트 키를 파일 키보다 먼저, 같은 공개키는 한 번만 제시</li>
+  <li>암호 걸린 키: 공개키만 먼저 제시하고 서버가 받아들일 때 서명 직전에 암호를 물음(lockedKey, RSA는 rsa-sha2 서명 유지). 3번까지 다시 묻고, 취소하면 접속 취소. 푼 키는 앱 종료까지 메모리에 기억. 공개키 없는 옛 PEM 키는 .pub 파일 사용, 없으면 바로 물음</li>
+  <li>Go → 화면 질문 창 공통 구조 추가(prompt.go: auth:prompt 이벤트 + AnswerPrompt, 5분 시간 제한). 화면은 authprompt.ts — 여러 칸, 비밀 입력, Enter로 다음 칸, 대기열. 다음 작업(keyboard-interactive/OTP)도 이 창을 씀</li>
+  <li>에이전트 클라이언트를 요청마다 읽는 방식으로 써서, 파이프에 읽기가 걸린 채 닫혀 멈추는 일이 없게 함</li>
+  <li>테스트 추가(sshauth_test.go, agent_windows_test.go): 받아들여질 때만 묻기, 틀린 암호 재질문, 재접속 시 안 묻기, 취소, RSA IdentityFile, 에이전트(메모리·명명된 파이프), 없는 에이전트 건너뛰기. 실제 Pageant를 잠시 띄워 키 추가·목록·서명 확인 후 종료. 질문 창은 Edge(Playwright)로 확인</li>
+</ul>
+
+<h2>2026-10-08 — 색 테마 · 커서 · 스크롤백 설정</h2>
+<ul>
+  <li>설정 창에 "색 · 커서" 절 추가: 색 테마 10종(기본, Campbell, PuTTY, Tango Dark, One Half Dark, Dracula, Gruvbox Dark, Solarized Dark/Light, One Half Light), 미리 보기(프롬프트·ls 예시와 16색 견본), 커서 모양(블록/밑줄/세로선)·깜빡임, 스크롤백 줄 수(1000~100000)</li>
+  <li>새 파일 frontend/src/themes.ts. 확인을 누르면 모든 탭에 바로 적용, 터미널 주변 여백도 테마 배경색(--term-bg)으로 맞춤</li>
+  <li>Settings에 theme / cursorStyle / cursorBlink / scrollback 추가(기본: choboterm, block, 깜빡임, 5000). 예전 settings.json은 기본값 유지 — 테스트에 확인 추가</li>
+  <li>설정 창이 낮은 창에서 잘리던 문제: 너비 520px, 본문 스크롤, 라벨 줄바꿈 방지</li>
+  <li>go test(Settings), tsc, 프런트 빌드 통과. Edge(Playwright)로 Solarized Light·세로선 커서 적용 확인</li>
+</ul>
+
+<h2>2026-10-08 — 분할 창 추가</h2>
+<ul>
+  <li>탭 하나를 여러 창으로 나눔: Ctrl+Shift+R(오른쪽) / Ctrl+Shift+B(아래), 탭 우클릭 메뉴에도 추가. 몇 번이든 중첩 분할 가능</li>
+  <li>창마다 별도 접속(백엔드 탭 id를 창 단위로 그대로 사용, Go 변경 없음). 새 창의 접속 창은 옆 창의 서버로 미리 채움, Esc로 취소하면 창도 닫힘</li>
+  <li>Alt+방향키로 창 이동(분할된 탭에서만 가로채고, 아니면 프로그램에 전달), 클릭으로도 이동. 지금 창은 파란 테두리</li>
+  <li>경계선 드래그로 크기 조절, 더블클릭으로 반반. 창 크기는 ResizeObserver로 창마다 맞춤(숨은 탭은 보일 때 맞춤)</li>
+  <li>탭 바: 분할된 창들은 한 묶음(.tabgroup)으로 표시, 끌기는 묶음 단위. Ctrl+Shift+W·✕는 그 창만 닫고 같은 탭의 옆 창으로 이동</li>
+  <li>도움말·README 갱신. tsc, wails build 통과. 가짜 백엔드로 빌드된 화면을 Edge(Playwright)에서 구동해 분할·취소·이동·드래그·닫기 확인</li>
+</ul>
+
+<h2>2026-10-08 — README와 소개 페이지 대조</h2>
+<ul>
+  <li>소개 페이지의 기능·단축키·라이선스 링크가 README에 모두 있는지 확인. 텍스트 뷰어·편집기, 현재 폴더에서 열기, GPU 표시, 스크린샷, 서드파티 라이선스 모두 이미 있음</li>
+  <li>README 단축키 표의 Ctrl+Shift+F 설명에 FTP 추가 (SFTP / SCP → SFTP / SCP / FTP)</li>
+</ul>
+
+<h2>2026-10-08 — 소개 페이지(docs/index.html) 갱신</h2>
+<ul>
+  <li>V0.1.5~0.1.8 기능 반영: "원격 파일 보기 · 편집"(F3/F4, 인코딩 자동 판별, Ctrl+S 서버 저장), "GPU 가속 화면"(WebGL, 창 제목 ⚡GPU/🐢CPU) 카드 추가, "편한 파일 창"에 셸 현재 폴더에서 열림 추가</li>
+  <li>"화면" 절에 screen_shot.png 추가, 단축키 표에 F3/F4(파일 창) 추가</li>
+  <li>하단에 LICENSE · THIRD_PARTY_NOTICES.txt 링크 추가</li>
+</ul>
+
+<h2>2026-10-08 — F1 도움말에 링크 추가</h2>
+<ul>
+  <li>도움말 맨 아래 "링크" 절: 릴리스 페이지(releases/latest), 라이선스(MIT, LICENSE), 서드파티 라이선스(THIRD_PARTY_NOTICES.txt). 클릭하면 기본 브라우저로 열림(BrowserOpenURL). 영어 도움말에도 동일</li>
+  <li>exe 안에서도 라이선스 고지로 갈 수 있게 하려는 목적. tsc, wails build 통과</li>
+  <li>wails build -clean 후 release\choboterm.exe 갱신, GitHub 릴리스 v0.1.8의 choboterm.exe 교체(--clobber, 401e887 기준). v0.1.8 태그를 9f99ab1 → 401e887(exe 빌드 기준)로 이동</li>
+</ul>
+
+<h2>2026-10-08 — LICENSE 저작권자 수정</h2>
+<ul>
+  <li>LICENSE의 저작권자 ChengHe → chobocho (저장소 안 다른 곳에는 ChengHe 없음)</li>
+</ul>
+
+<h2>2026-10-08 — 버전 0.1.8</h2>
+<ul>
+  <li>버전 0.1.7 → 0.1.8 (main.go, wails.json, README.md). 포함: 텍스트 뷰어·편집기(F3/F4), 파일 전송 창을 셸 현재 폴더에서 열기, 창 제목 GPU 표시</li>
+  <li>go test 통과, wails build -clean 후 release\choboterm.exe 갱신</li>
+  <li>서드파티 라이선스 고지 추가: THIRD_PARTY_NOTICES.txt(Go 표준 라이브러리, Go 모듈 22개, npm 패키지 19개 — CodeMirror·lezer·xterm.js 등 전문), 생성 스크립트 tools/gen_notices.py, README 라이선스 절에 안내. 릴리스에 exe와 함께 첨부</li>
+  <li>main push(GitHub Pages 재빌드), GitHub 릴리스 v0.1.8 생성(choboterm.exe + THIRD_PARTY_NOTICES.txt), v0.1.7 릴리스·태그 삭제</li>
+</ul>
+
+<h2>2026-10-08 — 창 제목에 GPU 가속 여부 표시</h2>
+<ul>
+  <li>창 제목 오른쪽 끝에 현재 탭의 렌더러 표시: ⚡GPU(WebGL 애드온 사용) / 🐢CPU(하드웨어 WebGL 없음·로드 실패·컨텍스트 손실로 DOM 렌더러)</li>
+  <li>main.ts: useWebgl이 사용 여부를 반환하고 컨텍스트 손실 시 콜백으로 tab.gpu=false 후 제목 갱신. updateTitle에서 표시</li>
+  <li>tsc, wails build 통과. GUI 확인 대기</li>
+</ul>
+
+<h2>2026-10-08 — 파일 전송 창을 터미널 현재 폴더에서 열기</h2>
+<ul>
+  <li>요청: Ctrl+Shift+F 파일 전송 창이 항상 루트(시작 폴더)에서 열림 → 셸의 현재 폴더에서 열기</li>
+  <li>프론트(main.ts): 커서 줄 프롬프트에서 경로 추출(user@host:~/src$, ~/src $, [u@h /var/log]$ 등, 첫 번째 "경로+프롬프트 기호") → OSC 7(file://host/path, registerOscHandler) → 창 제목(onTitleChange, "user@host: ~/src") 순. SSH 탭만</li>
+  <li>Go FileStartDir: ~ 를 원격 $HOME(exec printf "$HOME", 실패 시 SFTP 시작 폴더)으로 바꾸고, 절대 경로이며 목록을 읽을 수 있는 폴더일 때만 반환. 실패하면 홈 폴더에서 열고 상태줄에 안내</li>
+  <li>테스트: TestFileStartDir(~, ~/하위, .., 파일, 없는 폴더, 상대 경로, ~user). go test ./..., tsc, wails build 통과. GUI 동작은 사용자 확인 대기</li>
+</ul>
+
+<h2>2026-10-08 — 텍스트 편집기 (2단계) 추가</h2>
+<ul>
+  <li>파일 전송 창 F4 / 우클릭 "편집", 또는 뷰어의 "편집" 버튼으로 편집 모드. Ctrl+S / "저장" 버튼으로 서버에 바로 저장, Ctrl+Z 되돌리기(history), Tab 입력, 찾기·바꾸기</li>
+  <li>저장 시 원래 인코딩(자동/강제 지정한 것)·줄바꿈(CRLF/LF 중 많은 쪽)·UTF-8 BOM 유지. 정보줄에 인코딩·줄바꿈 표시, 변경 시 제목에 *</li>
+  <li>Go FileSaveText: 저장 전 폴더 목록으로 크기·수정한 날짜를 다시 확인해 다르면 충돌로 알리고 확인 후 덮어씀. EUC-KR에 없는 글자는 확인 후 ?로 저장. 저장한 바이트를 돌려줘 이후 인코딩 재해석에도 반영. FileView는 읽기 전 상태(크기·날짜)를 함께 반환</li>
+  <li>프론트 확인창: 깨진 글자(U+FFFD) 포함 저장, 저장 안 한 채 닫기, 편집 중 인코딩 변경. 10MB 넘어 잘린 파일은 편집 불가. 저장 후 파일 목록 새로 고침</li>
+  <li>한계: 충돌 확인은 목록의 수정 시각(분 단위)과 크기로만 판단 — 같은 분 안에 같은 크기로 바뀌면 못 알아챔</li>
+  <li>테스트: TestFileSaveTextOverSFTP(EUC-KR 저장, 없는 글자, 충돌·강제 덮어쓰기). go test ./..., tsc, wails build 통과. GUI 동작은 사용자 확인 대기</li>
+</ul>
+
+<h2>2026-10-08 — 텍스트 뷰어 (1단계) 추가</h2>
+<ul>
+  <li>파일 전송 창에서 F3 / "보기" 버튼 / 우클릭 "보기"로 원격 파일을 읽기 전용 CodeMirror 6 뷰어로 엶 (frontend/src/viewer.ts, index.html, style.css)</li>
+  <li>Go: FileView(앞 10MB만 받고 다운로드 중단, 진행률·취소는 기존 transfer 재사용), TextSaveAs(UTF-8/EUC-KR로 변환해 로컬 저장, CP949에 없는 글자는 ?로 바꾸고 개수 보고) — viewer.go</li>
+  <li>인코딩: 원본 바이트를 보관하고 프론트 TextDecoder로 디코딩. 유효한 UTF-8이면 UTF-8, 아니면 EUC-KR(CP949) 자동 판별. 드롭다운으로 강제 지정 시 다시 받지 않고 즉시 재디코딩. 잘린 파일 끝의 끊긴 UTF-8 바이트는 제외</li>
+  <li>깨진 글자(U+FFFD) 개수와 바이너리 파일(NUL 포함) 안내, 줄 바꿈 토글, Ctrl+F 찾기, Esc 닫기. 뷰어는 모달로 처리(main.ts modalOpen)</li>
+  <li>테스트: viewer_test.go(SFTP 전체/잘림/중단 후 연결 유지, encodeText), ftp_test.go에 다운로드 중단 후 연결 유지 검사 추가(pyftpdlib로 실행해 통과). go test ./..., tsc, wails build 통과. GUI 동작은 사용자 확인 대기</li>
+  <li>수정: Ctrl+F 찾기 패널이 깨짐 — 대화상자 공통 규칙(.body input 너비 100%, 높이 22px)이 CodeMirror 검색창 입력·체크박스에 적용된 탓. #vText .cm-search 전용 스타일로 한 줄 배치, 찾기 패널 문구 한글화(EditorState.phrases)</li>
+  <li>README, F1 도움말에 F3 보기 추가. npm 의존성 @codemirror/state·view·commands·search 추가(MIT), 번들 약 870KB</li>
+</ul>
+
+<h2>2026-10-05 — V0.1.7 릴리스</h2>
+<ul>
+  <li>버전 0.1.6 → 0.1.7 (main.go, wails.json, README.md). 포함: 터미널 입력 순서 보장(sendInput), 접속 종료 진단 로그</li>
+  <li>go test 통과, wails build -clean 후 release\choboterm.exe 갱신. main push(GitHub Pages 재빌드), GitHub 릴리스 v0.1.7 생성, v0.1.6 릴리스·태그 삭제</li>
+</ul>
+
+<h2>2026-10-05 — 접속 종료 에러 진단 로그 추가</h2>
+<ul>
+  <li>release\debug_.log 분석: vim 종료 후 Ctrl+D(로그아웃) → 19바이트 출력 → 약 3초 뒤 종료 메시지 출력. Go 종료 경로에 로그가 없어 어떤 에러로 끝났는지 확인 불가</li>
+  <li>진단 로그 추가: ssh EOF 시 session.Wait 결과/타임아웃(ssh.go), 읽기 종료 에러·최종 메시지와 lost 여부, keepalive 실패, 64바이트 이하 출력 내용(app.go), 프론트 term:closed 수신·autoReconnect 값(main.ts)</li>
+  <li>wails build 후 release\choboterm.exe 갱신. 사용자 재현 로그 대기 중</li>
+  <li>재현 로그(release\debug_2.log로 보관) 분석: 로그아웃이 아니라 vi(nvim으로 보임)를 종료 후 다시 실행한 직후 서버가 채널을 exit-status 없이 닫음 → "네트워크 연결이 끊어졌습니다"(lost=true) → 자동 재접속. 앱이 직접 닫은 흔적은 없음</li>
+  <li>별도 버그 발견: 터미널 응답(onData)이 Wails 호출마다 다른 goroutine에서 처리되어 서버로 가는 순서가 뒤바뀜(예: \x1b[?2048;0$y가 맨 뒤로)</li>
+  <li>TCP 연결 자체가 끊겼는지 알기 위해 client.Wait() 종료 로그 추가 후 재빌드</li>
+  <li>3차 재현(debug_3.log): 끊김 없음. 대신 nvim 시작 시 응답 전송 후 서버 출력이 약 10초 멈췄다가 화면이 그려짐. Ctrl+D 로그아웃은 exit-status 정상 수신(lost=false)</li>
+  <li>수정: frontend sendInput 추가 — Send 호출을 한 번에 하나씩 순서대로 보내고, 그동안 들어온 입력은 다음 호출에 합쳐 보냄(키 입력·매크로 모두 적용). 재빌드 후 release exe 갱신, 재확인 대기</li>
+  <li>4차 재현(release\debug.log): 응답 순서는 정상으로 확인(같은 묶음이 한 번에 순서대로 전송). 그래도 한 번은 12초 멈춤. 빠른 실행과 느린 실행에서 주고받은 바이트가 완전히 동일 → 멈춤은 서버 쪽 nvim 시작 과정(직전 nvim 종료 1초 후 재실행)으로 판단, choboterm 원인 아님</li>
+  <li>서버 쪽 확인 권장: nvim --startuptime, Windows Terminal ssh로 동일 재현 여부, 끊김 당시 서버 로그(journalctl/dmesg OOM)</li>
+</ul>
+
+<h2>2026-10-05 — README 스크린샷 갱신</h2>
+<ul>
+  <li>docs/screen_shot.png를 V0.1.6 새 아이콘 화면으로 다시 캡처(타이틀바·접속 창에 CT 아이콘)</li>
+  <li>접속 창에 저장된 Host/Port/Login이 채워져 있어 캡처 이미지에서 해당 칸을 비움</li>
+</ul>
+
+<h2>2026-10-05 — 아이콘 배포 및 릴리스 정리</h2>
+<ul>
+  <li>main push → GitHub Pages(docs/) 재빌드 완료, 새 아이콘·파비콘 반영</li>
+  <li>v0.1.6 릴리스의 choboterm.exe를 새 아이콘 빌드로 교체(태그 v0.1.6은 ac65e0f 그대로, 차이는 아이콘뿐)</li>
+  <li>v0.1.5, v0.1.4 릴리스와 원격 태그 삭제 → v0.1.6만 남김</li>
+</ul>
+
+<h2>2026-10-05 — 아이콘 C 색상을 하늘색으로 변경</h2>
+<ul>
+  <li>C 그라데이션: 주황→분홍 대신 밝은 하늘색(140,220,255)→진한 하늘색(30,144,230), 빛번짐도 파란 계열로. 배경·T(흰 가로획, 민트 커서)는 그대로</li>
+  <li>아이콘 파일 전부 재생성, build.bat(테스트 통과, wails build) 후 release exe 갱신</li>
+</ul>
+
+<h2>2026-10-05 — 앱 아이콘 교체 (CT 모노그램)</h2>
+<ul>
+  <li>기존 아이콘(파란 화면 + "&gt;_")이 흔한 터미널 아이콘 같아 ChoboTerm을 드러내는 "CT" 모노그램으로 교체</li>
+  <li>디자인: 짙은 보라 둥근 사각형 위에 주황→분홍 그라데이션의 굵은 "C"(Chobo), 그 안에 흰 가로획 + 민트 블록 커서 세로획의 "T"(Term). 16~32px은 C + 커서 블록만 그린 단순판</li>
+  <li>tools/make_icon.py 재작성 후 build/appicon.png, build/windows/icon.ico 재생성, docs/icon.png(256), docs/favicon.png·frontend/src/assets/icon.png(64) 갱신. build.bat(go test 통과, wails build -clean)로 build\bin, release\choboterm.exe에 새 아이콘 반영</li>
+</ul>
+
+<h2>2026-10-05 — V0.1.6 릴리스</h2>
+<ul>
+  <li>버전 0.1.5 → 0.1.6 (main.go, wails.json, README.md). 포함: 키 에코 지연 감소(출력 묶음 개선)</li>
+  <li>go test 통과, wails build -clean 후 release\choboterm.exe 갱신. main push, GitHub 릴리스 v0.1.6(choboterm.exe) 생성</li>
+</ul>
+
+<h2>2026-10-05 — 출력 묶음 지연 줄이기</h2>
+<ul>
+  <li>기존: pump가 출력을 모아 16ms 틱마다만 전송 → 키 에코도 평균 약 8ms(최대 16ms) 늦게 화면에 도착</li>
+  <li>변경(app.go pump): 직전 전송 후 16ms 넘게 조용했다면 들어온 출력을 바로 전송, 16ms 안에 이어 오는 출력만 틱을 기다려 묶음. 대량 출력의 묶음(최대 256KB)·이벤트 수 제한은 그대로</li>
+  <li>테스트 pump_latency_test.go: 틱 위상에 고르게 흩은 1바이트 에코 20회 평균 지연(수정 전 약 9ms로 실패, 수정 후 ~0ms), 10바이트 2000회 연속 쓰기가 200개 이하 이벤트로 묶이는지. go test 전체 통과, build\bin·release exe 갱신</li>
+</ul>
+
+<h2>2026-10-05 — V0.1.5 릴리스</h2>
+<ul>
+  <li>버전 0.1.4 → 0.1.5 (main.go, wails.json, README.md). 포함: WebGL 렌더러(sc-im 등 버벅임 개선), 접속 창 가림 수정, exe 폴더 debug.on 디버그 로그</li>
+  <li>go test 통과, wails build 후 release\choboterm.exe 갱신. main에 커밋(작업 브랜치 없음, 머지 불필요)</li>
+  <li>main push, GitHub 릴리스 v0.1.5(choboterm.exe) 생성. 릴리스 노트: 전체 화면 프로그램 버벅임 고침(WebGL), debug.on 디버그 로그. 접속 창 가림은 0.1.4에 없던 문제라 노트에서 제외</li>
+</ul>
+
+<h2>2026-10-05 — sc-im 등 전체 화면 TUI 버벅임 개선</h2>
+<ul>
+  <li>원인: xterm.js 렌더러 애드온이 없어 기본 DOM 렌더러 사용. 색·속성이 많은 화면을 매 프레임 span으로 다시 만들어 느림</li>
+  <li>@xterm/addon-webgl 0.19.0 추가, 탭 생성 시 WebGL 렌더러 적용. 컨텍스트 손실·미지원 시 DOM 렌더러로 자동 복귀</li>
+  <li>WebGL은 글리프를 캐시하므로 늦게 로드되는 글꼴(EUC-KR 모호 폭 글꼴 등) 도착 시 clearTextureAtlas로 다시 그림</li>
+  <li>frontend 빌드·wails build 성공 (build\bin\choboterm.exe). 실제 sc-im 체감 확인은 사용자 몫</li>
+  <li>문제: 첫 빌드 실행 시 화면만 뜨고 입력이 안 되는 먹통 보고</li>
+  <li>수정: document.fonts 'loadingdone'마다 clearTextureAtlas 하던 리스너 제거(다시 그리기→글꼴 로드→재호출 루프 의심) → 모호 폭 글꼴 load() 완료 시 1회만 호출(ambiguousFontReady)</li>
+  <li>수정: WebGL이 소프트웨어(SwiftShader 등)면 DOM 렌더러보다 느리므로 WebGL 미사용</li>
+  <li>점검: Wails가 브라우저 인자를 직접 지정해 WebView2 원격 디버깅 불가 → Edge headless + Wails 바인딩 스텁으로 프론트엔드 실행. 색칠된 40줄 전체 화면 200회 갱신 3.9초에 231프레임, 멈춤 없음(Intel Iris Xe D3D11). 단 WebView2 먹통 자체는 재현하지 못함</li>
+  <li>여전히 먹통 보고 → 디버그 로그 추가: CHOBOTERM_DEBUG=1이면 %AppData%\choboterm\debug.log에 기록(debug.go, frontend/src/debug.ts). Go: dom ready·send·emit 크기·resize. JS: console.warn/error, 예외, keydown/mousedown(포커스 대상), 1초 heartbeat(프레임 수·타이머 지연), longtask, WebGL 정보, term:data 처리 시간, onData/onRender</li>
+  <li>직접 실행 결과: 시작 후 60fps·지연 0ms로 페이지는 살아 있음, WebGL 하드웨어(Iris Xe) 로드됨. 키 입력 자동 테스트는 창이 IDE 뒤에 가려져 실패(입력이 Claude 터미널로 감) → 사용자가 디버그 모드로 재현 필요</li>
+  <li>사용자 재현 실행에서 로그가 생기지 않음(환경변수 미적용 추정) → %AppData%\choboterm\debug.on 파일이 있으면 디버그 켜짐으로 변경, debug.on 생성. build\bin과 release 모두 디버그 빌드로 교체</li>
+  <li><b>먹통 원인 확정</b>: 로그상 페이지는 정상(60fps), 키도 xterm에 도착. 그러나 시작 시 뜨는 접속 창 위치의 클릭이 모두 CANVAS.xterm-link-layer로 감 → WebGL 애드온의 z-index 붙은 캔버스가 z-index 없는 .overlay(접속 창) 위에 쌓여 입력을 가로챔. 포커스가 터미널로 가고, 미접속 상태라 Enter 외 키는 무반응 → 먹통처럼 보임</li>
+  <li>수정: style.css #terms에 isolation: isolate → xterm 레이어를 터미널 영역 안에 가둠. headless Edge elementFromPoint로 확인: 수정 전 CANVAS.xterm-link-layer, 수정 후 INPUT#host / BUTTON#ok</li>
+  <li>debug.on 삭제(디버그 기본 꺼짐, 기능은 남겨 둠). build\bin·release exe 재빌드</li>
+  <li>사용자 확인: 정상 동작. go test 통과 후 커밋 8c3e97b (main)</li>
+  <li>디버그 켜는 방법 변경: %AppData%\choboterm\debug.on → exe와 같은 폴더의 debug.on(os.Executable 기준). CHOBOTERM_DEBUG=1도 유지. 로그 위치도 exe와 같은 폴더의 debug.log로 변경. build\bin에 debug.on 두고 실행해 build\bin\debug.log 생성 확인 후 둘 다 삭제, release exe 갱신</li>
+  <li>정리: %AppData%\choboterm\debug.log(이전 위치 로그)와 임시 폴더의 CDP·캡처 테스트 스크립트/이미지 삭제</li>
+</ul>
+
+<h2>2026-10-05 — 가벼움 점검 (V0.1.4 실측)</h2>
+<ul>
+  <li>exe 12.4MB 단일 파일, 설치 불필요. Go 백엔드 + Wails v2(WebView2) + xterm.js, 소스 약 11.5k줄</li>
+  <li>탭 1개 시작 직후 메모리: 본체 Private 54MB + WebView2 프로세스 6개 Private 159MB = 합계 약 213MB(WS 단순합 386MB, 공유 페이지 중복 포함)</li>
+  <li>평가: 배포·설치·기능 대비로는 가볍지만 PuTTY(수 MB)급은 아님. 메모리 대부분이 WebView2 몫</li>
+</ul>
+
+<h2>2026-10-03 — MobaXterm 대비 부족한 기능 검토 (X11 제외)</h2>
+<ul>
+  <li>SSH 인증: ssh-agent/Pageant 미지원, 암호 걸린 개인키 미지원, 키 파일 직접 지정 불가, SSH 비밀번호 저장 불가</li>
+  <li>접속 경로: 점프 호스트(ProxyJump/게이트웨이), HTTP/SOCKS 프록시 경유 접속 없음</li>
+  <li>세션 관리: 세션 트리(폴더·이름·세션별 설정) 없음, 최근 20개 기록만 있음. 가져오기/내보내기(PuTTY 등) 없음</li>
+  <li>세션 종류: 로컬 셸(cmd/PowerShell/WSL), 시리얼(COM), RDP/VNC, Mosh, Rlogin 없음</li>
+  <li>터미널: 분할 창, MultiExec(여러 탭 동시 입력), 세션 로그 저장, 색 테마/글꼴 선택, 스크롤백 크기 설정 없음</li>
+  <li>파일: SSH 사이드바 SFTP 탐색기(현재 폴더 따라가기), 원격 파일 바로 편집(저장 시 업로드), 동기화 없음</li>
+  <li>기타: 독립 터널 관리자(MobaSSHTunnel), 네트워크 도구, 휴대용 설정 파일 등</li>
+  <li>추가 설명: 세션 로그 = 접속 중 수신 출력을 실시간으로 파일에 계속 기록(자동/수동, 파일명 패턴, 이스케이프 제거 옵션). 스크롤백 한도와 무관하게 전체 기록이 남음</li>
+</ul>
+
+<h2>2026-10-03 — 세션 로그 기능</h2>
+<ul>
+  <li>sessionlog.go: 탭마다 로그 파일(문서\choboterm\logs\호스트_포트_날짜_시간.log, 같은 이름이면 ' (1)'). pump의 flush에서 디코딩된 UTF-8 출력을 그대로 기록 → 화면과 같은 내용, Zmodem 바이너리는 제외</li>
+  <li>일반 텍스트 모드(기본): CSI/OSC/DCS 등 이스케이프·제어 문자 제거, \r·\b·ESC[K·커서 좌우 이동을 현재 줄에 적용(진행률은 마지막 상태만), 청크 경계에서 잘린 이스케이프·UTF-8 처리. 원본 모드는 이스케이프 포함 저장</li>
+  <li>접속/재접속/끊김/종료 시각을 '===== 시각 내용 =====' 구분선으로 기록. 재접속해도 탭을 닫기 전까지 같은 파일에 이어 씀</li>
+  <li>설정: logAuto(접속마다 자동 기록), logRaw, logDir(찾아보기 = 폴더 선택 창). 바인딩 StartLog/StopLog/LogPath/ShowLogs(탐색기에서 파일 선택)/ChooseLogDir, 이벤트 log:changed</li>
+  <li>UI: Ctrl+Shift+L 시작/중지, 탭 우클릭 메뉴 '로그 기록 시작/중지'·'로그 폴더 열기', 기록 중인 탭 이름 앞 빨간 점과 툴팁에 경로, 설정 창 '세션 로그' 항목. 도움말·README·소개 페이지 갱신</li>
+  <li>테스트: sessionlog_test.go(일반 텍스트 변환 12가지, 파일 이름, pump 연동·구분선·탭 닫기, 원본 모드·중지 후 미기록). Edge 자동 점검: 메뉴/단축키 시작·중지, 자동 기록 후 재접속, 끊기 구분선, 설정 창 배치 확인. 사용자 settings.json/hosts.json은 점검 후 복원</li>
+  <li>커밋 4ddb9e0 (main)</li>
+</ul>
+
+<h2>2026-10-03 — V0.1.2 릴리스</h2>
+<ul>
+  <li>버전 0.1.1 → 0.1.2 (main.go AppVersion, wails.json productVersion, README 제목)</li>
+  <li>build.bat으로 테스트 → wails build -clean → release\choboterm.exe (12.9MB, SHA-256 035d96a6...). 실행 파일에 'choboterm V0.1.2' 포함 확인</li>
+  <li>소개 페이지(docs/index.html)는 세션 로그 커밋에서 이미 갱신. GitHub Release v0.1.2 생성(새 기능: 세션 로그)</li>
+</ul>
+<h2>2026-10-04 — ~/.ssh/config 이름으로 접속 + V0.1.3 릴리스</h2>
+<ul>
+  <li>sshconfig.go: kevinburke/ssh_config로 ~/.ssh/config 해석. Host 칸의 'pusan', 'ssh pusan', 'ssh -p 2222 -l me pusan', 'user@host'를 해석(LookupSSH), config Host 이름 목록(GetSSHConfigHosts)</li>
+  <li>Connect: ssh 명령줄이면 Host/Port/Login을 덮어쓰고, 접속은 HostName으로, 탭·기록·포워딩에는 별칭을 남김. Login이 비면 config User. IdentityFile 키를 기본 키보다 먼저 시도(%h %r %u %d ~ 치환)</li>
+  <li>일반 호스트는 'Host *' 설정을 적용해 Port를 바꾸지 않음(Telnet/FTP 보호). ssh 명령줄일 때만 패턴 항목 적용. ProxyJump·Match 미지원</li>
+  <li>접속 창: Host 포커스 시 노란 툴팁(입력 예, 등록된 이름 / 별칭이면 user@주소:포트), placeholder, ▼ 목록에 'ssh config' 항목 추가, 변경·Connect 시 Port/Login 자동 채움</li>
+  <li>F1 도움말(한/영)·README·소개 페이지 갱신. 테스트 sshconfig_test.go(명령줄 파싱, 별칭·패턴, 키 경로, 인프로세스 SSH 서버로 'ssh 별칭' 접속). Edge 헤드리스+CDP로 툴팁·목록 화면 확인</li>
+  <li>버전 0.1.2 → 0.1.3, build.bat 빌드, GitHub Release v0.1.3</li>
+</ul>
+<h2>2026-10-05 — EUC-KR 모호폭 기호(▒ 등) 틈 문제 수정</h2>
+<ul>
+  <li>증상: BBS 상단 바의 ▒ 패턴이 Zterm처럼 꽉 차지 않고 "▒ ▒ ▒"처럼 사이가 벌어져 보임</li>
+  <li>원인: EUC-KR 모드에서 ▒은 2칸 폭이지만 D2Coding 글리프는 반각 → xterm DOM 렌더러가 자간(letter-spacing)으로 2칸을 채워 틈이 생김</li>
+  <li>수정: cjkwidth.ts에 모호폭 문자 범위만(unicode-range) 굴림체/돋움체/바탕체(local)로 그리는 FontFace "ChoboAmbiguous" 등록. applyEncoding에서 EUC-KR일 때만 글꼴 목록 맨 앞에 추가 (UTF-8은 기존 그대로)</li>
+  <li>확인: GulimChe의 ▒ ─ ■ · 폭 = 1024(ASCII 512의 2배, 전각). tsc/vite 빌드 통과</li>
+</ul>
+<h2>2026-10-05 — 설정에 글꼴 선택 추가</h2>
+<ul>
+  <li>설정 창(화면)에 "글꼴 (UTF-8)", "글꼴 (EUC-KR)" 선택 추가: D2Coding / 굴림체 / 돋움체 / 바탕체 / 궁서체 / Consolas</li>
+  <li>기본값: UTF-8 = D2Coding, EUC-KR = 굴림체(GulimChe) → Zterm과 같은 모양</li>
+  <li>EUC-KR에서 D2Coding·Consolas 같은 현대 글꼴을 고르면 ▒─■ 등 모호폭 기호만 굴림체로 대체(ChoboAmbiguous), 굴림체류는 자체 전각 기호 사용</li>
+  <li>settings.go(fontUtf8/fontEucKr, 기존 설정 파일은 기본값 적용), models.ts, settings.ts, prefs.ts, index.html, cjkwidth.ts(FONTS, fontFamily), main.ts(applyFontFamily — 인코딩 전환·설정 적용 시 탭별 적용)</li>
+  <li>go test / tsc·vite 빌드 통과</li>
+</ul>
+<h2>2026-10-05 — V0.1.4 릴리스</h2>
+<ul>
+  <li>버전 0.1.3 → 0.1.4 (main.go, wails.json, README.md), README·GitHub 페이지 기능 소개에 인코딩별 글꼴 선택 추가</li>
+  <li>커밋 후 main push, GitHub 릴리스 v0.1.4(choboterm.exe) 생성 → 페이지의 버전 표시는 최신 릴리스를 읽어 자동 갱신</li>
+</ul>
+<h2>2026-10-05 — 이전 릴리스 정리</h2>
+<ul>
+  <li>GitHub 릴리스 v0.1.0~v0.1.3 삭제 및 원격 태그 함께 삭제(gh release delete --cleanup-tag). v0.1.4만 남김</li>
+</ul>
+</body>
+</html>
