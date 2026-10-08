@@ -35,8 +35,18 @@ let version = '';
 // idle: not connected, on: terminal session, ftp: FTP (file window only)
 type TabState = 'idle' | 'on' | 'ftp';
 
+// A tab bar entry. It shows one or more panes (split with Ctrl+Shift+R / B);
+// each pane is a Tab with its own connection and its own entry in the chip.
+interface Group {
+    box: HTMLDivElement;  // the panes' layout in #terms
+    chip: HTMLDivElement; // the panes' tab bar entries
+}
+
+type SplitDir = 'row' | 'col'; // row: side by side, col: one above the other
+
 interface Tab {
     id: number;
+    group: Group;
     term: Terminal;
     fit: FitAddon;
     search: ReturnType<typeof attachSearch>;
@@ -148,13 +158,27 @@ function useWebgl(term: Terminal, onLost: () => void): boolean {
     }
 }
 
-function createTab(): Tab {
+/** Creates a tab, or with split a new pane next to split.from in its tab. */
+function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     const id = nextId++;
 
     const pane = document.createElement('div');
     pane.className = 'term';
-    pane.hidden = true;
-    termsEl.appendChild(pane);
+    let group: Group;
+    if (split) {
+        group = split.from.group;
+        splitPane(split.from.pane, pane, split.dir);
+    } else {
+        const box = document.createElement('div');
+        box.className = 'group';
+        box.hidden = true;
+        box.appendChild(pane);
+        termsEl.appendChild(box);
+        const chip = document.createElement('div');
+        chip.className = 'tabgroup';
+        tabsEl.appendChild(chip);
+        group = {box, chip};
+    }
 
     const term = new Terminal({
         fontFamily: fontFamily(settings.fontUtf8, false),
@@ -201,10 +225,14 @@ function createTab(): Tab {
     x.title = '탭 닫기 (Ctrl+Shift+W)';
     x.textContent = '✕';
     el.append(dot, label, x);
-    tabsEl.appendChild(el);
+    if (split) split.from.el.after(el);
+    else group.chip.appendChild(el);
 
-    const t: Tab = {id, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false, gpu};
+    const t: Tab = {id, group, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false, gpu};
     tabs.set(id, t);
+    paintGroup(group);
+    // Window size, splits and dragged dividers all change the pane's size.
+    new ResizeObserver(() => fitPane(t)).observe(pane);
 
     // Shells can report their folder as OSC 7 file://host/path (e.g. with vte.sh).
     term.parser.registerOscHandler(7, data => {
@@ -233,6 +261,11 @@ function createTab(): Tab {
     });
     term.onResize(({cols, rows}) => {
         if (t.state === 'on') Resize(t.id, cols, rows);
+    });
+
+    // Clicking (or tabbing) into a pane of a split tab makes it the active one.
+    pane.addEventListener('focusin', () => {
+        if (active !== t && tabs.has(t.id)) activate(t);
     });
 
     // Like PuTTY: selecting with the mouse copies, right-click pastes.
@@ -269,25 +302,137 @@ function createTab(): Tab {
     x.addEventListener('mousedown', ev => ev.stopPropagation());
     x.addEventListener('click', () => closeTab(t));
 
-    // Drag to reorder.
+    // Drag to reorder; a split tab moves as a whole.
     el.addEventListener('dragstart', ev => {
         dragging = t;
-        el.classList.add('dragging');
+        t.group.chip.classList.add('dragging');
         ev.dataTransfer?.setData('text/plain', String(id));
     });
     el.addEventListener('dragend', () => {
         dragging = undefined;
-        el.classList.remove('dragging');
+        t.group.chip.classList.remove('dragging');
     });
     el.addEventListener('dragover', ev => {
-        if (!dragging || dragging === t) return;
+        if (!dragging || dragging.group === t.group) return;
         ev.preventDefault();
-        const r = el.getBoundingClientRect();
-        tabsEl.insertBefore(dragging.el, ev.clientX < r.left + r.width / 2 ? el : el.nextSibling);
+        const chip = t.group.chip;
+        const r = chip.getBoundingClientRect();
+        tabsEl.insertBefore(dragging.group.chip, ev.clientX < r.left + r.width / 2 ? chip : chip.nextSibling);
     });
 
     welcome(t);
     return t;
+}
+
+// ---- Split panes ----
+
+/** The panes of group g, in tab bar order. */
+function panesOf(g: Group): Tab[] {
+    return orderedTabs().filter(t => t.group === g);
+}
+
+/** Fits a pane to its size; panes of hidden tabs are fitted when they are shown. */
+function fitPane(t: Tab) {
+    if (t.pane.clientWidth > 0 && t.pane.clientHeight > 0) t.fit.fit();
+}
+
+function paintGroup(g: Group) {
+    const multi = g.box.querySelectorAll('.term').length > 1;
+    g.chip.classList.toggle('multi', multi);
+    g.box.classList.toggle('multi', multi);
+}
+
+/** Puts pane next to old (right of it for row, below it for col), halving old's space. */
+function splitPane(old: HTMLElement, pane: HTMLElement, dir: SplitDir) {
+    const split = document.createElement('div');
+    split.className = `split ${dir}`;
+    split.style.flex = old.style.flex; // take old's place in its parent
+    old.replaceWith(split);
+    old.style.flex = '';
+    const gutter = document.createElement('div');
+    gutter.className = 'gutter';
+    gutter.title = '끌어서 크기 조절 · 더블클릭: 반반';
+    gutter.addEventListener('mousedown', ev => dragGutter(gutter, ev));
+    gutter.addEventListener('dblclick', () => {
+        (gutter.previousElementSibling as HTMLElement).style.flex = '';
+        (gutter.nextElementSibling as HTMLElement).style.flex = '';
+    });
+    split.append(old, gutter, pane);
+}
+
+/** Takes pane out of its split; the part left over takes the split's place. */
+function unsplitPane(pane: HTMLElement) {
+    const split = pane.parentElement;
+    pane.remove();
+    if (!split?.classList.contains('split')) return;
+    const rest = Array.from(split.children).find(el => !el.classList.contains('gutter')) as HTMLElement;
+    rest.style.flex = split.style.flex;
+    split.replaceWith(rest);
+}
+
+function dragGutter(gutter: HTMLElement, ev: MouseEvent) {
+    if (ev.button !== 0) return;
+    ev.preventDefault();
+    const split = gutter.parentElement!;
+    const a = gutter.previousElementSibling as HTMLElement;
+    const b = gutter.nextElementSibling as HTMLElement;
+    const row = split.classList.contains('row');
+    document.body.classList.add(row ? 'resizing-row' : 'resizing-col');
+    const move = (e: MouseEvent) => {
+        const r = split.getBoundingClientRect();
+        const pos = row ? (e.clientX - r.left) / r.width : (e.clientY - r.top) / r.height;
+        const f = Math.max(0.1, Math.min(0.9, pos));
+        a.style.flex = `${f} 1 0`;
+        b.style.flex = `${1 - f} 1 0`;
+    };
+    const up = () => {
+        window.removeEventListener('mousemove', move);
+        window.removeEventListener('mouseup', up);
+        document.body.classList.remove('resizing-row', 'resizing-col');
+        focusActive();
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+}
+
+/** Splits t's pane and opens the Connect dialog in the new one, filled in with t's server. */
+function splitTab(t: Tab, dir: SplitDir) {
+    if (t.dialog) return toast('접속 창을 먼저 닫으세요');
+    const n = createTab({from: t, dir});
+    n.temp = true; // cancelling its dialog closes the pane again
+    openDialog(n, t);
+}
+
+/** Moves to the nearest pane in a direction within the active tab. */
+function focusPane(dx: number, dy: number) {
+    const t = active;
+    if (!t) return;
+    const c = t.pane.getBoundingClientRect();
+    const cx = (c.left + c.right) / 2;
+    const cy = (c.top + c.bottom) / 2;
+    let best: Tab | undefined;
+    let bestDist = Infinity;
+    for (const o of panesOf(t.group)) {
+        if (o === t) continue;
+        const r = o.pane.getBoundingClientRect();
+        const beyond = dx < 0 ? r.right <= c.left + 1 : dx > 0 ? r.left >= c.right - 1 :
+            dy < 0 ? r.bottom <= c.top + 1 : r.top >= c.bottom - 1;
+        if (!beyond) continue;
+        const dist = Math.hypot((r.left + r.right) / 2 - cx, (r.top + r.bottom) / 2 - cy);
+        if (dist < bestDist) {
+            best = o;
+            bestDist = dist;
+        }
+    }
+    if (best) activate(best);
+}
+
+const ARROWS: Record<string, [number, number]> = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]};
+
+/** Alt+arrow moves between panes, but only in a split tab; otherwise the program gets it. */
+function isPaneKey(ev: KeyboardEvent): boolean {
+    return ev.altKey && !ev.ctrlKey && !ev.shiftKey && ev.key in ARROWS &&
+        !!active && panesOf(active.group).length > 1;
 }
 
 // ---- Font size ----
@@ -306,12 +451,12 @@ function setFontSize(n: number) {
 }
 
 function applyFontSize() {
-    // Hidden tabs are fitted again when they are activated.
+    // Hidden tabs are fitted again when they are shown.
     for (const t of tabs.values()) {
         t.term.options.fontSize = settings.fontSize;
         applyFontFamily(t);
+        fitPane(t);
     }
-    active?.fit.fit();
 }
 
 const toastEl = $<HTMLDivElement>('toast');
@@ -349,24 +494,35 @@ async function pasteClipboard(t: Tab) {
     pasteText(t, await ClipboardGetText());
 }
 
+/** All panes in tab bar order (the panes of a split tab are next to each other). */
 function orderedTabs(): Tab[] {
-    return Array.from(tabsEl.children)
-        .map(el => tabs.get(Number((el as HTMLElement).dataset.id)))
+    return Array.from(tabsEl.querySelectorAll<HTMLElement>('.tab'))
+        .map(el => tabs.get(Number(el.dataset.id)))
         .filter((t): t is Tab => !!t);
 }
 
 function activate(t: Tab) {
     const changed = active !== t;
     if (changed) {
-        if (active) {
-            if (active.dialog) saveDialog(active);
-            active.el.classList.remove('active');
-            active.pane.hidden = true;
+        const old = active;
+        if (old) {
+            if (old.dialog) saveDialog(old);
+            old.el.classList.remove('active');
+            old.pane.classList.remove('focused');
+        }
+        if (old?.group !== t.group) {
+            if (old) {
+                old.group.box.hidden = true;
+                old.group.chip.classList.remove('current');
+            }
+            t.group.box.hidden = false;
+            t.group.chip.classList.add('current');
+            for (const p of panesOf(t.group)) p.el.classList.remove('activity');
         }
         active = t;
         t.el.classList.add('active');
         t.el.classList.remove('activity');
-        t.pane.hidden = false;
+        t.pane.classList.add('focused');
         t.el.scrollIntoView({block: 'nearest', inline: 'nearest'});
         // Each tab keeps its own Connect dialog and file window.
         showFilesFor(t.id);
@@ -374,7 +530,7 @@ function activate(t: Tab) {
         if (t.dialog) loadDialog(t);
         else hideDialog();
     }
-    t.fit.fit();
+    for (const p of panesOf(t.group)) fitPane(p);
     updateTitle();
     if (changed) focusActive();
     else if (!t.dialog && !filesOpen()) t.term.focus();
@@ -406,13 +562,22 @@ function closeTab(t: Tab) {
     const i = list.indexOf(t);
     CloseTab(t.id);
     t.term.dispose();
-    t.pane.remove();
+    unsplitPane(t.pane);
     t.el.remove();
     tabs.delete(t.id);
+    const g = t.group;
+    if (g.box.querySelector('.term')) {
+        paintGroup(g);
+    } else {
+        g.box.remove();
+        g.chip.remove();
+    }
 
     if (active === t) {
         active = undefined;
-        const next = list[i + 1] ?? list[i - 1];
+        // Closing one pane of a split tab stays in that tab.
+        const near = [list[i - 1], list[i + 1]].find(n => n?.group === g);
+        const next = near ?? list[i + 1] ?? list[i - 1];
         if (next) activate(next);
     }
     if (tabs.size === 0) {
@@ -593,7 +758,7 @@ async function toggleEncoding(t: Tab) {
     updateTitle();
 }
 
-new ResizeObserver(() => active?.fit.fit()).observe(termsEl);
+
 
 // WebGL caches glyphs, so redraw them once the ambiguous-width face has arrived.
 // (Not on every 'loadingdone': redrawing can load fonts again and loop forever.)
@@ -610,7 +775,7 @@ EventsOn('term:data', (id: number, b64: string) => {
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const t0 = performance.now();
     t.term.write(bytes, () => dbg(`tab ${id} wrote ${bytes.length} bytes in ${Math.round(performance.now() - t0)}ms`));
-    if (t !== active) t.el.classList.add('activity');
+    if (t.group !== active?.group) t.el.classList.add('activity');
 });
 
 // lost: the connection broke (not ended by the server), so it may be reconnected.
@@ -655,6 +820,7 @@ function showMenu(t: Tab, x: number, y: number) {
     enable('disconnect', t.state !== 'idle');
     enable('log', !!t.log || t.state === 'on');
     menu.querySelector('[data-act="log"]')!.textContent = t.log ? '로그 기록 중지' : '로그 기록 시작';
+    menu.querySelector('[data-act="close"]')!.textContent = panesOf(t.group).length > 1 ? '분할 창 닫기' : '탭 닫기';
     menu.hidden = false;
     const r = menu.getBoundingClientRect();
     menu.style.left = `${Math.min(x, window.innerWidth - r.width - 4)}px`;
@@ -678,6 +844,12 @@ menu.addEventListener('click', ev => {
             break;
         case 'duplicate':
             duplicate(t);
+            break;
+        case 'splitRight':
+            splitTab(t, 'row');
+            break;
+        case 'splitDown':
+            splitTab(t, 'col');
             break;
         case 'files':
             openFilesFor(t);
@@ -742,7 +914,7 @@ function updateProto() {
  * Opens the Connect dialog. t: the tab to connect in, null: a new tab,
  * undefined: the active tab if it's empty, otherwise a new tab.
  */
-async function openDialog(t?: Tab | null) {
+async function openDialog(t?: Tab | null, from?: Tab) {
     if (active?.dialog) saveDialog(active);
     let tab: Tab;
     if (t === null || (t === undefined && !(active && active.state === 'idle'))) {
@@ -760,8 +932,8 @@ async function openDialog(t?: Tab | null) {
     entries = [...history, ...configHosts.filter(c => !seen.has(c.host)).map(c => ({
         host: c.host, port: c.port, login: c.login, encoding: 'UTF-8', pass: '', fromConfig: true,
     }))];
-    if (tab.req) {
-        const r = tab.req;
+    const r = tab.req ?? from?.req; // a new split pane starts with its neighbour's server
+    if (r) {
         applyEntry({host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass});
     } else if (!host.value && history.length > 0) {
         applyEntry(history[0]);
@@ -1107,7 +1279,8 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (macroForKey(ev)) return true;
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPL]$/i.test(ev.key);
+    if (isPaneKey(ev)) return true;
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLRB]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
@@ -1136,6 +1309,10 @@ window.addEventListener('keydown', ev => {
     if (ev.key === '=' || ev.key === '+') return setFontSize(settings.fontSize + 1);
     if (ev.key === '-') return setFontSize(settings.fontSize - 1);
     if (ev.key === '0') return setFontSize(DEFAULT_FONT);
+    if (isPaneKey(ev)) {
+        if (!t?.dialog && !filesOpen()) focusPane(...ARROWS[ev.key]);
+        return;
+    }
     switch (key) {
         case 'C':
             if (t) copySelection(t);
@@ -1170,6 +1347,12 @@ window.addEventListener('keydown', ev => {
             break;
         case 'E':
             if (t) toggleEncoding(t);
+            break;
+        case 'R':
+            if (t) splitTab(t, 'row');
+            break;
+        case 'B':
+            if (t) splitTab(t, 'col');
             break;
         case 'F':
             if (t) openFilesFor(t);

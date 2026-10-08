@@ -31,7 +31,9 @@ const TEXT: Record<Lang, HelpText> = {
                 rows: [
                     ['Ctrl+Shift+T / Ctrl+Shift+N', '새 탭으로 접속'],
                     ['Ctrl+Tab / Ctrl+Shift+Tab', '다음 / 이전 탭 (Ctrl+PgDn / Ctrl+PgUp)'],
-                    ['Ctrl+Shift+W', '탭 닫기'],
+                    ['Ctrl+Shift+W', '탭 닫기 (분할된 탭에서는 지금 창만)'],
+                    ['Ctrl+Shift+R / Ctrl+Shift+B', '오른쪽 / 아래로 창 분할. 새 창마다 따로 접속 (지금 서버가 미리 채워짐)'],
+                    ['Alt+←→↑↓', '분할된 탭에서 옆 창으로 이동 (클릭해도 됨). 경계선을 끌어 크기 조절, 더블클릭으로 반반'],
                     ['Enter (연결이 없는 탭)', '그 탭에서 접속 창 열기'],
                     ['마우스', '+ 또는 탭 바 더블클릭: 새 탭 · 가운데 클릭: 닫기 · 끌기: 순서 바꾸기 · 우클릭: 메뉴'],
                 ],
@@ -116,7 +118,9 @@ const TEXT: Record<Lang, HelpText> = {
                 rows: [
                     ['Ctrl+Shift+T / Ctrl+Shift+N', 'Connect in a new tab'],
                     ['Ctrl+Tab / Ctrl+Shift+Tab', 'Next / previous tab (Ctrl+PgDn / Ctrl+PgUp)'],
-                    ['Ctrl+Shift+W', 'Close tab'],
+                    ['Ctrl+Shift+W', 'Close tab (only the current pane of a split tab)'],
+                    ['Ctrl+Shift+R / Ctrl+Shift+B', 'Split right / down. Each pane has its own connection (current server filled in)'],
+                    ['Alt+←→↑↓', 'Move to the next pane in a split tab (or click it). Drag the divider to resize, double-click to even out'],
                     ['Enter (disconnected tab)', 'Open the Connect dialog in that tab'],
                     ['Mouse', '+ or double-click the tab bar: new tab · Middle-click: close · Drag: reorder · Right-click: menu'],
                 ],
