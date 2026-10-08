@@ -45,7 +45,7 @@ func (a *sshAuth) Close() {
 // Windows, Pageant or SSH_AUTH_SOCK), then key files (keys, then the default
 // ones in ~/.ssh). A file key protected by a passphrase is offered too, and
 // the passphrase is asked only when the server accepts that key. After the
-// keys come the password and keyboard-interactive.
+// keys come the password and keyboard-interactive (see interactive).
 func newSSHAuth(pass string, keys []string, ask asker) *sshAuth {
 	a := &sshAuth{}
 	var signers []ssh.Signer
@@ -88,20 +88,68 @@ func newSSHAuth(pass string, keys []string, ask asker) *sshAuth {
 	}
 
 	if pass != "" {
-		a.methods = append(a.methods,
-			ssh.Password(pass),
-			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
-				answers := make([]string, len(questions))
-				for i := range questions {
-					if !echos[i] {
-						answers[i] = pass
-					}
-				}
-				return answers, nil
-			}),
-		)
+		a.methods = append(a.methods, ssh.Password(pass))
+	}
+	a.methods = append(a.methods, ssh.KeyboardInteractive(interactive(pass, ask)))
+	if pass == "" && ask != nil {
+		// Servers taking only "password": ask for it, as ssh does.
+		a.methods = append(a.methods, ssh.PasswordCallback(func() (string, error) {
+			vals, ok := ask("SSH 로그인", "", []PromptField{{Label: "비밀번호", Secret: true}})
+			if !ok {
+				return "", errLoginCancelled
+			}
+			return vals[0], nil
+		}))
 	}
 	return a
+}
+
+// errLoginCancelled means the user cancelled a login prompt.
+var errLoginCancelled = errors.New("로그인을 취소했습니다")
+
+// interactive answers keyboard-interactive questions. The first lone hidden
+// question that asks for a password gets the password from the Connect
+// dialog; anything else (a one-time code, a second password, Duo...) is
+// shown to the user as the server wrote it.
+func interactive(pass string, ask asker) ssh.KeyboardInteractiveChallenge {
+	passUsed := pass == ""
+	return func(name, instruction string, questions []string, echos []bool) ([]string, error) {
+		if len(questions) == 0 {
+			return nil, nil // an info message only
+		}
+		if !passUsed && len(questions) == 1 && !echos[0] && asksPassword(questions[0]) {
+			passUsed = true
+			return []string{pass}, nil
+		}
+		if ask == nil {
+			return nil, errLoginCancelled
+		}
+		fields := make([]PromptField, len(questions))
+		for i, q := range questions {
+			fields[i] = PromptField{Label: strings.TrimSpace(q), Secret: !echos[i]}
+		}
+		title := strings.TrimSpace(name)
+		if title == "" {
+			title = "SSH 로그인"
+		}
+		vals, ok := ask(title, strings.TrimSpace(instruction), fields)
+		if !ok {
+			return nil, errLoginCancelled
+		}
+		return vals, nil
+	}
+}
+
+// asksPassword tells a password question ("Password:", "user@host's password:")
+// from a one-time code or PIN question ("One-time password:", "Verification code:").
+func asksPassword(q string) bool {
+	q = strings.ToLower(q)
+	for _, w := range []string{"one-time", "one time", "otp", "token", "code", "일회용", "인증"} {
+		if strings.Contains(q, w) {
+			return false
+		}
+	}
+	return strings.Contains(q, "password") || strings.Contains(q, "비밀번호") || strings.Contains(q, "암호")
 }
 
 // keyFiles returns keys followed by the default key files, without duplicates.

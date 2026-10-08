@@ -216,3 +216,112 @@ func TestAgentMissing(t *testing.T) {
 	}
 	sess.Close()
 }
+
+// otpServer asks "Password:" (hidden) and then "Verification code:" (shown)
+// with keyboard-interactive, and accepts pw / 123456.
+func otpServer(t *testing.T) (string, ssh.Signer) {
+	cfg := &ssh.ServerConfig{
+		KeyboardInteractiveCallback: func(_ ssh.ConnMetadata, client ssh.KeyboardInteractiveChallenge) (*ssh.Permissions, error) {
+			a, err := client("", "", []string{"Password: "}, []bool{false})
+			if err != nil || len(a) != 1 || a[0] != "pw" {
+				return nil, errors.New("bad password")
+			}
+			a, err = client("", "Enter the code from your app.", []string{"Verification code: "}, []bool{true})
+			if err != nil || len(a) != 1 || a[0] != "123456" {
+				return nil, errors.New("bad code")
+			}
+			return nil, nil
+		},
+	}
+	host := ed25519Signer(t)
+	return serveShell(t, cfg, host), host
+}
+
+// recordingAsker answers each prompt with the next values and keeps the prompts.
+func recordingAsker(answers ...[]string) (asker, *[][]PromptField, *[]string) {
+	var fields [][]PromptField
+	var msgs []string
+	return func(title, msg string, f []PromptField) ([]string, bool) {
+		fields = append(fields, f)
+		msgs = append(msgs, msg)
+		i := len(fields) - 1
+		if i >= len(answers) || answers[i] == nil {
+			return nil, false
+		}
+		return answers[i], true
+	}, &fields, &msgs
+}
+
+func TestKeyboardInteractiveOTP(t *testing.T) {
+	addr, host := otpServer(t)
+	useHome(t, addr, host)
+
+	// The Connect dialog's password answers "Password:"; the code is asked.
+	ask, fields, msgs := recordingAsker([]string{"123456"})
+	sess, err := dialAsk(t, addr, "pw", ask)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	sess.Close()
+	if len(*fields) != 1 || (*fields)[0][0].Label != "Verification code:" || (*fields)[0][0].Secret ||
+		(*msgs)[0] != "Enter the code from your app." {
+		t.Fatalf("prompts = %+v %q", *fields, *msgs)
+	}
+
+	// Without a password in the dialog, both questions are asked.
+	ask, fields, _ = recordingAsker([]string{"pw"}, []string{"123456"})
+	sess, err = dialAsk(t, addr, "", ask)
+	if err != nil {
+		t.Fatalf("connect without password: %v", err)
+	}
+	sess.Close()
+	if len(*fields) != 2 || !(*fields)[0][0].Secret {
+		t.Fatalf("prompts = %+v", *fields)
+	}
+
+	// Cancelling stops the login.
+	ask, _, _ = recordingAsker(nil)
+	if _, err := dialAsk(t, addr, "pw", ask); err == nil || !strings.Contains(err.Error(), "취소") {
+		t.Fatalf("cancel: err = %v", err)
+	}
+}
+
+func TestPasswordAskedWhenEmpty(t *testing.T) {
+	cfg := &ssh.ServerConfig{
+		PasswordCallback: func(_ ssh.ConnMetadata, p []byte) (*ssh.Permissions, error) {
+			if string(p) == "pw" {
+				return nil, nil
+			}
+			return nil, errors.New("bad password")
+		},
+	}
+	host := ed25519Signer(t)
+	addr := serveShell(t, cfg, host)
+	useHome(t, addr, host)
+
+	ask, fields, _ := recordingAsker([]string{"pw"})
+	sess, err := dialAsk(t, addr, "", ask)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	sess.Close()
+	if len(*fields) != 1 || !(*fields)[0][0].Secret {
+		t.Fatalf("prompts = %+v", *fields)
+	}
+}
+
+func TestAsksPassword(t *testing.T) {
+	for q, want := range map[string]bool{
+		"Password: ":                 true,
+		"me@host's password: ":       true,
+		"비밀번호: ":                     true,
+		"One-time password (OTP): ":  false,
+		"Verification code: ":        false,
+		"Passcode or option (1-3): ": false,
+		"일회용 암호: ":                   false,
+	} {
+		if got := asksPassword(q); got != want {
+			t.Errorf("asksPassword(%q) = %v", q, got)
+		}
+	}
+}
