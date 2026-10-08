@@ -268,6 +268,8 @@ export namespace main {
 	    cursorStyle: string;
 	    cursorBlink: boolean;
 	    scrollback: number;
+	    translucency: string;
+	    opacity: number;
 	    pasteNoConfirm: boolean;
 	    keepAlive: number;
 	    autoReconnect: boolean;
@@ -290,6 +292,8 @@ export namespace main {
 	        this.cursorStyle = source["cursorStyle"];
 	        this.cursorBlink = source["cursorBlink"];
 	        this.scrollback = source["scrollback"];
+	        this.translucency = source["translucency"];
+	        this.opacity = source["opacity"];
 	        this.pasteNoConfirm = source["pasteNoConfirm"];
 	        this.keepAlive = source["keepAlive"];
 	        this.autoReconnect = source["autoReconnect"];

@@ -233,6 +233,24 @@ html, body {
     border-color: #3b82f6;
 }
 
+/* "배경만" translucency: no margin color; each pane draws its own see-through
+   background (inline style) with the margin inside it, so nothing is drawn twice. */
+body.glass #terms {
+    top: 33px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+body.glass #terms .term {
+    padding: 4px;
+}
+
+/* xterm.css paints its scroll area black; the pane draws the background instead. */
+body.glass #terms .xterm .xterm-viewport {
+    background-color: transparent !important;
+}
+
 #terms .gutter {
     flex: 0 0 4px;
     cursor: col-resize;
@@ -1132,6 +1150,14 @@ body.resizing-col #terms .term {
 
 .prefs label.row input#pScrollback {
     width: 70px;
+}
+
+.prefs label.row input#pOpacity {
+    width: 180px;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
 }
 
 /* A few lines in the chosen theme's colors, then its 16 ANSI colors. */

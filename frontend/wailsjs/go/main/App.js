@@ -6,6 +6,10 @@ export function AnswerPrompt(arg1, arg2, arg3) {
   return window['go']['main']['App']['AnswerPrompt'](arg1, arg2, arg3);
 }
 
+export function BackgroundTranslucent() {
+  return window['go']['main']['App']['BackgroundTranslucent']();
+}
+
 export function ChooseLogDir(arg1) {
   return window['go']['main']['App']['ChooseLogDir'](arg1);
 }
@@ -144,6 +148,10 @@ export function SetEncoding(arg1, arg2) {
 
 export function SetTabTheme(arg1, arg2) {
   return window['go']['main']['App']['SetTabTheme'](arg1, arg2);
+}
+
+export function SetWindowOpacity(arg1) {
+  return window['go']['main']['App']['SetWindowOpacity'](arg1);
 }
 
 export function ShowLogs(arg1) {

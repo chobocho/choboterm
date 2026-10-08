@@ -94,3 +94,35 @@ func restoreWindowBounds(s WindowState) bool {
 	r, _, _ := procSetWindowPlacement.Call(h, uintptr(unsafe.Pointer(&wp)))
 	return r != 0
 }
+
+var (
+	procGetWindowLongPtrW          = user32.NewProc("GetWindowLongPtrW")
+	procSetWindowLongPtrW          = user32.NewProc("SetWindowLongPtrW")
+	procSetLayeredWindowAttributes = user32.NewProc("SetLayeredWindowAttributes")
+)
+
+const (
+	gwlExStyle  = ^uintptr(19) // GWL_EXSTYLE (-20) as the unsigned argument
+	wsExLayered = 0x00080000
+	lwaAlpha    = 0x2
+)
+
+// setWindowAlpha makes the main window percent opaque. At 100 the window
+// stops being a layered window, which draws a little faster.
+func setWindowAlpha(percent int) {
+	h := mainWindow()
+	if h == 0 {
+		return
+	}
+	ex, _, _ := procGetWindowLongPtrW.Call(h, gwlExStyle)
+	if percent >= 100 {
+		if ex&wsExLayered != 0 {
+			procSetWindowLongPtrW.Call(h, gwlExStyle, ex&^wsExLayered)
+		}
+		return
+	}
+	if ex&wsExLayered == 0 {
+		procSetWindowLongPtrW.Call(h, gwlExStyle, ex|wsExLayered)
+	}
+	procSetLayeredWindowAttributes.Call(h, 0, uintptr(percent*255/100), lwaAlpha)
+}

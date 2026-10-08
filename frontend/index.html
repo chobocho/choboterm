@@ -165,6 +165,13 @@
                 </select></label>
                 <label class="check"><input type="checkbox" id="pBlink"/> 커서 깜빡임</label>
                 <label class="row">스크롤백 <input id="pScrollback" inputmode="numeric"/> <span class="hint">줄, 1000~100000 (탭마다 위로 남겨 두는 출력)</span></label>
+                <label class="row">반투명 <select id="pTrans">
+                    <option value="off">끄기</option>
+                    <option value="window">창 전체 (글자도 함께)</option>
+                    <option value="background">배경만 (글자는 선명, 뒤가 흐리게)</option>
+                </select></label>
+                <label class="row">불투명도 <input type="range" id="pOpacity" min="20" max="100" step="5"/> <span id="pOpacityVal"></span></label>
+                <span class="hint" id="pTransHint"></span>
             </fieldset>
             <fieldset>
                 <legend>연결</legend>

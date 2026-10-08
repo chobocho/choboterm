@@ -65,6 +65,7 @@ type App struct {
 	tabs  map[int]*tab
 	hooks testHooks
 	shown sync.Once
+	glass bool // started with a see-through window (Translucency "background")
 }
 
 // tab is one connection with its own terminal tab in the frontend.
@@ -107,8 +108,12 @@ func (a *App) startup(ctx context.Context) {
 func (a *App) domReady(ctx context.Context) {
 	debugf("dom ready")
 	a.shown.Do(func() {
-		if w := loadSettings().Window; w != nil {
+		s := loadSettings()
+		if w := s.Window; w != nil {
 			restoreWindowBounds(*w)
+		}
+		if s.Translucency == "window" {
+			a.SetWindowOpacity(s.Opacity)
 		}
 		runtime.WindowShow(ctx)
 	})

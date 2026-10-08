@@ -11,6 +11,8 @@ export let settings: main.Settings = main.Settings.createFrom({
     cursorStyle: 'block',
     cursorBlink: true,
     scrollback: 5000,
+    translucency: 'off',
+    opacity: 85,
     pasteNoConfirm: false,
     keepAlive: 60,
     autoReconnect: true,

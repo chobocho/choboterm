@@ -21,6 +21,11 @@ type Settings struct {
 	CursorBlink bool   `json:"cursorBlink"`
 	// Scrollback is how many lines each terminal keeps above the screen.
 	Scrollback int `json:"scrollback"`
+	// Translucency is "off", "window" (the whole window, text too) or
+	// "background" (only the terminal background, over a blurred desktop;
+	// takes effect at the next start). Opacity is in percent.
+	Translucency string `json:"translucency"`
+	Opacity      int    `json:"opacity"`
 	// PasteNoConfirm skips the confirmation before pasting several lines.
 	PasteNoConfirm bool `json:"pasteNoConfirm"`
 	// KeepAlive is the keepalive interval in seconds for SSH and Telnet (0 = off).
@@ -66,6 +71,7 @@ func defaultSettings() Settings {
 	return Settings{
 		FontSize: 15, FontUTF8: "D2Coding", FontEUCKR: "GulimChe",
 		Theme: "choboterm", CursorStyle: "block", CursorBlink: true, Scrollback: 5000,
+		Translucency: "off", Opacity: 85,
 		KeepAlive: 60, AutoReconnect: true, Macros: []Macro{},
 	}
 }

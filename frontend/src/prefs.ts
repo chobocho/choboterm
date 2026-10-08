@@ -21,6 +21,10 @@ const preview = $<HTMLDivElement>('pThemePreview');
 const cursor = $<HTMLSelectElement>('pCursor');
 const blink = $<HTMLInputElement>('pBlink');
 const scrollback = $<HTMLInputElement>('pScrollback');
+const trans = $<HTMLSelectElement>('pTrans');
+const opacity = $<HTMLInputElement>('pOpacity');
+const opacityVal = $<HTMLSpanElement>('pOpacityVal');
+const transHint = $<HTMLSpanElement>('pTransHint');
 const keepAlive = $<HTMLInputElement>('pKeepAlive');
 const autoReconnect = $<HTMLInputElement>('pReconnect');
 const pasteConfirm = $<HTMLInputElement>('pPaste');
@@ -31,6 +35,29 @@ const error = $<HTMLDivElement>('pError');
 
 let onApply: (() => void) | undefined;
 let onClose: (() => void) | undefined;
+
+// Shows translucency while it is being chosen; set by main.ts.
+let showTranslucency: (mode: string, opacity: number) => void = () => undefined;
+// Whether the window was started see-through ("background" works only then).
+let glassStarted = false;
+
+export function initTranslucencyPreview(fn: (mode: string, opacity: number) => void, started: boolean) {
+    showTranslucency = fn;
+    glassStarted = started;
+}
+
+function paintTranslucency() {
+    opacityVal.textContent = `${opacity.value}%`;
+    opacity.disabled = trans.value === 'off';
+    transHint.textContent =
+        trans.value === 'window' ? '창 전체가 비칩니다. 바로 적용됩니다.' :
+            trans.value === 'background' && !glassStarted ? '배경만 반투명은 choboterm을 다시 시작하면 적용됩니다.' :
+                trans.value === 'background' ? '터미널 배경만 비치고 글자는 선명합니다. 불투명도는 바로 바뀝니다.' : '';
+    showTranslucency(trans.value, Number(opacity.value));
+}
+
+trans.addEventListener('change', paintTranslucency);
+opacity.addEventListener('input', paintTranslucency);
 
 export function prefsOpen() {
     return !overlay.hidden;
@@ -48,6 +75,9 @@ export function openPrefs(apply: () => void, close: () => void) {
     cursor.value = settings.cursorStyle;
     blink.checked = settings.cursorBlink;
     scrollback.value = String(settings.scrollback);
+    trans.value = settings.translucency || 'off';
+    opacity.value = String(settings.opacity || 85);
+    paintTranslucency();
     keepAlive.value = String(settings.keepAlive);
     autoReconnect.checked = settings.autoReconnect;
     pasteConfirm.checked = !settings.pasteNoConfirm;
@@ -95,6 +125,8 @@ theme.addEventListener('change', paintPreview);
 function closePrefs() {
     if (overlay.hidden) return;
     overlay.hidden = true;
+    // Cancelled (or after OK, already saved): show what is saved.
+    showTranslucency(settings.translucency || 'off', settings.opacity || 85);
     const cb = onClose;
     onClose = onApply = undefined;
     cb?.();
@@ -126,6 +158,8 @@ function apply() {
         s.cursorStyle = cursor.value;
         s.cursorBlink = blink.checked;
         s.scrollback = lines;
+        s.translucency = trans.value;
+        s.opacity = Number(opacity.value);
         s.keepAlive = ka;
         s.autoReconnect = autoReconnect.checked;
         s.pasteNoConfirm = !pasteConfirm.checked;

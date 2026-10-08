@@ -53,7 +53,8 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 	}
 	got := a.GetSettings()
 	if got.FontSize != 15 || got.KeepAlive != 60 || !got.AutoReconnect || !got.PasteNoConfirm || got.Macros == nil ||
-		got.Theme != "choboterm" || got.CursorStyle != "block" || !got.CursorBlink || got.Scrollback != 5000 {
+		got.Theme != "choboterm" || got.CursorStyle != "block" || !got.CursorBlink || got.Scrollback != 5000 ||
+		got.Translucency != "off" || got.Opacity != 85 {
 		t.Fatalf("partial file: %+v", got)
 	}
 

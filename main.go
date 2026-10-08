@@ -25,8 +25,22 @@ func main() {
 	// The window starts hidden and is shown once it is moved to where it was
 	// last time (see App.domReady), so it doesn't jump on screen.
 	start := options.Normal
-	if w := loadSettings().Window; w != nil && w.Maximized {
+	settings := loadSettings()
+	if w := settings.Window; w != nil && w.Maximized {
 		start = options.Maximised
+	}
+
+	// "Only the background" translucency needs a see-through window from the
+	// start; the page then draws the terminals with see-through backgrounds.
+	win := &windows.Options{WindowClassName: windowClass}
+	background := &options.RGBA{R: 0, G: 0, B: 0, A: 1}
+	if settings.Translucency == "background" {
+		app.glass = true
+		win.WebviewIsTransparent = true
+		win.WindowIsTranslucent = true
+		// No blur: Acrylic turns solid gray whenever the window is inactive.
+		win.BackdropType = windows.None
+		background = &options.RGBA{R: 0, G: 0, B: 0, A: 0}
 	}
 
 	// Create application with options
@@ -37,16 +51,14 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 1},
+		BackgroundColour: background,
 		StartHidden:      true,
 		WindowStartState: start,
 		OnStartup:        app.startup,
 		OnDomReady:       app.domReady,
 		OnBeforeClose:    app.beforeClose,
 		OnShutdown:       app.shutdown,
-		Windows: &windows.Options{
-			WindowClassName: windowClass,
-		},
+		Windows:          win,
 		// Files dropped on the file window are uploaded (see files.ts).
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop:     true,
