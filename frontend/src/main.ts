@@ -13,7 +13,7 @@ import {initTranslucencyPreview, openPrefs, prefsOpen} from './prefs';
 import {expandMacro, macroForKey, macrosOpen, openMacros} from './macros';
 import {forwardsOpen, forwardsTabClosed, openForwards} from './forwards';
 import {askOpen} from './dialog';
-import {openSaveSession, sessionSaveOpen} from './sessions';
+import {openSaveSession, openSessionManager, sessionManagerOpen, sessionSaveOpen} from './sessions';
 import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
@@ -1483,7 +1483,13 @@ async function doConnect() {
     await resolveHost();
     if (t !== active || !t.dialog || t.dialog.connecting) return;
     saveDialog(t);
+    await connectDialog(t);
+}
+
+/** Connects tab t with what its Connect dialog holds; the dialog closes on success or shows the error. */
+async function connectDialog(t: Tab) {
     const d = t.dialog;
+    if (!d) return;
     d.error = '';
     d.connecting = true;
     error.textContent = '';
@@ -1572,6 +1578,30 @@ function showPrefs() {
 
 $<HTMLButtonElement>('prefsBtn').addEventListener('click', showPrefs);
 
+// ---- Session manager ----
+
+function showSessions() {
+    if (!modalOpen()) openSessionManager(openSessions, focusActive);
+}
+
+$<HTMLButtonElement>('sessBtn').addEventListener('click', showSessions);
+
+/**
+ * Connects saved sessions: the first in the active tab if it is empty, the
+ * others in new tabs. Each goes through its tab's Connect dialog, which stays
+ * open with the error if the connection fails.
+ */
+async function openSessions(list: main.SavedSession[]) {
+    for (const s of list) {
+        await openDialog(list.length > 1 && s !== list[0] ? null : undefined);
+        const t = active;
+        if (!t?.dialog || t.dialog.connecting) continue;
+        applyEntry({host: s.host, port: s.port, login: s.login, encoding: s.encoding, pass: s.pass, session: s});
+        saveDialog(t);
+        void connectDialog(t);
+    }
+}
+
 // Wails runs each Go call on its own goroutine, so calls made back to back can
 // reach the server out of order (e.g. replies to a burst of terminal queries).
 // One Send at a time keeps the order; input typed meanwhile goes in the next one.
@@ -1633,7 +1663,7 @@ async function toggleLog(t: Tab) {
 /** A window that takes all keys until it is closed. */
 function modalOpen() {
     return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen() || askOpen() || viewerOpen() ||
-        authPromptOpen() || sessionSaveOpen();
+        authPromptOpen() || sessionSaveOpen() || sessionManagerOpen();
 }
 
 function isAppShortcut(ev: KeyboardEvent): boolean {
@@ -1643,7 +1673,7 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
     if (isPaneKey(ev) || splitKey(ev)) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPL]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLH]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
@@ -1693,6 +1723,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'M':
             showMacros();
+            break;
+        case 'H':
+            showSessions();
             break;
         case 'P':
             if (t) showForwards(t);

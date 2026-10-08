@@ -164,12 +164,14 @@ html, body {
 }
 
 #newTab:hover,
+#sessBtn:hover,
 #prefsBtn:hover {
     background: #34363b;
     color: #fff;
 }
 
 /* Pushed to the right end of the tab bar. */
+#sessBtn,
 #prefsBtn {
     flex: 0 0 auto;
     width: 28px;
@@ -182,6 +184,10 @@ html, body {
     font-size: 15px;
     line-height: 22px;
     cursor: pointer;
+}
+
+#prefsBtn {
+    margin-left: 0;
 }
 
 #terms {
@@ -585,6 +591,7 @@ body.resizing-col #terms .term {
     max-height: 240px;
     margin: 0;
     padding: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     list-style: none;
     background: #fff;
@@ -594,6 +601,8 @@ body.resizing-col #terms .term {
 .combo li {
     padding: 2px 4px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     cursor: default;
 }
 
@@ -1347,6 +1356,92 @@ body.resizing-col #terms .term {
     outline: 1px solid #0078d7;
 }
 
+/* ---- Session manager (built on the macro window's layout) ---- */
+
+.sm .cols {
+    height: min(320px, calc(100vh - 160px));
+}
+
+.sm .left {
+    width: 240px;
+}
+
+#smList {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #7a7a7a;
+    outline: none;
+}
+
+#smList:focus {
+    border-color: #0078d7;
+}
+
+#smList li {
+    padding: 3px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: default;
+}
+
+#smList li.head {
+    padding: 3px 4px 1px;
+    background: #f0f0f0;
+    color: #555;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#smList li .meta {
+    margin-left: 6px;
+    color: #888;
+    font-size: 11px;
+}
+
+#smList li.sel {
+    background: #0078d7;
+    color: #fff;
+}
+
+#smList li.sel .meta {
+    color: #dbe9f7;
+}
+
+#smList li.empty {
+    color: #888;
+    white-space: normal;
+}
+
+.sm .right {
+    grid-template-rows: none;
+    align-content: start;
+}
+
+.sm .right .wide {
+    grid-column: 1 / -1;
+}
+
+.sm .right .portno {
+    width: 80px;
+}
+
+.sm .buttons #smGroupOpen {
+    margin-right: auto;
+}
+
+.sm .buttons #smOpen {
+    outline: 1px solid #0078d7;
+}
+
+#sessBtn {
+    font-size: 13px;
+}
+
 /* ---- Port forwarding window ---- */
 
 .dialog.pf {
@@ -1508,6 +1603,13 @@ body.resizing-col #terms .term {
 .dialog.sesssave {
     width: min(360px, calc(100vw - 32px));
     outline: none;
+}
+
+/* Label | field rows, like the Connect dialog (not the ask window's single column). */
+.sesssave .body {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: center;
 }
 
 .sesssave .where,

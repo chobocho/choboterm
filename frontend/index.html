@@ -9,6 +9,7 @@
 <div id="tabbar">
     <div id="tabs"></div>
     <button type="button" id="newTab" title="새 탭 (Ctrl+Shift+T)">+</button>
+    <button type="button" id="sessBtn" title="세션 관리 (Ctrl+Shift+H)">★</button>
     <button type="button" id="prefsBtn" title="설정 (Ctrl+Shift+O)">⚙</button>
 </div>
 <div id="terms"></div>
@@ -229,6 +230,55 @@
             <div class="buttons">
                 <button type="button" id="mSend" title="Enter (목록) / Ctrl+Enter">보내기</button>
                 <button type="button" id="mClose">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="smOverlay" class="overlay modal" hidden>
+    <div class="dialog macros sm" id="sm" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title">세션 관리</span>
+            <button type="button" class="close" id="smX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div class="cols">
+                <div class="left">
+                    <input id="smFilter" spellcheck="false" autocomplete="off" placeholder="찾기 (이름 · 주소 · 그룹)"/>
+                    <ul id="smList" tabindex="0"></ul>
+                    <div class="listbtns">
+                        <button type="button" id="smAdd" title="Insert">+ 추가</button>
+                        <button type="button" id="smDup">복제</button>
+                        <button type="button" id="smDel" title="Delete">삭제</button>
+                    </div>
+                </div>
+                <div class="right" id="smForm">
+                    <label for="smName">이름</label>
+                    <input id="smName" spellcheck="false" autocomplete="off" title="F2"/>
+                    <label for="smGroup">그룹</label>
+                    <input id="smGroup" list="sessGroups" spellcheck="false" autocomplete="off" placeholder="비우면 그룹 없음"/>
+                    <label for="smHost">Host</label>
+                    <input id="smHost" spellcheck="false" autocomplete="off" placeholder="주소, ssh config 이름, cmd · wsl"/>
+                    <label for="smPort">Port</label>
+                    <input id="smPort" inputmode="numeric" class="portno"/>
+                    <label for="smLogin">Login</label>
+                    <input id="smLogin" spellcheck="false" autocomplete="off"/>
+                    <label for="smPass">Pass</label>
+                    <input id="smPass" type="password" autocomplete="off"/>
+                    <label class="check wide"><input type="checkbox" id="smSavePass"/> 비밀번호 저장 (Windows 사용자 계정으로 암호화)</label>
+                    <label for="smCode">Code</label>
+                    <select id="smCode">
+                        <option value="UTF-8">UTF-8</option>
+                        <option value="EUC-KR">EUC-KR (CP949)</option>
+                    </select>
+                    <div class="error wide" id="smError"></div>
+                </div>
+            </div>
+            <div class="buttons">
+                <button type="button" id="smGroupOpen" title="이 그룹의 세션을 모두 새 탭으로 엽니다">그룹 전체 열기</button>
+                <button type="button" id="smOpen" title="Enter (목록)">접속</button>
+                <button type="button" id="smClose">닫기</button>
             </div>
         </div>
     </div>
