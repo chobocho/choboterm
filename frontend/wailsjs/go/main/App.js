@@ -26,6 +26,10 @@ export function DebugLog(arg1) {
   return window['go']['main']['App']['DebugLog'](arg1);
 }
 
+export function DeleteSession(arg1) {
+  return window['go']['main']['App']['DeleteSession'](arg1);
+}
+
 export function Disconnect(arg1) {
   return window['go']['main']['App']['Disconnect'](arg1);
 }
@@ -110,6 +114,10 @@ export function GetSSHConfigHosts() {
   return window['go']['main']['App']['GetSSHConfigHosts']();
 }
 
+export function GetSessions() {
+  return window['go']['main']['App']['GetSessions']();
+}
+
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
@@ -128,6 +136,10 @@ export function LookupSSH(arg1) {
 
 export function Resize(arg1, arg2, arg3) {
   return window['go']['main']['App']['Resize'](arg1, arg2, arg3);
+}
+
+export function SaveSession(arg1, arg2) {
+  return window['go']['main']['App']['SaveSession'](arg1, arg2);
 }
 
 export function SaveSettings(arg1) {

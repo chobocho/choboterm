@@ -14,6 +14,8 @@ export function DebugEnabled():Promise<boolean>;
 
 export function DebugLog(arg1:string):Promise<void>;
 
+export function DeleteSession(arg1:string):Promise<void>;
+
 export function Disconnect(arg1:number):Promise<void>;
 
 export function FileCancel(arg1:number):Promise<void>;
@@ -56,6 +58,8 @@ export function GetLocalShells():Promise<Array<main.LocalShell>>;
 
 export function GetSSHConfigHosts():Promise<Array<main.SSHConfigHost>>;
 
+export function GetSessions():Promise<Array<main.SavedSession>>;
+
 export function GetSettings():Promise<main.Settings>;
 
 export function GetVersion():Promise<string>;
@@ -65,6 +69,8 @@ export function LogPath(arg1:number):Promise<string>;
 export function LookupSSH(arg1:string):Promise<main.SSHTarget>;
 
 export function Resize(arg1:number,arg2:number,arg3:number):Promise<void>;
+
+export function SaveSession(arg1:main.SavedSession,arg2:boolean):Promise<main.SavedSession>;
 
 export function SaveSettings(arg1:main.Settings):Promise<void>;
 

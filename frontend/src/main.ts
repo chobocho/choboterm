@@ -21,7 +21,7 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, GetHistory, GetLocalShells, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    CloseTab, Connect, Disconnect, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -98,6 +98,7 @@ interface DialogState {
     error: string;
     connecting: boolean;
     resolved: string; // Host text whose ~/.ssh/config values were already filled in
+    session?: main.SavedSession; // the saved session picked from the list
 }
 
 const tabs = new Map<number, Tab>();
@@ -1114,13 +1115,21 @@ const hostDrop = $<HTMLButtonElement>('hostDrop');
 const hostList = $<HTMLUListElement>('hostList');
 const hostTip = $<HTMLDivElement>('hostTip');
 
-type ListEntry = Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'> & {fromConfig?: boolean; label?: string};
+type ListEntry = Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'> & {
+    fromConfig?: boolean;
+    label?: string;
+    session?: main.SavedSession;
+};
 
 let history: main.HostEntry[] = [];
+let sessions: main.SavedSession[] = [];
 let configHosts: main.SSHConfigHost[] = [];
 let localShells: main.LocalShell[] = [];
-let entries: ListEntry[] = []; // history, then ~/.ssh/config names not in it
+let entries: ListEntry[] = []; // saved sessions, history, then ~/.ssh/config names and local shells not in it
+let visible: ListEntry[] = []; // entries matching what is typed in the Host field
+let filter = '';
 let activeIndex = -1;
+let chosen: main.SavedSession | undefined; // saved session the fields came from
 let resolved = '';
 
 function updateProto() {
@@ -1153,10 +1162,14 @@ async function openDialog(t?: Tab | null, from?: Tab) {
     cancelRetry(tab);
 
     history = (await GetHistory()) ?? [];
+    sessions = (await GetSessions()) ?? [];
     configHosts = (await GetSSHConfigHosts()) ?? [];
     localShells = (await GetLocalShells()) ?? [];
     const seen = new Set(history.map(h => h.host));
-    entries = [...history, ...configHosts.filter(c => !seen.has(c.host)).map(c => ({
+    const saved = new Set(sessions.map(s => `${s.host}:${s.port}`));
+    entries = [...sessions.map(s => ({
+        host: s.host, port: s.port, login: s.login, encoding: s.encoding, pass: s.pass, session: s,
+    })), ...history.filter(h => !saved.has(`${h.host}:${h.port}`)), ...configHosts.filter(c => !seen.has(c.host)).map(c => ({
         host: c.host, port: c.port, login: c.login, encoding: 'UTF-8', pass: '', fromConfig: true,
     })), ...localShells.filter(s => !seen.has(s.name)).map(s => ({
         host: s.name, port: 0, login: '', encoding: 'UTF-8', pass: '', label: s.label,
@@ -1171,7 +1184,7 @@ async function openDialog(t?: Tab | null, from?: Tab) {
     }
     tab.dialog = {
         host: host.value, port: port.value, login: login.value, pass: pass.value,
-        encoding: encoding.value, error: '', connecting: false, resolved,
+        encoding: encoding.value, error: '', connecting: false, resolved, session: chosen,
     };
     if (active === tab) {
         loadDialog(tab);
@@ -1192,6 +1205,7 @@ function saveDialog(t: Tab) {
     d.encoding = encoding.value;
     d.error = error.textContent ?? '';
     d.resolved = resolved;
+    d.session = chosen;
     hideList();
 }
 
@@ -1203,6 +1217,7 @@ function loadDialog(t: Tab) {
     pass.value = d.pass;
     encoding.value = d.encoding;
     resolved = d.resolved;
+    chosen = d.session;
     error.textContent = d.error;
     paintConnecting(d);
     updateProto();
@@ -1233,7 +1248,8 @@ function cancelDialog() {
     if (active?.dialog && !active.dialog.connecting) dismissDialog(active, true);
 }
 
-function applyEntry(e: Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'>) {
+function applyEntry(e: ListEntry) {
+    chosen = e.session;
     host.value = e.host;
     if (e.port > 0) port.value = String(e.port); // a local shell (port 0) keeps the port for later
     login.value = e.login;
@@ -1304,23 +1320,54 @@ async function refreshTip() {
     if (seq === tipSeq && document.activeElement === host) showTip(r);
 }
 
-// Fills the remembered (Telnet) password for the host/port currently typed in.
+// Fills the remembered password for the host/port currently typed in:
+// the picked session's, another session's for that server, or the history's (Telnet).
 function fillSavedPass() {
-    const e = history.find(h => h.host === host.value.trim() && h.port === Number(port.value));
-    pass.value = e?.pass ?? '';
+    const h = host.value.trim(), p = Number(port.value);
+    const same = (e: {host: string; port: number}) => e.host === h && e.port === p;
+    if (chosen && !same(chosen)) chosen = undefined;
+    pass.value = (chosen ?? sessions.find(s => same(s) && s.pass) ?? history.find(same))?.pass ?? '';
+}
+
+/** Entries that contain every word typed in the Host field (name, address, group or login). */
+function matching(): ListEntry[] {
+    const words = filter.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return entries;
+    return entries.filter(e => {
+        const text = [e.host, e.login, e.label, e.session?.name, e.session?.group].join(' ').toLowerCase();
+        return words.every(w => text.includes(w));
+    });
+}
+
+/** The heading an entry goes under; only saved sessions get headings. */
+function section(e: ListEntry): string {
+    if (e.session) return '★ ' + (e.session.group || '저장된 세션');
+    return sessions.length > 0 ? '최근 · ssh config · 로컬 셸' : '';
 }
 
 function showList() {
     hostList.innerHTML = '';
-    if (entries.length === 0) return;
+    visible = matching();
+    if (visible.length === 0) return hideList();
     hideTip();
-    entries.forEach((e, i) => {
+    let head = '';
+    visible.forEach((e, i) => {
+        const sec = section(e);
+        if (sec !== head) {
+            head = sec;
+            const h = document.createElement('li');
+            h.className = 'head';
+            h.textContent = sec;
+            h.addEventListener('mousedown', ev => ev.preventDefault());
+            hostList.appendChild(h);
+        }
         const li = document.createElement('li');
-        li.textContent = e.host;
+        li.textContent = e.session?.name ?? e.host;
         const meta = document.createElement('span');
         meta.className = 'meta';
+        const where = e.session && e.session.name !== e.host ? `${e.host} · ` : '';
         meta.textContent = isLocal(e.host) ? `로컬 셸${e.label ? ' · ' + e.label : ''}` :
-            `${e.port}${e.login ? ' · ' + e.login : ''}${e.fromConfig ? ' · ssh config' : ''}`;
+            `${where}${e.port}${e.login ? ' · ' + e.login : ''}${e.fromConfig ? ' · ssh config' : ''}`;
         li.appendChild(meta);
         li.addEventListener('mousedown', ev => {
             ev.preventDefault();
@@ -1328,7 +1375,10 @@ function showList() {
             hideList();
             focusAfterHost();
         });
-        if (i === activeIndex) li.className = 'active';
+        if (i === activeIndex) {
+            li.className = 'active';
+            requestAnimationFrame(() => li.scrollIntoView({block: 'nearest'}));
+        }
         hostList.appendChild(li);
     });
     hostList.hidden = false;
@@ -1337,6 +1387,7 @@ function showList() {
 function hideList() {
     hostList.hidden = true;
     activeIndex = -1;
+    filter = '';
 }
 
 hostDrop.addEventListener('click', () => {
@@ -1354,8 +1405,14 @@ host.addEventListener('blur', () => {
 });
 host.addEventListener('focus', () => refreshTip());
 host.addEventListener('input', () => {
+    chosen = undefined;
     updateProto(); // "cmd", "wsl"... are local shells
-    refreshTip();
+    // Typing narrows the list down; with nothing typed the tooltip explains the field.
+    filter = host.value.trim();
+    activeIndex = -1;
+    if (filter) showList();
+    else hideList();
+    if (hostList.hidden) refreshTip();
 });
 host.addEventListener('change', () => {
     fillSavedPass();
@@ -1365,10 +1422,11 @@ port.addEventListener('change', fillSavedPass);
 host.addEventListener('keydown', ev => {
     if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
         ev.preventDefault();
-        if (entries.length === 0) return;
+        if (hostList.hidden) visible = matching();
+        if (visible.length === 0) return;
         const step = ev.key === 'ArrowDown' ? 1 : -1;
-        activeIndex = (activeIndex + step + entries.length) % entries.length;
-        applyEntry(entries[activeIndex]);
+        activeIndex = (activeIndex + step + visible.length) % visible.length;
+        applyEntry(visible[activeIndex]);
         showList();
     } else if (ev.key === 'Enter' && !hostList.hidden) {
         ev.preventDefault();
