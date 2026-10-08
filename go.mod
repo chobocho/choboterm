@@ -7,6 +7,7 @@ require (
 	github.com/kevinburke/ssh_config v1.6.0
 	github.com/pkg/sftp v1.13.11
 	github.com/wailsapp/wails/v2 v2.11.0
+	github.com/yuin/gopher-lua v1.1.2
 	golang.org/x/crypto v0.57.0
 	golang.org/x/sys v0.48.0
 	golang.org/x/text v0.42.0

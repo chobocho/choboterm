@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -19,6 +20,11 @@ const AppVersion = "0.2.1"
 const appName = "choboterm V" + AppVersion
 
 func main() {
+	// The same exe runs Lua scripts in a child process (see luahost.go).
+	if len(os.Args) > 1 && os.Args[1] == "--lua-host" {
+		os.Exit(runLuaHost(os.Stdin, os.Stdout))
+	}
+
 	// Create an instance of the app structure
 	app := NewApp()
 

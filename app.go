@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -79,9 +80,11 @@ type tab struct {
 	zm    zmodemState
 	fwd   forwards
 	log   sessionLog
-	dead  error  // why keepalive closed sess (guarded by mu)
-	host  string // where sess is connected (guarded by mu)
-	port  int
+	// The Lua script running in the tab, if any (see luarun.go).
+	script atomic.Pointer[scriptRun]
+	dead   error  // why keepalive closed sess (guarded by mu)
+	host   string // where sess is connected (guarded by mu)
+	port   int
 }
 
 // testHooks lets tests run the app without a Wails window.
@@ -383,6 +386,9 @@ func (t *tab) pump(sess Session) {
 				debugf("tab %d emit %d bytes", t.id, len(pending))
 			}
 			t.log.write(pending)
+			if s := t.script.Load(); s != nil {
+				s.feed(pending)
+			}
 			t.emit("term:data", base64.StdEncoding.EncodeToString(pending))
 			pending = pending[:0]
 		}
@@ -436,6 +442,7 @@ func (t *tab) pump(sess Session) {
 				if current {
 					t.fileClose()
 					t.stopForwards()
+					t.stopScript("연결이 끊어져 스크립트를 멈췄습니다")
 					// A connection that broke (not one the server ended normally)
 					// is reported as lost, so the frontend can reconnect.
 					lost := err != nil && !errors.Is(err, io.EOF)
@@ -536,6 +543,7 @@ func (a *App) CloseTab(tabID int) {
 func (t *tab) disconnect() {
 	t.fileClose()
 	t.stopForwards()
+	t.stopScript("연결을 끊어 스크립트를 멈췄습니다")
 	t.mu.Lock()
 	sess := t.sess
 	t.sess = nil
