@@ -1461,6 +1461,9 @@ host.addEventListener('keydown', ev => {
         applyEntry(visible[activeIndex]);
         showList();
     } else if (ev.key === 'Enter' && !hostList.hidden) {
+        // Nothing picked with the arrows: the list only opened because of typing,
+        // so Enter connects to what was typed, as it does without the list.
+        if (activeIndex < 0) return hideList();
         ev.preventDefault();
         hideList();
         focusAfterHost();
