@@ -52,7 +52,8 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := a.GetSettings()
-	if got.FontSize != 15 || got.KeepAlive != 60 || !got.AutoReconnect || !got.PasteNoConfirm || got.Macros == nil {
+	if got.FontSize != 15 || got.KeepAlive != 60 || !got.AutoReconnect || !got.PasteNoConfirm || got.Macros == nil ||
+		got.Theme != "choboterm" || got.CursorStyle != "block" || !got.CursorBlink || got.Scrollback != 5000 {
 		t.Fatalf("partial file: %+v", got)
 	}
 

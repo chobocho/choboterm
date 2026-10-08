@@ -248,6 +248,10 @@ export namespace main {
 	    fontSize: number;
 	    fontUtf8: string;
 	    fontEucKr: string;
+	    theme: string;
+	    cursorStyle: string;
+	    cursorBlink: boolean;
+	    scrollback: number;
 	    pasteNoConfirm: boolean;
 	    keepAlive: number;
 	    autoReconnect: boolean;
@@ -266,6 +270,10 @@ export namespace main {
 	        this.fontSize = source["fontSize"];
 	        this.fontUtf8 = source["fontUtf8"];
 	        this.fontEucKr = source["fontEucKr"];
+	        this.theme = source["theme"];
+	        this.cursorStyle = source["cursorStyle"];
+	        this.cursorBlink = source["cursorBlink"];
+	        this.scrollback = source["scrollback"];
 	        this.pasteNoConfirm = source["pasteNoConfirm"];
 	        this.keepAlive = source["keepAlive"];
 	        this.autoReconnect = source["autoReconnect"];

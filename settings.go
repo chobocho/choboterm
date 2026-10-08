@@ -14,6 +14,13 @@ type Settings struct {
 	// FontUTF8 and FontEUCKR are the terminal font families for each encoding.
 	FontUTF8  string `json:"fontUtf8"`
 	FontEUCKR string `json:"fontEucKr"`
+	// Theme is the terminal color scheme (names in frontend/src/themes.ts).
+	Theme string `json:"theme"`
+	// CursorStyle is "block", "underline" or "bar"; CursorBlink makes it blink.
+	CursorStyle string `json:"cursorStyle"`
+	CursorBlink bool   `json:"cursorBlink"`
+	// Scrollback is how many lines each terminal keeps above the screen.
+	Scrollback int `json:"scrollback"`
 	// PasteNoConfirm skips the confirmation before pasting several lines.
 	PasteNoConfirm bool `json:"pasteNoConfirm"`
 	// KeepAlive is the keepalive interval in seconds for SSH and Telnet (0 = off).
@@ -56,7 +63,11 @@ func (w WindowState) valid() bool {
 }
 
 func defaultSettings() Settings {
-	return Settings{FontSize: 15, FontUTF8: "D2Coding", FontEUCKR: "GulimChe", KeepAlive: 60, AutoReconnect: true, Macros: []Macro{}}
+	return Settings{
+		FontSize: 15, FontUTF8: "D2Coding", FontEUCKR: "GulimChe",
+		Theme: "choboterm", CursorStyle: "block", CursorBlink: true, Scrollback: 5000,
+		KeepAlive: 60, AutoReconnect: true, Macros: []Macro{},
+	}
 }
 
 var settingsMu sync.Mutex

@@ -152,6 +152,18 @@
                 <label class="check"><input type="checkbox" id="pPaste"/> 여러 줄을 붙여넣기 전에 확인</label>
             </fieldset>
             <fieldset>
+                <legend>색 · 커서</legend>
+                <label class="row">색 테마 <select id="pTheme"></select></label>
+                <div class="themePreview" id="pThemePreview"></div>
+                <label class="row">커서 <select id="pCursor">
+                    <option value="block">블록 █</option>
+                    <option value="underline">밑줄 _</option>
+                    <option value="bar">세로선 |</option>
+                </select></label>
+                <label class="check"><input type="checkbox" id="pBlink"/> 커서 깜빡임</label>
+                <label class="row">스크롤백 <input id="pScrollback" inputmode="numeric"/> <span class="hint">줄, 1000~100000 (탭마다 위로 남겨 두는 출력)</span></label>
+            </fieldset>
+            <fieldset>
                 <legend>연결</legend>
                 <label class="row">연결 유지 간격 <input id="pKeepAlive" inputmode="numeric"/> <span class="hint">초, 0 = 끄기 (새 연결부터 적용)</span></label>
                 <label class="check"><input type="checkbox" id="pReconnect"/> 연결이 끊기면 자동으로 다시 연결</label>

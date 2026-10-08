@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-08 — 색 테마 · 커서 · 스크롤백 설정</h2>
+<ul>
+  <li>설정 창에 "색 · 커서" 절 추가: 색 테마 10종(기본, Campbell, PuTTY, Tango Dark, One Half Dark, Dracula, Gruvbox Dark, Solarized Dark/Light, One Half Light), 미리 보기(프롬프트·ls 예시와 16색 견본), 커서 모양(블록/밑줄/세로선)·깜빡임, 스크롤백 줄 수(1000~100000)</li>
+  <li>새 파일 frontend/src/themes.ts. 확인을 누르면 모든 탭에 바로 적용, 터미널 주변 여백도 테마 배경색(--term-bg)으로 맞춤</li>
+  <li>Settings에 theme / cursorStyle / cursorBlink / scrollback 추가(기본: choboterm, block, 깜빡임, 5000). 예전 settings.json은 기본값 유지 — 테스트에 확인 추가</li>
+  <li>설정 창이 낮은 창에서 잘리던 문제: 너비 520px, 본문 스크롤, 라벨 줄바꿈 방지</li>
+  <li>go test(Settings), tsc, 프런트 빌드 통과. Edge(Playwright)로 Solarized Light·세로선 커서 적용 확인</li>
+</ul>
+
 <h2>2026-10-08 — 분할 창 추가</h2>
 <ul>
   <li>탭 하나를 여러 창으로 나눔: Ctrl+Shift+R(오른쪽) / Ctrl+Shift+B(아래), 탭 우클릭 메뉴에도 추가. 몇 번이든 중첩 분할 가능</li>

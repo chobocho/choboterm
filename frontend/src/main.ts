@@ -16,6 +16,7 @@ import {askOpen} from './dialog';
 import {viewerOpen} from './viewer';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
+import {themeByName} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
@@ -183,10 +184,8 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     const term = new Terminal({
         fontFamily: fontFamily(settings.fontUtf8, false),
         fontSize: settings.fontSize,
-        cursorBlink: true,
-        scrollback: 5000,
         allowProposedApi: true,
-        theme: {background: '#000000'},
+        ...lookOptions(),
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -433,6 +432,29 @@ const ARROWS: Record<string, [number, number]> = {ArrowLeft: [-1, 0], ArrowRight
 function isPaneKey(ev: KeyboardEvent): boolean {
     return ev.altKey && !ev.ctrlKey && !ev.shiftKey && ev.key in ARROWS &&
         !!active && panesOf(active.group).length > 1;
+}
+
+// ---- Colors and cursor ----
+
+type CursorStyle = 'block' | 'underline' | 'bar';
+
+/** Terminal options set in the Settings window, besides the font. */
+function lookOptions() {
+    const style = (['block', 'underline', 'bar'] as const).find(s => s === settings.cursorStyle) ?? 'block';
+    return {
+        theme: themeByName(settings.theme).theme,
+        cursorStyle: style as CursorStyle,
+        cursorBlink: settings.cursorBlink,
+        scrollback: settings.scrollback > 0 ? settings.scrollback : 5000,
+    };
+}
+
+/** Applies the settings to every tab (after the Settings window's OK). */
+function applySettings() {
+    const look = lookOptions();
+    document.documentElement.style.setProperty('--term-bg', look.theme.background ?? '#000');
+    for (const t of tabs.values()) Object.assign(t.term.options, look);
+    applyFontSize();
 }
 
 // ---- Font size ----
@@ -1205,7 +1227,7 @@ form.addEventListener('keydown', ev => {
 // ---- Settings window ----
 
 function showPrefs() {
-    if (!modalOpen()) openPrefs(applyFontSize, focusActive);
+    if (!modalOpen()) openPrefs(applySettings, focusActive);
 }
 
 $<HTMLButtonElement>('prefsBtn').addEventListener('click', showPrefs);
@@ -1367,6 +1389,7 @@ setActiveTabProvider(() => active?.id ?? 0);
 Promise.all([GetVersion(), loadSettings()]).then(([v]) => {
     version = v;
     appName = `choboterm V${v}`;
+    applySettings();
     const first = createTab();
     activate(first);
     openDialog(first);

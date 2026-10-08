@@ -1,7 +1,8 @@
 html, body {
     margin: 0;
     height: 100%;
-    background: #000;
+    /* The terminal theme's background, so the margin around the terminals matches. */
+    background: var(--term-bg, #000);
     overflow: hidden;
 }
 
@@ -1012,15 +1013,21 @@ body.resizing-col #terms .term {
 /* ---- Settings window ---- */
 
 .dialog.prefs {
-    width: min(460px, calc(100vw - 32px));
+    display: flex;
+    flex-direction: column;
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100vh - 24px);
     outline: none;
 }
 
+/* Scrolls when the window is too short for all the settings. */
 .prefs .body {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .prefs fieldset {
@@ -1041,6 +1048,16 @@ body.resizing-col #terms .term {
     display: flex;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
+}
+
+.prefs label.row select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.prefs label.row .hint {
+    white-space: normal;
 }
 
 .prefs label.row input {
@@ -1061,6 +1078,30 @@ body.resizing-col #terms .term {
 .prefs .dirrow button {
     flex: 0 0 auto;
     white-space: nowrap;
+}
+
+.prefs label.row input#pScrollback {
+    width: 70px;
+}
+
+/* A few lines in the chosen theme's colors, then its 16 ANSI colors. */
+.prefs .themePreview {
+    padding: 6px 8px;
+    border: 1px solid #c8c8c8;
+    font: 13px Consolas, "D2Coding", monospace;
+    line-height: 1.4;
+    white-space: pre;
+}
+
+.prefs .themePreview .swatches {
+    display: flex;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.prefs .themePreview .swatches span {
+    flex: 1 1 0;
+    height: 12px;
 }
 
 .prefs .hint {
