@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261008_124635.html">history_20261008_124635.html</a></p>
 
+<h2>2026-10-08 — 로컬 셸일 때 접속 창 입력칸 비활성화</h2>
+<ul>
+  <li>Host가 cmd · powershell · pwsh · wsl이면 Port / Login / Pass / Code를 비활성화(회색). 서버 이름으로 바꾸면 다시 활성화. 입력 중, ▼ 목록 선택, 탭 전환 모두 updateProto에서 처리</li>
+  <li>목록에서 로컬 셸을 고르면 Pass 대신 Connect 버튼으로 포커스 이동(focusAfterHost)</li>
+  <li>Edge(Playwright)로 cmd → 비활성, pusan → 활성, 목록에서 powershell 선택 후 Enter로 접속 확인. README 갱신</li>
+</ul>
+
 <h2>2026-10-08 — 소개 페이지(docs/index.html)에 새 기능 반영</h2>
 <ul>
   <li>기능 카드 추가·수정: 탭 · 분할 창, 로컬 셸(cmd · powershell · wsl), SSH 키 · 에이전트 · OTP, 색 테마</li>

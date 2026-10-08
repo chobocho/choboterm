@@ -30,7 +30,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
     - Host 칸에 포커스를 두면 툴팁으로 입력 예와 등록된 이름을 보여 주고, config 이름을 입력하면 실제 접속할 `user@주소:포트`를 보여 줍니다. config의 이름들은 ▼ 목록에도 `ssh config`로 표시됩니다.
     - `IdentityFile`의 키를 먼저 시도하고, 안 되면 기본 키와 비밀번호를 씁니다. `Host *.corp` 같은 패턴 항목도 적용합니다. `ProxyJump`, `Match`는 아직 지원하지 않습니다.
   - `~/.ssh/known_hosts`로 호스트 키 확인. 처음 접속하는 호스트는 지문을 보여 주고 신뢰할지 묻고, 키가 바뀐 호스트는 차단합니다.
-- **로컬 셸 (cmd / PowerShell / WSL)**: 접속 창의 Host에 `cmd`, `powershell`, `pwsh`, `wsl`(또는 `wsl -d Ubuntu`처럼 인자 포함)을 쓰면 이 PC의 셸을 탭에서 엽니다. ▼ 목록에도 설치된 셸이 `로컬 셸`로 나옵니다.
+- **로컬 셸 (cmd / PowerShell / WSL)**: 접속 창의 Host에 `cmd`, `powershell`, `pwsh`, `wsl`(또는 `wsl -d Ubuntu`처럼 인자 포함)을 쓰면 이 PC의 셸을 탭에서 엽니다. ▼ 목록에도 설치된 셸이 `로컬 셸`로 나옵니다. 이때 Port / Login / Pass / Code 칸은 쓰지 않으므로 비활성화됩니다.
   - Windows의 의사 콘솔(ConPTY)을 쓰므로 Windows 10 1809 이상이 필요합니다. 사용자 폴더에서 시작하며 항상 UTF-8입니다.
   - 분할 창, 매크로, 세션 로그, 스크롤백 검색이 그대로 되고, WSL에서는 `sz` / `rz`(Zmodem)로 파일을 주고받을 수 있습니다. `exit`로 끝나면 `Enter`로 다시 엽니다.
 - **Telnet**: NAWS / TTYPE / ECHO / SGA / BINARY 협상, `login:` / `password:` 프롬프트 자동 로그인

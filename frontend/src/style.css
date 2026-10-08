@@ -480,6 +480,14 @@ body.resizing-col #terms .term {
     border-color: #0078d7;
 }
 
+/* E.g. Port / Login / Pass for a local shell. */
+.body input:disabled,
+.body select:disabled {
+    border-color: #c4c4c4;
+    background: #e8e8e8;
+    color: #8a8a8a;
+}
+
 .combo {
     position: relative;
     display: flex;

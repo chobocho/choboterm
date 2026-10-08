@@ -957,7 +957,10 @@ let activeIndex = -1;
 let resolved = '';
 
 function updateProto() {
-    if (isLocal(host.value)) {
+    // A local shell needs no port, login or password, and is always UTF-8.
+    const local = isLocal(host.value);
+    for (const el of [port, login, pass, encoding]) el.disabled = local;
+    if (local) {
         proto.textContent = '로컬 셸';
         return;
     }
@@ -1156,7 +1159,7 @@ function showList() {
             ev.preventDefault();
             applyEntry(e);
             hideList();
-            pass.focus();
+            focusAfterHost();
         });
         if (i === activeIndex) li.className = 'active';
         hostList.appendChild(li);
@@ -1203,9 +1206,14 @@ host.addEventListener('keydown', ev => {
     } else if (ev.key === 'Enter' && !hostList.hidden) {
         ev.preventDefault();
         hideList();
-        pass.focus();
+        focusAfterHost();
     }
 });
+
+/** After choosing a host: the password, or Connect for a local shell. */
+function focusAfterHost() {
+    (pass.disabled ? ok : pass).focus();
+}
 
 port.addEventListener('input', () => {
     port.value = port.value.replace(/\D/g, '');
