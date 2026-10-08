@@ -386,6 +386,48 @@ body.resizing-col #terms .term {
     color: #999;
 }
 
+/* An item that opens a submenu. */
+.menu li.sub {
+    position: relative;
+}
+
+.menu li.sub::after {
+    content: '▸';
+    position: absolute;
+    right: 8px;
+}
+
+/* Color themes: a sample of each, the current one checked. */
+.menu.themes {
+    z-index: 31;
+}
+
+.menu.themes li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 22px;
+}
+
+.menu.themes li.checked::before {
+    content: '✓';
+    position: absolute;
+    margin-left: -16px;
+}
+
+.menu.themes li.sep {
+    padding: 0;
+}
+
+.menu.themes .swatch {
+    flex: 0 0 auto;
+    width: 30px;
+    border: 1px solid #888;
+    font: 11px Consolas, monospace;
+    line-height: 16px;
+    text-align: center;
+}
+
 .menu li.sep {
     height: 1px;
     margin: 4px 0;

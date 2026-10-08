@@ -49,3 +49,38 @@ func TestHistoryRemembersEncryptedPassword(t *testing.T) {
 		t.Fatalf("password not removed: %+v", list[0])
 	}
 }
+
+func TestTabThemeSavedPerHost(t *testing.T) {
+	hist := filepath.Join(t.TempDir(), "hosts.json")
+	orig := historyFile
+	historyFile = func() (string, error) { return hist, nil }
+	defer func() { historyFile = orig }()
+
+	a := NewApp()
+	if ok, err := a.SetTabTheme(1, "dracula"); ok || err != nil {
+		t.Fatalf("never connected tab: %v %v", ok, err)
+	}
+	_ = addHistory(HostEntry{Host: "busan", Port: 22, Login: "me"}, nil)
+	_ = addHistory(HostEntry{Host: "seoul", Port: 22}, nil)
+	tb := a.getTab(1)
+	tb.host, tb.port = "busan", 22
+
+	if ok, err := a.SetTabTheme(1, "dracula"); !ok || err != nil {
+		t.Fatalf("set: %v %v", ok, err)
+	}
+	// Connecting again keeps it; other hosts are not touched.
+	_ = addHistory(HostEntry{Host: "busan", Port: 22, Login: "me"}, nil)
+	if got := a.TabTheme(1); got != "dracula" {
+		t.Fatalf("theme = %q", got)
+	}
+	for _, h := range loadHistory() {
+		if want := map[string]string{"busan": "dracula"}[h.Host]; h.Theme != want {
+			t.Fatalf("%s theme = %q", h.Host, h.Theme)
+		}
+	}
+	// "" goes back to the Settings theme.
+	_, _ = a.SetTabTheme(1, "")
+	if got := a.TabTheme(1); got != "" {
+		t.Fatalf("after reset: %q", got)
+	}
+}

@@ -29,6 +29,7 @@
     <li data-act="duplicate">복제 (새 탭으로 같은 서버 접속)</li>
     <li data-act="splitRight">오른쪽으로 분할 (Ctrl+Shift+\)</li>
     <li data-act="splitDown">아래로 분할 (Ctrl+Shift+-)</li>
+    <li data-act="theme" class="sub">색 테마 (이 서버)</li>
     <li data-act="files">파일 전송</li>
     <li data-act="forwards">포트 포워딩</li>
     <li data-act="log">로그 기록 시작</li>
@@ -37,6 +38,8 @@
     <li class="sep"></li>
     <li data-act="close">탭 닫기</li>
 </ul>
+
+<ul id="themeMenu" class="menu themes" hidden></ul>
 
 <div id="overlay" class="overlay" hidden>
     <form id="connect" class="dialog" autocomplete="off">

@@ -123,6 +123,7 @@ export namespace main {
 	    encoding: string;
 	    pass: string;
 	    forwards: Forward[];
+	    theme: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new HostEntry(source);
@@ -136,6 +137,7 @@ export namespace main {
 	        this.encoding = source["encoding"];
 	        this.pass = source["pass"];
 	        this.forwards = this.convertValues(source["forwards"], Forward);
+	        this.theme = source["theme"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

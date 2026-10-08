@@ -72,10 +72,14 @@ export function Send(arg1:number,arg2:string):Promise<void>;
 
 export function SetEncoding(arg1:number,arg2:string):Promise<string>;
 
+export function SetTabTheme(arg1:number,arg2:string):Promise<boolean>;
+
 export function ShowLogs(arg1:number):Promise<void>;
 
 export function StartLog(arg1:number):Promise<string>;
 
 export function StopLog(arg1:number):Promise<void>;
+
+export function TabTheme(arg1:number):Promise<string>;
 
 export function TextSaveAs(arg1:string,arg2:string,arg3:string):Promise<main.SaveResult>;

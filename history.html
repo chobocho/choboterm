@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261008_124635.html">history_20261008_124635.html</a></p>
 
+<h2>2026-10-08 — 서버별 색 테마</h2>
+<ul>
+  <li>탭 우클릭 메뉴에 "색 테마 (이 서버)" 하위 메뉴 추가(마우스를 올리거나 클릭하면 열림): 기본값(설정 따름) + 10가지 테마, 색 견본과 현재 선택 ✓ 표시</li>
+  <li>고른 테마는 접속 기록(hosts.json)의 그 호스트+포트 항목에 theme으로 저장. Go에서 탭의 실제 접속 대상(t.host/t.port)으로 찾으므로 ssh 명령형 입력·로컬 셸(포트 0)도 같은 키. 재접속·복제·분할·새 탭 접속 때 TabTheme으로 불러와 적용, 같은 서버의 다른 탭에도 즉시 반영. 접속한 적 없는 탭은 그 탭에만 적용</li>
+  <li>창마다 배경색을 따로 칠하고, 터미널 주변 여백은 지금 탭의 테마 배경을 따름(paintMargin). history_store에 historyEntry / updateHistoryEntry 공통 함수로 정리, addHistory가 theme 유지</li>
+  <li>테스트: TestTabThemeSavedPerHost. Edge(Playwright)로 busan 두 창 + seoul 탭에서 busan에만 Dracula 적용, 새 busan 탭도 Dracula 확인. README·도움말·소개 페이지 갱신</li>
+</ul>
+
 <h2>2026-10-08 — V0.2.0 릴리스</h2>
 <ul>
   <li>버전 0.1.8 → 0.2.0 (main.go, wails.json, README.md). 포함: 분할 창, 색 테마·커서·스크롤백, SSH 에이전트(OpenSSH·Pageant)·암호 걸린 키, OTP 등 keyboard-interactive 질문, 로컬 셸(cmd·PowerShell·WSL)</li>

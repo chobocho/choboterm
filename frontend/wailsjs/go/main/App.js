@@ -142,6 +142,10 @@ export function SetEncoding(arg1, arg2) {
   return window['go']['main']['App']['SetEncoding'](arg1, arg2);
 }
 
+export function SetTabTheme(arg1, arg2) {
+  return window['go']['main']['App']['SetTabTheme'](arg1, arg2);
+}
+
 export function ShowLogs(arg1) {
   return window['go']['main']['App']['ShowLogs'](arg1);
 }
@@ -152,6 +156,10 @@ export function StartLog(arg1) {
 
 export function StopLog(arg1) {
   return window['go']['main']['App']['StopLog'](arg1);
+}
+
+export function TabTheme(arg1) {
+  return window['go']['main']['App']['TabTheme'](arg1);
 }
 
 export function TextSaveAs(arg1, arg2, arg3) {

@@ -17,12 +17,12 @@ import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
-import {themeByName} from './themes';
+import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
     CloseTab, Connect, Disconnect, GetHistory, GetLocalShells, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
-    SetEncoding, ShowLogs, StartLog, StopLog,
+    SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
@@ -84,6 +84,8 @@ interface Tab {
     title?: string;
     // Drawn by the GPU (WebGL renderer) rather than the DOM renderer.
     gpu: boolean;
+    // Color theme chosen for this tab's server; undefined: the one in Settings.
+    theme?: string;
 }
 
 // Connect dialog contents saved per tab, so switching tabs keeps them.
@@ -457,11 +459,11 @@ function isPaneKey(ev: KeyboardEvent): boolean {
 
 type CursorStyle = 'block' | 'underline' | 'bar';
 
-/** Terminal options set in the Settings window, besides the font. */
-function lookOptions() {
+/** Terminal options set in the Settings window, besides the font; t's own theme if it has one. */
+function lookOptions(t?: Tab) {
     const style = (['block', 'underline', 'bar'] as const).find(s => s === settings.cursorStyle) ?? 'block';
     return {
-        theme: themeByName(settings.theme).theme,
+        theme: themeByName(t?.theme || settings.theme).theme,
         cursorStyle: style as CursorStyle,
         cursorBlink: settings.cursorBlink,
         scrollback: settings.scrollback > 0 ? settings.scrollback : 5000,
@@ -470,10 +472,46 @@ function lookOptions() {
 
 /** Applies the settings to every tab (after the Settings window's OK). */
 function applySettings() {
-    const look = lookOptions();
-    document.documentElement.style.setProperty('--term-bg', look.theme.background ?? '#000');
-    for (const t of tabs.values()) Object.assign(t.term.options, look);
+    for (const t of tabs.values()) applyLook(t);
+    paintMargin();
     applyFontSize();
+}
+
+function applyLook(t: Tab) {
+    const look = lookOptions(t);
+    Object.assign(t.term.options, look);
+    t.pane.style.background = look.theme.background ?? '';
+    if (t === active) paintMargin();
+}
+
+/** The margin around the terminals takes the active tab's background. */
+function paintMargin() {
+    const bg = lookOptions(active).theme.background ?? '#000';
+    document.documentElement.style.setProperty('--term-bg', bg);
+}
+
+/** Picks a color theme for tab t ("" = Settings) and remembers it for its server. */
+async function chooseTheme(t: Tab, name: string) {
+    t.theme = name || undefined;
+    applyLook(t);
+    const label = name ? themeByName(name).label : '기본값 (설정 따름)';
+    let saved = false;
+    try {
+        saved = await SetTabTheme(t.id, name);
+    } catch (e) {
+        notice(t, String(e));
+    }
+    if (!saved) return toast(`색 테마: ${label} (이 탭만)`);
+    // Other tabs on the same server follow.
+    for (const o of tabs.values()) {
+        if (o === t || !o.req) continue;
+        const theme = (await TabTheme(o.id)) || undefined;
+        if (theme !== o.theme) {
+            o.theme = theme;
+            applyLook(o);
+        }
+    }
+    toast(`색 테마: ${label} (${t.req?.host ?? '이 서버'}에 저장)`);
 }
 
 // ---- Font size ----
@@ -565,6 +603,7 @@ function activate(t: Tab) {
         t.el.classList.remove('activity');
         t.pane.classList.add('focused');
         t.el.scrollIntoView({block: 'nearest', inline: 'nearest'});
+        paintMargin();
         // Each tab keeps its own Connect dialog and file window.
         showFilesFor(t.id);
         switchSearch(t.search);
@@ -687,6 +726,9 @@ async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = false):
         t.term.write(`FTP ${req.host}:${req.port}\r\n\x1b[90mCtrl+Shift+F: 파일 전송 창 열기 · 탭을 닫으면 연결이 끊어집니다\x1b[0m\r\n`);
     } else {
         setState(t, 'on');
+        // The theme saved for this server, if any.
+        t.theme = (await TabTheme(t.id)) || undefined;
+        applyLook(t);
         // The screen was cleared after an automatic log start was announced.
         if (t.log && !keepScreen) notice(t, `로그 기록 중: ${t.log}`);
     }
@@ -872,6 +914,7 @@ function showMenu(t: Tab, x: number, y: number) {
     enable('log', !!t.log || t.state === 'on');
     menu.querySelector('[data-act="log"]')!.textContent = t.log ? '로그 기록 중지' : '로그 기록 시작';
     menu.querySelector('[data-act="close"]')!.textContent = panesOf(t.group).length > 1 ? '분할 창 닫기' : '탭 닫기';
+    hideThemeMenu();
     menu.hidden = false;
     const r = menu.getBoundingClientRect();
     menu.style.left = `${Math.min(x, window.innerWidth - r.width - 4)}px`;
@@ -881,13 +924,73 @@ function showMenu(t: Tab, x: number, y: number) {
 function hideMenu() {
     menu.hidden = true;
     menuTab = undefined;
+    hideThemeMenu();
 }
 
+// The "색 테마 ▸" submenu: Settings' theme, then every theme, the current one checked.
+const themeMenu = $<HTMLUListElement>('themeMenu');
+let themeMenuTab: Tab | undefined;
+
+function showThemeMenu(t: Tab, li: HTMLElement) {
+    themeMenuTab = t;
+    themeMenu.innerHTML = '';
+    const item = (name: string, label: string, bg: string, fg: string) => {
+        const el = document.createElement('li');
+        el.dataset.theme = name;
+        if ((t.theme ?? '') === name) el.classList.add('checked');
+        const sw = document.createElement('span');
+        sw.className = 'swatch';
+        sw.style.background = bg;
+        sw.style.color = fg;
+        sw.textContent = 'Aa';
+        el.append(sw, label);
+        themeMenu.appendChild(el);
+    };
+    const def = themeByName(settings.theme);
+    item('', `기본값 (설정: ${def.label})`, def.theme.background!, def.theme.foreground!);
+    const sep = document.createElement('li');
+    sep.className = 'sep';
+    themeMenu.appendChild(sep);
+    for (const th of THEMES) item(th.name, th.label, th.theme.background!, th.theme.foreground!);
+    themeMenu.hidden = false;
+    const r = li.getBoundingClientRect();
+    const m = themeMenu.getBoundingClientRect();
+    const right = r.right + m.width <= window.innerWidth;
+    themeMenu.style.left = `${right ? r.right - 2 : r.left - m.width + 2}px`;
+    themeMenu.style.top = `${Math.max(4, Math.min(r.top - 4, window.innerHeight - m.height - 4))}px`;
+}
+
+function hideThemeMenu() {
+    themeMenu.hidden = true;
+    themeMenuTab = undefined;
+}
+
+themeMenu.addEventListener('mousedown', ev => ev.stopPropagation());
+themeMenu.addEventListener('click', ev => {
+    const li = (ev.target as HTMLElement).closest('li');
+    const t = themeMenuTab;
+    if (!li || !t || li.classList.contains('sep')) return;
+    hideMenu();
+    chooseTheme(t, li.dataset.theme ?? '');
+    if (t === active) focusActive();
+});
+
 menu.addEventListener('mousedown', ev => ev.stopPropagation());
+// Pointing at "색 테마 ▸" opens its submenu; pointing at another item closes it.
+menu.addEventListener('mouseover', ev => {
+    const li = (ev.target as HTMLElement).closest('li');
+    if (!li || !menuTab || li.classList.contains('sep')) return;
+    if (li.dataset.act === 'theme') {
+        if (themeMenu.hidden) showThemeMenu(menuTab, li);
+    } else {
+        hideThemeMenu();
+    }
+});
 menu.addEventListener('click', ev => {
     const li = (ev.target as HTMLElement).closest('li');
     const t = menuTab;
     if (!li || !t || li.classList.contains('disabled') || li.classList.contains('sep')) return;
+    if (li.dataset.act === 'theme') return showThemeMenu(t, li);
     hideMenu();
     switch (li.dataset.act) {
         case 'reconnect':
