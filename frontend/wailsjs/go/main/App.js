@@ -150,12 +150,24 @@ export function Resize(arg1, arg2, arg3) {
   return window['go']['main']['App']['Resize'](arg1, arg2, arg3);
 }
 
+export function RunScript(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RunScript'](arg1, arg2, arg3);
+}
+
+export function RunScriptFile(arg1) {
+  return window['go']['main']['App']['RunScriptFile'](arg1);
+}
+
 export function SaveSession(arg1, arg2) {
   return window['go']['main']['App']['SaveSession'](arg1, arg2);
 }
 
 export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
+}
+
+export function ScriptScreen(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ScriptScreen'](arg1, arg2, arg3);
 }
 
 export function Send(arg1, arg2) {
@@ -174,12 +186,20 @@ export function ShowLogs(arg1) {
   return window['go']['main']['App']['ShowLogs'](arg1);
 }
 
+export function ShowScripts() {
+  return window['go']['main']['App']['ShowScripts']();
+}
+
 export function StartLog(arg1) {
   return window['go']['main']['App']['StartLog'](arg1);
 }
 
 export function StopLog(arg1) {
   return window['go']['main']['App']['StopLog'](arg1);
+}
+
+export function StopScript(arg1) {
+  return window['go']['main']['App']['StopScript'](arg1);
 }
 
 export function TabTheme(arg1) {

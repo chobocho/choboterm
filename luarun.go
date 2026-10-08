@@ -8,14 +8,19 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
@@ -54,6 +59,7 @@ type scriptRun struct {
 
 	mu      sync.Mutex
 	reason  string // why the app stopped it ("" = it ended by itself)
+	stopped bool   // stopped on purpose (by the user, or with the connection), not a failure
 	result  *luaMsg
 	screens map[int]chan string
 	killed  bool
@@ -135,7 +141,7 @@ func (s *scriptRun) feed(data []byte) {
 func (s *scriptRun) stop(reason string) {
 	s.mu.Lock()
 	if s.reason == "" && s.result == nil {
-		s.reason = reason
+		s.reason, s.stopped = reason, true
 	}
 	s.mu.Unlock()
 	select {
@@ -324,10 +330,11 @@ func (s *scriptRun) wait() {
 	if s.result != nil && s.reason != "" && msg == errScriptStopped.Error() {
 		msg = s.reason
 	}
+	stopped := s.stopped && msg == s.reason
 	s.mu.Unlock()
 	elapsed := time.Since(s.started)
 	debugf("tab %d script %q ended after %v: %q", s.t.id, s.name, elapsed, msg)
-	s.t.emit("script:end", elapsed.Milliseconds(), msg)
+	s.t.emit("script:end", elapsed.Milliseconds(), msg, stopped)
 }
 
 // sendScriptInput writes a script's send() to the session like typed input.
@@ -368,17 +375,72 @@ func (a *App) StopScript(tabID int) {
 	}
 }
 
-// ScriptRunning returns the tab's running script, or nil.
-func (a *App) ScriptRunning(tabID int) *ScriptStatus {
+// scriptsDir is the folder of .lua files offered by "Lua 스크립트 실행".
+func scriptsDir() string {
+	if home, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(home, "Documents", "choboterm", "scripts")
+	}
+	return "scripts"
+}
+
+// ensureScriptsDir creates the scripts folder, with the examples the first time.
+func ensureScriptsDir() (string, error) {
+	dir := scriptsDir()
+	if _, err := os.Stat(dir); err == nil {
+		return dir, nil
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", err
+	}
+	for name, src := range luaExamples {
+		_ = os.WriteFile(filepath.Join(dir, name), []byte(src), 0o600)
+	}
+	return dir, nil
+}
+
+// RunScriptFile asks for a .lua file and runs it in the tab. It returns the
+// script's name, or "" if the dialog was cancelled.
+func (a *App) RunScriptFile(tabID int) (string, error) {
 	t := a.findTab(tabID)
 	if t == nil {
-		return nil
+		return "", errors.New("탭이 없습니다")
 	}
-	s := t.script.Load()
-	if s == nil {
-		return nil
+	dir, _ := ensureScriptsDir()
+	p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:            "Lua 스크립트 실행",
+		DefaultDirectory: dir,
+		Filters:          []runtime.FileFilter{{DisplayName: "Lua 스크립트 (*.lua)", Pattern: "*.lua"}},
+	})
+	if err != nil || p == "" {
+		return "", err
 	}
-	return &ScriptStatus{Name: s.name, Started: s.started.UnixMilli()}
+	return runScriptFile(t, p)
+}
+
+func runScriptFile(t *tab, p string) (string, error) {
+	st, err := os.Stat(p)
+	if err != nil {
+		return "", err
+	}
+	if st.Size() > luaScriptMaxSrc {
+		return "", fmt.Errorf("스크립트가 너무 큽니다 (%dKB까지)", luaScriptMaxSrc>>10)
+	}
+	src, err := os.ReadFile(p)
+	if err != nil {
+		return "", err
+	}
+	name := strings.TrimSuffix(filepath.Base(p), filepath.Ext(p))
+	src = bytes.TrimPrefix(src, []byte{0xEF, 0xBB, 0xBF}) // the BOM Notepad may add
+	return name, t.startScript(name, string(src))
+}
+
+// ShowScripts opens the scripts folder in Explorer.
+func (a *App) ShowScripts() error {
+	dir, err := ensureScriptsDir()
+	if err != nil {
+		return err
+	}
+	return exec.Command("explorer", dir).Start()
 }
 
 // ScriptScreen is the frontend's answer to a "script:screen" event.

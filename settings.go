@@ -54,6 +54,7 @@ type Macro struct {
 	Name string `json:"name"`
 	Key  string `json:"key"`
 	Text string `json:"text"`
+	Kind string `json:"kind"` // "" = text sent as typed, "lua" = a Lua script run in the tab
 }
 
 // WindowState is the main window's restored bounds (screen pixels) and

@@ -33,6 +33,9 @@
     <li data-act="theme" class="sub">색 테마 (이 서버)</li>
     <li data-act="files">파일 전송</li>
     <li data-act="forwards">포트 포워딩</li>
+    <li data-act="script">Lua 스크립트 실행...</li>
+    <li data-act="stopScript">스크립트 중지</li>
+    <li data-act="scripts">스크립트 폴더 열기</li>
     <li data-act="log">로그 기록 시작</li>
     <li data-act="logs">로그 폴더 열기</li>
     <li data-act="saveSession">세션으로 저장</li>
@@ -222,9 +225,14 @@
                     <input id="mName" spellcheck="false" autocomplete="off"/>
                     <label for="mKey">단축키</label>
                     <select id="mKey"></select>
+                    <label for="mKind">종류</label>
+                    <select id="mKind">
+                        <option value="">텍스트 (입력한 것처럼 보내기)</option>
+                        <option value="lua">Lua 스크립트 (탭에서 실행)</option>
+                    </select>
                     <label for="mText">내용</label>
                     <textarea id="mText" spellcheck="false"></textarea>
-                    <div class="hint">줄바꿈 = Enter · \t Tab · \e Esc · \x03 Ctrl+C · \\ 역슬래시</div>
+                    <div class="hint" id="mHint">줄바꿈 = Enter · \t Tab · \e Esc · \x03 Ctrl+C · \\ 역슬래시</div>
                 </div>
             </div>
             <div class="buttons">

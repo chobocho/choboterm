@@ -64,7 +64,11 @@ func newScriptFixture(t *testing.T, mode string) *scriptFixture {
 		case "script:print":
 			f.prints = append(f.prints, data[1].(string))
 		case "script:end":
-			f.ends <- data[2].(string)
+			msg, stopped := data[2].(string), data[3].(bool)
+			if stopped != (msg == "스크립트를 멈췄습니다" || strings.HasPrefix(msg, "연결")) {
+				msg = fmt.Sprintf("stopped=%v for %q", stopped, msg)
+			}
+			f.ends <- msg
 		}
 	}
 	f.tab = f.app.getTab(1)

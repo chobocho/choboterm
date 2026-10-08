@@ -22,7 +22,7 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    CloseTab, Connect, Disconnect, RunScript, RunScriptFile, ScriptScreen, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -79,6 +79,11 @@ interface Tab {
     reconnecting?: boolean;
     // Session log file while logging is on.
     log?: string;
+    // The Lua script running in the tab, the badge showing its time, and the
+    // box with its print() output and how it ended (shown over the pane).
+    script?: {name: string; started: number};
+    run: HTMLSpanElement;
+    scriptBox?: {el: HTMLDivElement; head: HTMLSpanElement; body: HTMLDivElement; lines: string[]; timer: number};
     // Input waiting for the Send call in flight (see sendInput).
     outbox: string;
     sending: boolean;
@@ -253,11 +258,14 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     x.type = 'button';
     x.title = '탭 닫기 (Ctrl+Shift+W)';
     x.textContent = '✕';
-    el.append(dot, label, x);
+    const run = document.createElement('span');
+    run.className = 'run';
+    run.hidden = true;
+    el.append(dot, label, run, x);
     if (split) split.from.el.after(el);
     else group.chip.appendChild(el);
 
-    const t: Tab = {id, group, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false};
+    const t: Tab = {id, group, term, fit, search, pane, el, label, run, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false};
     tabs.set(id, t);
     chooseRenderer(t);
     applyLook(t);
@@ -1001,6 +1009,8 @@ function showMenu(t: Tab, x: number, y: number) {
     enable('disconnect', t.state !== 'idle');
     enable('saveSession', !!t.req);
     enable('log', !!t.log || t.state === 'on');
+    enable('script', t.state === 'on' && !t.script);
+    enable('stopScript', !!t.script);
     menu.querySelector('[data-act="log"]')!.textContent = t.log ? '로그 기록 중지' : '로그 기록 시작';
     menu.querySelector('[data-act="close"]')!.textContent = panesOf(t.group).length > 1 ? '분할 창 닫기' : '탭 닫기';
     hideThemeMenu();
@@ -1099,6 +1109,15 @@ menu.addEventListener('click', ev => {
             break;
         case 'forwards':
             showForwards(t);
+            break;
+        case 'script':
+            runScript(t, async () => void await RunScriptFile(t.id));
+            break;
+        case 'stopScript':
+            StopScript(t.id);
+            break;
+        case 'scripts':
+            ShowScripts().catch(e => toast(String(e)));
             break;
         case 'log':
             toggleLog(t);
@@ -1626,10 +1645,141 @@ async function sendInput(t: Tab, data: string) {
     }
 }
 
+// ---- Lua scripts ----
+
+/** Starts a script in t (start calls Go); errors such as "already running" become a toast. */
+async function runScript(t: Tab, start: () => Promise<void>) {
+    if (t.state !== 'on') return toast('연결되어 있지 않습니다');
+    try {
+        await start();
+    } catch (e) {
+        toast(String(e));
+    }
+}
+
+function elapsedText(ms: number): string {
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, sec = s % 60;
+    const mmss = `${m}:${String(sec).padStart(2, '0')}`;
+    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : mmss;
+}
+
+/** The ▶ badge on the tab and the box's heading: the running script's time so far. */
+function paintScript(t: Tab) {
+    const s = t.script;
+    t.run.hidden = !s;
+    if (!s) return;
+    const time = elapsedText(Date.now() - s.started);
+    t.run.textContent = `▶ ${time}`;
+    t.run.title = `Lua 스크립트 실행 중: ${s.name}\n탭 우클릭 → 스크립트 중지`;
+    if (t.scriptBox) t.scriptBox.head.textContent = `▶ ${s.name} · ${time}`;
+}
+
+/**
+ * The script box in the corner of the pane. Script messages go here, not
+ * into the terminal, where they would mix with the program's own screen.
+ */
+function scriptBox(t: Tab) {
+    if (t.scriptBox) return t.scriptBox;
+    const el = document.createElement('div');
+    el.className = 'script-box';
+    const top = document.createElement('div');
+    top.className = 'top';
+    const head = document.createElement('span');
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.textContent = '✕';
+    x.title = '닫기';
+    x.addEventListener('click', () => closeScriptBox(t));
+    top.append(head, x);
+    const body = document.createElement('div');
+    body.className = 'lines';
+    el.append(top, body);
+    el.addEventListener('mousedown', ev => ev.stopPropagation()); // keep the terminal's selection
+    t.pane.appendChild(el);
+    t.scriptBox = {el, head, body, lines: [], timer: 0};
+    return t.scriptBox;
+}
+
+function closeScriptBox(t: Tab) {
+    if (!t.scriptBox) return;
+    clearTimeout(t.scriptBox.timer);
+    t.scriptBox.el.remove();
+    t.scriptBox = undefined;
+    if (t === active) focusActive();
+}
+
+function scriptLine(t: Tab, text: string, cls = '') {
+    const box = scriptBox(t);
+    for (const line of text.split('\n')) {
+        const div = document.createElement('div');
+        if (cls) div.className = cls;
+        div.textContent = line;
+        box.body.appendChild(div);
+    }
+    while (box.body.childElementCount > 200) box.body.firstElementChild!.remove();
+    box.body.scrollTop = box.body.scrollHeight;
+}
+
+window.setInterval(() => {
+    for (const t of tabs.values()) if (t.script) paintScript(t);
+}, 1000);
+
+EventsOn('script:start', (id: number, s: {name: string; started: number}) => {
+    const t = tabs.get(id);
+    if (!t) return;
+    t.script = {name: s.name, started: s.started};
+    const box = scriptBox(t);
+    clearTimeout(box.timer);
+    box.el.className = 'script-box';
+    box.body.replaceChildren();
+    paintScript(t);
+});
+EventsOn('script:end', (id: number, ms: number, msg: string, stopped: boolean) => {
+    const t = tabs.get(id);
+    if (!t) return;
+    const name = t.script?.name ?? '스크립트';
+    t.script = undefined;
+    paintScript(t);
+    const time = elapsedText(ms);
+    const box = scriptBox(t);
+    if (stopped) {
+        box.el.className = 'script-box stopped';
+        box.head.textContent = `■ ${name} · 멈춤 · ${time}`;
+        scriptLine(t, msg);
+        box.timer = window.setTimeout(() => closeScriptBox(t), 5000);
+    } else if (msg) {
+        // Errors stay until closed: the line number is needed to fix the script.
+        box.el.className = 'script-box failed';
+        box.head.textContent = `✖ ${name} · ${time}`;
+        scriptLine(t, msg, 'err');
+    } else {
+        box.el.className = 'script-box done';
+        box.head.textContent = `✔ ${name} · 끝 · ${time}`;
+        box.timer = window.setTimeout(() => closeScriptBox(t), 5000);
+    }
+});
+EventsOn('script:print', (id: number, text: string) => {
+    const t = tabs.get(id);
+    if (t) scriptLine(t, text);
+});
+// screen(): the text the tab shows now.
+EventsOn('script:screen', (id: number, req: number) => {
+    const t = tabs.get(id);
+    if (!t) return;
+    const b = t.term.buffer.active;
+    const lines: string[] = [];
+    for (let y = b.viewportY; y < b.viewportY + t.term.rows; y++) {
+        lines.push(b.getLine(y)?.translateToString(true) ?? '');
+    }
+    ScriptScreen(id, req, lines.join('\n').replace(/\s+$/, ''));
+});
+
 // ---- Macros ----
 
 function sendMacro(t: Tab, m: main.Macro) {
     if (t.state !== 'on') return toast('연결되어 있지 않습니다');
+    if (m.kind === 'lua') return runScript(t, () => RunScript(t.id, m.name || '매크로', m.text));
     const text = expandMacro(m.text);
     if (text) sendInput(t, text);
 }

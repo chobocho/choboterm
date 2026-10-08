@@ -168,6 +168,7 @@ export namespace main {
 	    name: string;
 	    key: string;
 	    text: string;
+	    kind: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Macro(source);
@@ -178,6 +179,7 @@ export namespace main {
 	        this.name = source["name"];
 	        this.key = source["key"];
 	        this.text = source["text"];
+	        this.kind = source["kind"];
 	    }
 	}
 	export class SSHConfigHost {

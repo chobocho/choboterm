@@ -57,6 +57,9 @@ const panel = $<HTMLDivElement>('macros');
 const list = $<HTMLUListElement>('mList');
 const nameInput = $<HTMLInputElement>('mName');
 const keySelect = $<HTMLSelectElement>('mKey');
+const kindSelect = $<HTMLSelectElement>('mKind');
+const hint = $<HTMLDivElement>('mHint');
+const textHint = hint.textContent ?? '';
 const textInput = $<HTMLTextAreaElement>('mText');
 const form = $<HTMLDivElement>('mForm');
 const sendBtn = $<HTMLButtonElement>('mSend');
@@ -124,16 +127,25 @@ function select(i: number) {
     selected = Math.max(-1, Math.min(i, macros().length - 1));
     const m = macros()[selected];
     form.classList.toggle('disabled', !m);
-    for (const el of [nameInput, keySelect, textInput, sendBtn, delBtn]) el.disabled = !m;
+    for (const el of [nameInput, keySelect, kindSelect, textInput, sendBtn, delBtn]) el.disabled = !m;
     nameInput.value = m?.name ?? '';
+    kindSelect.value = m?.kind ?? '';
+    paintKind();
     textInput.value = m?.text ?? '';
     paintKeys(m);
     paintList();
     list.children[selected]?.scrollIntoView({block: 'nearest'});
 }
 
+/** The hint and the Send button follow the macro's kind. */
+function paintKind() {
+    const lua = kindSelect.value === 'lua';
+    hint.textContent = lua ? 'send("ls\\r") · expect("%$ ", 10) · sleep(500) · screen() · print(...) · Lua 5.1' : textHint;
+    sendBtn.textContent = lua ? '실행' : '보내기';
+}
+
 function add() {
-    macros().push(main.Macro.createFrom({name: '', key: '', text: ''}));
+    macros().push(main.Macro.createFrom({name: '', key: '', text: '', kind: ''}));
     save();
     select(macros().length - 1);
     nameInput.focus();
@@ -184,6 +196,14 @@ textInput.addEventListener('input', () => {
     if (!m) return;
     m.text = textInput.value;
     save();
+    paintList();
+});
+kindSelect.addEventListener('change', () => {
+    const m = macros()[selected];
+    if (!m) return;
+    m.kind = kindSelect.value;
+    save();
+    paintKind();
     paintList();
 });
 keySelect.addEventListener('change', () => {

@@ -76,9 +76,15 @@ export function LookupSSH(arg1:string):Promise<main.SSHTarget>;
 
 export function Resize(arg1:number,arg2:number,arg3:number):Promise<void>;
 
+export function RunScript(arg1:number,arg2:string,arg3:string):Promise<void>;
+
+export function RunScriptFile(arg1:number):Promise<string>;
+
 export function SaveSession(arg1:main.SavedSession,arg2:boolean):Promise<main.SavedSession>;
 
 export function SaveSettings(arg1:main.Settings):Promise<void>;
+
+export function ScriptScreen(arg1:number,arg2:number,arg3:string):Promise<void>;
 
 export function Send(arg1:number,arg2:string):Promise<void>;
 
@@ -88,9 +94,13 @@ export function SetTabTheme(arg1:number,arg2:string):Promise<boolean>;
 
 export function ShowLogs(arg1:number):Promise<void>;
 
+export function ShowScripts():Promise<void>;
+
 export function StartLog(arg1:number):Promise<string>;
 
 export function StopLog(arg1:number):Promise<void>;
+
+export function StopScript(arg1:number):Promise<void>;
 
 export function TabTheme(arg1:number):Promise<string>;
 
