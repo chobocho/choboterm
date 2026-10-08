@@ -171,10 +171,11 @@ function useWebgl(term: Terminal, onLost: () => void): WebglAddon | undefined {
 
 /**
  * Draws t with the GPU, except on a see-through background, where the GPU
- * renderer draws text without proper anti-aliasing and the browser draws it instead.
+ * renderer draws text without proper anti-aliasing and the browser draws it
+ * instead, unless the GPU was asked for there too (Settings).
  */
 function chooseRenderer(t: Tab) {
-    const want = !glassOn();
+    const want = !glassOn() || translucency.gpu;
     if (want && !t.webgl) {
         t.webgl = useWebgl(t.term, () => {
             t.webgl = undefined;
@@ -480,7 +481,7 @@ type CursorStyle = 'block' | 'underline' | 'bar';
 
 // The window is always see-through where the page is (main.go), so both kinds
 // are drawn here. What is shown now: the saved setting, or the one being tried in Settings.
-let translucency = {mode: 'off', opacity: 100};
+let translucency = {mode: 'off', opacity: 100, gpu: false};
 
 function seeThroughOn() {
     return translucency.mode !== 'off' && translucency.opacity < 100;
@@ -496,8 +497,8 @@ function glassOn() {
  * menus are outside them and stay opaque. "배경만" paints each pane's
  * background see-through.
  */
-function applyTranslucency(mode: string, opacity: number) {
-    translucency = {mode, opacity};
+function applyTranslucency(mode: string, opacity: number, gpu: boolean) {
+    translucency = {mode, opacity, gpu};
     const body = document.body.classList;
     body.toggle('seethrough', seeThroughOn());
     body.toggle('glass', glassOn());
@@ -508,7 +509,7 @@ function applyTranslucency(mode: string, opacity: number) {
         applyLook(t);
     }
     paintMargin();
-    dbg(`translucency ${mode} ${opacity}% seethrough=${seeThroughOn()} glass=${glassOn()}`);
+    dbg(`translucency ${mode} ${opacity}% gpu=${gpu} seethrough=${seeThroughOn()} glass=${glassOn()}`);
 }
 
 /** #rrggbb with the background opacity, for see-through panes. */
@@ -536,7 +537,7 @@ function lookOptions(t?: Tab) {
 
 /** Applies the settings to every tab (after the Settings window's OK). */
 function applySettings() {
-    applyTranslucency(settings.translucency || 'off', settings.opacity || 85);
+    applyTranslucency(settings.translucency || 'off', settings.opacity || 85, settings.glassGpu);
     applyFontSize();
 }
 

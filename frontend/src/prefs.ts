@@ -25,6 +25,7 @@ const trans = $<HTMLSelectElement>('pTrans');
 const opacity = $<HTMLInputElement>('pOpacity');
 const opacityVal = $<HTMLSpanElement>('pOpacityVal');
 const transHint = $<HTMLSpanElement>('pTransHint');
+const glassGpu = $<HTMLInputElement>('pGlassGpu');
 const keepAlive = $<HTMLInputElement>('pKeepAlive');
 const autoReconnect = $<HTMLInputElement>('pReconnect');
 const pasteConfirm = $<HTMLInputElement>('pPaste');
@@ -37,23 +38,26 @@ let onApply: (() => void) | undefined;
 let onClose: (() => void) | undefined;
 
 // Shows translucency while it is being chosen; set by main.ts.
-let showTranslucency: (mode: string, opacity: number) => void = () => undefined;
+let showTranslucency: (mode: string, opacity: number, gpu: boolean) => void = () => undefined;
 
-export function initTranslucencyPreview(fn: (mode: string, opacity: number) => void) {
+export function initTranslucencyPreview(fn: (mode: string, opacity: number, gpu: boolean) => void) {
     showTranslucency = fn;
 }
 
 function paintTranslucency() {
     opacityVal.textContent = `${opacity.value}%`;
     opacity.disabled = trans.value === 'off';
+    glassGpu.disabled = trans.value !== 'background';
     transHint.textContent =
         trans.value === 'window' ? '탭과 터미널이 글자까지 비칩니다. 설정·질문 창은 불투명합니다.' :
-            trans.value === 'background' ? '터미널 배경만 비치고 글자는 선명합니다.' : '';
-    showTranslucency(trans.value, Number(opacity.value));
+            trans.value === 'background' && glassGpu.checked ? '터미널 배경만 비칩니다. GPU로 그립니다.' :
+                trans.value === 'background' ? '터미널 배경만 비치고 글자는 선명합니다 (GPU 대신 브라우저가 그림).' : '';
+    showTranslucency(trans.value, Number(opacity.value), glassGpu.checked);
 }
 
 trans.addEventListener('change', paintTranslucency);
 opacity.addEventListener('input', paintTranslucency);
+glassGpu.addEventListener('change', paintTranslucency);
 
 export function prefsOpen() {
     return !overlay.hidden;
@@ -73,6 +77,7 @@ export function openPrefs(apply: () => void, close: () => void) {
     scrollback.value = String(settings.scrollback);
     trans.value = settings.translucency || 'off';
     opacity.value = String(settings.opacity || 85);
+    glassGpu.checked = settings.glassGpu;
     paintTranslucency();
     keepAlive.value = String(settings.keepAlive);
     autoReconnect.checked = settings.autoReconnect;
@@ -122,7 +127,7 @@ function closePrefs() {
     if (overlay.hidden) return;
     overlay.hidden = true;
     // Cancelled (or after OK, already saved): show what is saved.
-    showTranslucency(settings.translucency || 'off', settings.opacity || 85);
+    showTranslucency(settings.translucency || 'off', settings.opacity || 85, settings.glassGpu);
     const cb = onClose;
     onClose = onApply = undefined;
     cb?.();
@@ -156,6 +161,7 @@ function apply() {
         s.scrollback = lines;
         s.translucency = trans.value;
         s.opacity = Number(opacity.value);
+        s.glassGpu = glassGpu.checked;
         s.keepAlive = ka;
         s.autoReconnect = autoReconnect.checked;
         s.pasteNoConfirm = !pasteConfirm.checked;

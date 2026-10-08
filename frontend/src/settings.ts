@@ -13,6 +13,7 @@ export let settings: main.Settings = main.Settings.createFrom({
     scrollback: 5000,
     translucency: 'off',
     opacity: 85,
+    glassGpu: false,
     pasteNoConfirm: false,
     keepAlive: 60,
     autoReconnect: true,

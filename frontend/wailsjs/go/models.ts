@@ -270,6 +270,7 @@ export namespace main {
 	    scrollback: number;
 	    translucency: string;
 	    opacity: number;
+	    glassGpu: boolean;
 	    pasteNoConfirm: boolean;
 	    keepAlive: number;
 	    autoReconnect: boolean;
@@ -294,6 +295,7 @@ export namespace main {
 	        this.scrollback = source["scrollback"];
 	        this.translucency = source["translucency"];
 	        this.opacity = source["opacity"];
+	        this.glassGpu = source["glassGpu"];
 	        this.pasteNoConfirm = source["pasteNoConfirm"];
 	        this.keepAlive = source["keepAlive"];
 	        this.autoReconnect = source["autoReconnect"];

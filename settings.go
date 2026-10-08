@@ -26,6 +26,9 @@ type Settings struct {
 	// in percent.
 	Translucency string `json:"translucency"`
 	Opacity      int    `json:"opacity"`
+	// GlassGPU keeps the GPU renderer with "background" translucency, which
+	// otherwise draws with the browser for smoother text.
+	GlassGPU bool `json:"glassGpu"`
 	// PasteNoConfirm skips the confirmation before pasting several lines.
 	PasteNoConfirm bool `json:"pasteNoConfirm"`
 	// KeepAlive is the keepalive interval in seconds for SSH and Telnet (0 = off).
