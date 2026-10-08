@@ -38,21 +38,17 @@ let onClose: (() => void) | undefined;
 
 // Shows translucency while it is being chosen; set by main.ts.
 let showTranslucency: (mode: string, opacity: number) => void = () => undefined;
-// Whether the window was started see-through ("background" works only then).
-let glassStarted = false;
 
-export function initTranslucencyPreview(fn: (mode: string, opacity: number) => void, started: boolean) {
+export function initTranslucencyPreview(fn: (mode: string, opacity: number) => void) {
     showTranslucency = fn;
-    glassStarted = started;
 }
 
 function paintTranslucency() {
     opacityVal.textContent = `${opacity.value}%`;
     opacity.disabled = trans.value === 'off';
     transHint.textContent =
-        trans.value === 'window' ? '창 전체가 비칩니다. 바로 적용됩니다.' :
-            trans.value === 'background' && !glassStarted ? '배경만 반투명은 choboterm을 다시 시작하면 적용됩니다.' :
-                trans.value === 'background' ? '터미널 배경만 비치고 글자는 선명합니다. 불투명도는 바로 바뀝니다.' : '';
+        trans.value === 'window' ? '탭과 터미널이 글자까지 비칩니다. 설정·질문 창은 불투명합니다.' :
+            trans.value === 'background' ? '터미널 배경만 비치고 글자는 선명합니다.' : '';
     showTranslucency(trans.value, Number(opacity.value));
 }
 

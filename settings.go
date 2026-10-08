@@ -21,9 +21,9 @@ type Settings struct {
 	CursorBlink bool   `json:"cursorBlink"`
 	// Scrollback is how many lines each terminal keeps above the screen.
 	Scrollback int `json:"scrollback"`
-	// Translucency is "off", "window" (the whole window, text too) or
-	// "background" (only the terminal background, over a blurred desktop;
-	// takes effect at the next start). Opacity is in percent.
+	// Translucency is "off", "window" (tabs and terminals, text too; dialogs
+	// stay opaque) or "background" (only the terminal background). Opacity is
+	// in percent.
 	Translucency string `json:"translucency"`
 	Opacity      int    `json:"opacity"`
 	// PasteNoConfirm skips the confirmation before pasting several lines.

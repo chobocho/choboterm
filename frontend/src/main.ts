@@ -21,8 +21,8 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    BackgroundTranslucent, CloseTab, Connect, Disconnect, GetHistory, GetLocalShells, GetSSHConfigHosts, GetVersion,
-    LookupSSH, Resize, Send, SetEncoding, SetTabTheme, SetWindowOpacity, ShowLogs, StartLog, StopLog, TabTheme,
+    CloseTab, Connect, Disconnect, GetHistory, GetLocalShells, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
@@ -82,8 +82,8 @@ interface Tab {
     // The shell's folder as reported by OSC 7, and the window title it set.
     osc7?: string;
     title?: string;
-    // Drawn by the GPU (WebGL renderer) rather than the DOM renderer.
-    gpu: boolean;
+    // The GPU (WebGL) renderer, while it draws this tab instead of the DOM renderer.
+    webgl?: WebglAddon;
     // Color theme chosen for this tab's server; undefined: the one in Settings.
     theme?: string;
 }
@@ -146,11 +146,11 @@ const hardwareWebgl = (() => {
 
 // The default DOM renderer rebuilds a span per styled run on every frame, which makes
 // full-screen TUIs with many colors (sc-im, htop...) stutter; draw with WebGL instead.
-// Returns true if the GPU (WebGL) renderer is in use; onLost runs if it is dropped later.
-function useWebgl(term: Terminal, onLost: () => void): boolean {
+// Returns the WebGL renderer if it is in use; onLost runs if it is dropped later.
+function useWebgl(term: Terminal, onLost: () => void): WebglAddon | undefined {
     if (!hardwareWebgl) {
         dbg('webgl skipped: no hardware WebGL');
-        return false;
+        return undefined;
     }
     try {
         const webgl = new WebglAddon();
@@ -162,11 +162,29 @@ function useWebgl(term: Terminal, onLost: () => void): boolean {
         });
         term.loadAddon(webgl);
         dbg('webgl renderer loaded');
-        return true;
+        return webgl;
     } catch (e) {
         console.warn('WebGL renderer unavailable; using the DOM renderer', e);
-        return false;
+        return undefined;
     }
+}
+
+/**
+ * Draws t with the GPU, except on a see-through background, where the GPU
+ * renderer draws text without proper anti-aliasing and the browser draws it instead.
+ */
+function chooseRenderer(t: Tab) {
+    const want = !glassOn();
+    if (want && !t.webgl) {
+        t.webgl = useWebgl(t.term, () => {
+            t.webgl = undefined;
+            if (t === active) updateTitle();
+        });
+    } else if (!want && t.webgl) {
+        t.webgl.dispose();
+        t.webgl = undefined;
+    }
+    if (t === active) updateTitle();
 }
 
 /** Creates a tab, or with split a new pane next to split.from in its tab. */
@@ -195,8 +213,6 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
         fontFamily: fontFamily(settings.fontUtf8, false),
         fontSize: settings.fontSize,
         allowProposedApi: true,
-        // See-through backgrounds ("배경만" translucency) need this from the start.
-        allowTransparency: glass,
         ...lookOptions(),
     });
     const fit = new FitAddon();
@@ -214,12 +230,7 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     term.attachCustomKeyEventHandler(ev => !isAppShortcut(ev));
     dbg(`tab ${id} open`);
     term.open(pane);
-    // On a see-through background the GPU renderer draws text without proper
-    // anti-aliasing, so the browser draws it instead.
-    const gpu = !glass && useWebgl(term, () => {
-        t.gpu = false;
-        if (t === active) updateTitle();
-    });
+
     term.onData(d => dbg(`tab ${id} onData ${JSON.stringify(d)}`));
     term.onRender(({start, end}) => dbg(`tab ${id} render rows ${start}-${end}`));
 
@@ -241,8 +252,9 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     if (split) split.from.el.after(el);
     else group.chip.appendChild(el);
 
-    const t: Tab = {id, group, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false, gpu};
+    const t: Tab = {id, group, term, fit, search, pane, el, label, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false};
     tabs.set(id, t);
+    chooseRenderer(t);
     applyLook(t);
     paintGroup(group);
     // Window size, splits and dragged dividers all change the pane's size.
@@ -466,23 +478,37 @@ type CursorStyle = 'block' | 'underline' | 'bar';
 
 // ---- Translucency ----
 
-// The window was started see-through, so terminals can have see-through backgrounds.
-let glass = false;
-// What is shown now: the saved setting, or the one being tried in Settings.
+// The window is always see-through where the page is (main.go), so both kinds
+// are drawn here. What is shown now: the saved setting, or the one being tried in Settings.
 let translucency = {mode: 'off', opacity: 100};
 
-/** Terminal backgrounds are see-through ("배경만" and a see-through window). */
-function glassOn() {
-    return glass && translucency.mode === 'background';
+function seeThroughOn() {
+    return translucency.mode !== 'off' && translucency.opacity < 100;
 }
 
+/** "배경만": terminal backgrounds are see-through, text stays solid. */
+function glassOn() {
+    return seeThroughOn() && translucency.mode === 'background';
+}
+
+/**
+ * "창 전체" fades the tab bar and the terminals, text included; dialogs and
+ * menus are outside them and stay opaque. "배경만" paints each pane's
+ * background see-through.
+ */
 function applyTranslucency(mode: string, opacity: number) {
     translucency = {mode, opacity};
-    SetWindowOpacity(mode === 'window' ? opacity : 100);
-    document.body.classList.toggle('glass', glassOn());
-    for (const t of tabs.values()) applyLook(t);
+    const body = document.body.classList;
+    body.toggle('seethrough', seeThroughOn());
+    body.toggle('glass', glassOn());
+    body.toggle('fade', seeThroughOn() && mode === 'window');
+    document.documentElement.style.setProperty('--fade', String(opacity / 100));
+    for (const t of tabs.values()) {
+        chooseRenderer(t);
+        applyLook(t);
+    }
     paintMargin();
-    dbg(`translucency ${mode} ${opacity}% glass=${glass} on=${glassOn()}`);
+    dbg(`translucency ${mode} ${opacity}% seethrough=${seeThroughOn()} glass=${glassOn()}`);
 }
 
 /** #rrggbb with the background opacity, for see-through panes. */
@@ -498,6 +524,8 @@ function lookOptions(t?: Tab) {
     const style = (['block', 'underline', 'bar'] as const).find(s => s === settings.cursorStyle) ?? 'block';
     const theme = themeByName(t?.theme || settings.theme).theme;
     return {
+        // Before theme: xterm works out its colors when the theme is set.
+        allowTransparency: glassOn(),
         // With see-through panes the pane draws the background, once.
         theme: glassOn() ? {...theme, background: '#00000000'} : theme,
         cursorStyle: style as CursorStyle,
@@ -519,10 +547,10 @@ function applyLook(t: Tab) {
     if (t === active) paintMargin();
 }
 
-/** The margin around the terminals takes the active tab's background (none when see-through). */
+/** The margin around the terminals takes the active tab's background (inside the panes when see-through). */
 function paintMargin() {
     const bg = themeByName(active?.theme || settings.theme).theme.background ?? '#000';
-    document.documentElement.style.setProperty('--term-bg', glassOn() ? 'transparent' : bg);
+    document.documentElement.style.setProperty('--term-bg', seeThroughOn() ? 'transparent' : bg);
 }
 
 /** Picks a color theme for tab t ("" = Settings) and remembers it for its server. */
@@ -733,7 +761,7 @@ function updateTitle() {
         title += ` [${t.encoding}]`;
     }
     // At the right end: whether this tab is drawn with GPU acceleration.
-    if (t) title += t.gpu ? '  ⚡GPU' : '  🐢CPU';
+    if (t) title += t.webgl ? '  ⚡GPU' : '  🐢CPU';
     WindowSetTitle(title);
 }
 
@@ -1581,10 +1609,9 @@ initAuthPrompt(id => {
     return `${r.login ? r.login + '@' : ''}${r.host}:${r.port}`;
 }, focusActive);
 
-Promise.all([GetVersion(), loadSettings(), BackgroundTranslucent()]).then(([v, , started]) => {
+Promise.all([GetVersion(), loadSettings()]).then(([v]) => {
     version = v;
-    glass = started;
-    initTranslucencyPreview(applyTranslucency, started);
+    initTranslucencyPreview(applyTranslucency);
     appName = `choboterm V${v}`;
     applySettings();
     const first = createTab();

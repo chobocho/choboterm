@@ -233,22 +233,31 @@ html, body {
     border-color: #3b82f6;
 }
 
-/* "배경만" translucency: no margin color; each pane draws its own see-through
-   background (inline style) with the margin inside it, so nothing is drawn twice. */
-body.glass #terms {
+/* Translucency: no margin color; each pane draws its own background (inline
+   style) with the margin inside it, so nothing is drawn twice. */
+body.seethrough #terms {
     top: 33px;
     left: 0;
     right: 0;
     bottom: 0;
 }
 
-body.glass #terms .term {
+body.seethrough #terms .term {
     padding: 4px;
 }
 
-/* xterm.css paints its scroll area black; the pane draws the background instead. */
+/* "창 전체": the tab bar and the terminals fade, text too. Dialogs, menus and
+   the search bar are outside them and stay opaque. */
+body.fade #tabbar,
+body.fade #terms {
+    opacity: var(--fade);
+}
+
+/* xterm.css paints its scroll area black; the pane draws the background instead.
+   Its native scrollbar would then show, which the opaque renderers cover. */
 body.glass #terms .xterm .xterm-viewport {
     background-color: transparent !important;
+    scrollbar-width: none;
 }
 
 #terms .gutter {

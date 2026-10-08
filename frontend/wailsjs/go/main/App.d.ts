@@ -4,8 +4,6 @@ import {main} from '../models';
 
 export function AnswerPrompt(arg1:number,arg2:Array<string>,arg3:boolean):Promise<void>;
 
-export function BackgroundTranslucent():Promise<boolean>;
-
 export function ChooseLogDir(arg1:string):Promise<string>;
 
 export function CloseTab(arg1:number):Promise<void>;
@@ -75,8 +73,6 @@ export function Send(arg1:number,arg2:string):Promise<void>;
 export function SetEncoding(arg1:number,arg2:string):Promise<string>;
 
 export function SetTabTheme(arg1:number,arg2:string):Promise<boolean>;
-
-export function SetWindowOpacity(arg1:number):Promise<void>;
 
 export function ShowLogs(arg1:number):Promise<void>;
 
