@@ -322,9 +322,9 @@ func TestPortForwarding(t *testing.T) {
 	if list, _ := a.ForwardList(1); len(list) != 3 {
 		t.Fatalf("restored %+v", list)
 	}
-	// Reconnecting must not lose the rules saved in the history.
-	if e := loadHistory(); len(e) != 1 || len(e[0].Forwards) != 3 || !strings.Contains(e[0].Host, "127.0.0.1") {
-		t.Fatalf("history %+v", e)
+	// Reconnecting must not lose the saved rules.
+	if e := loadHistory(); len(e) != 1 || !strings.Contains(e[0].Host, "127.0.0.1") || len(historyForwards(e[0].Host, e[0].Port)) != 3 {
+		t.Fatalf("history %+v, rules %+v", e, historyForwards(host, port))
 	}
 }
 

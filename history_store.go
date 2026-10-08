@@ -11,23 +11,23 @@ import (
 // HostEntry is one remembered connection as shown in the Host list.
 // Pass is filled only for hosts with a saved (Telnet) password.
 type HostEntry struct {
-	Host     string    `json:"host"`
-	Port     int       `json:"port"`
-	Login    string    `json:"login"`
-	Encoding string    `json:"encoding"`
-	Pass     string    `json:"pass"`
-	Forwards []Forward `json:"forwards"`
-	Theme    string    `json:"theme"` // color theme for this host ("" = the one in Settings)
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Login    string `json:"login"`
+	Encoding string `json:"encoding"`
+	Pass     string `json:"pass"`
 }
 
 // storedEntry is the on-disk form: the password is DPAPI-encrypted, never plain.
 type storedEntry struct {
-	Host     string    `json:"host"`
-	Port     int       `json:"port"`
-	Login    string    `json:"login"`
-	Encoding string    `json:"encoding"`
-	PassEnc  string    `json:"passEnc,omitempty"`
-	Forwards []Forward `json:"forwards,omitempty"` // SSH port forwarding rules
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Login    string `json:"login"`
+	Encoding string `json:"encoding"`
+	PassEnc  string `json:"passEnc,omitempty"`
+	// Before sessions.json these were kept here; they are only read now,
+	// as the starting value of the server's prefs (see prefsFor).
+	Forwards []Forward `json:"forwards,omitempty"`
 	Theme    string    `json:"theme,omitempty"`
 }
 
@@ -56,8 +56,6 @@ func loadHistory() []HostEntry {
 			Login:    s.Login,
 			Encoding: s.Encoding,
 			Pass:     decryptPass(s.PassEnc),
-			Forwards: s.Forwards,
-			Theme:    s.Theme,
 		})
 	}
 	return list
@@ -165,30 +163,14 @@ func historyEntry(host string, port int) (storedEntry, bool) {
 	return storedEntry{}, false
 }
 
-// updateHistoryEntry changes the entry of host:port, which is already in the
-// history (it was added when connecting).
-func updateHistoryEntry(host string, port int, change func(*storedEntry)) error {
-	historyMu.Lock()
-	defer historyMu.Unlock()
-	entries := readHistory()
-	for i := range entries {
-		if entries[i].Host == host && entries[i].Port == port {
-			change(&entries[i])
-			return writeHistory(entries)
-		}
-	}
-	return nil
-}
-
 // historyForwards returns the port forwarding rules saved for host:port.
 func historyForwards(host string, port int) []Forward {
-	h, _ := historyEntry(host, port)
-	return h.Forwards
+	return prefsFor(host, port).Forwards
 }
 
 // setHistoryForwards saves the port forwarding rules of host:port.
 func setHistoryForwards(host string, port int, list []Forward) error {
-	return updateHistoryEntry(host, port, func(e *storedEntry) { e.Forwards = list })
+	return updatePrefs(host, port, func(p *serverPrefs) { p.Forwards = list })
 }
 
 // TabTheme returns the color theme saved for the server of a tab's
@@ -198,8 +180,7 @@ func (a *App) TabTheme(tabID int) string {
 	if !ok {
 		return ""
 	}
-	h, _ := historyEntry(host, port)
-	return h.Theme
+	return prefsFor(host, port).Theme
 }
 
 // SetTabTheme saves a color theme for the server of a tab's connection
@@ -210,7 +191,7 @@ func (a *App) SetTabTheme(tabID int, theme string) (bool, error) {
 	if !ok {
 		return false, nil
 	}
-	return true, updateHistoryEntry(host, port, func(e *storedEntry) { e.Theme = theme })
+	return true, updatePrefs(host, port, func(p *serverPrefs) { p.Theme = theme })
 }
 
 // tabTarget is where a tab's terminal session is (or was last) connected.

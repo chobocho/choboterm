@@ -74,8 +74,8 @@ func TestTabThemeSavedPerHost(t *testing.T) {
 		t.Fatalf("theme = %q", got)
 	}
 	for _, h := range loadHistory() {
-		if want := map[string]string{"busan": "dracula"}[h.Host]; h.Theme != want {
-			t.Fatalf("%s theme = %q", h.Host, h.Theme)
+		if want := map[string]string{"busan": "dracula"}[h.Host]; prefsFor(h.Host, h.Port).Theme != want {
+			t.Fatalf("%s theme = %q", h.Host, prefsFor(h.Host, h.Port).Theme)
 		}
 	}
 	// "" goes back to the Settings theme.
