@@ -480,6 +480,30 @@ func (a *App) FileMkdir(tabID int, dir, name string) error {
 	return t.withFS(func(fs RemoteFS) error { return fs.Mkdir(path.Join(dir, name)) })
 }
 
+// FileCreate creates the empty file name inside dir. It never replaces
+// a file or folder that is already there.
+func (a *App) FileCreate(tabID int, dir, name string) error {
+	t := a.findTab(tabID)
+	if t == nil {
+		return errors.New("연결되어 있지 않습니다")
+	}
+	if err := checkName(name); err != nil {
+		return err
+	}
+	return t.withFS(func(fs RemoteFS) error {
+		list, err := fs.List(dir)
+		if err != nil {
+			return err
+		}
+		for _, e := range list {
+			if e.Name == name {
+				return fmt.Errorf("같은 이름이 이미 있습니다: %s", name)
+			}
+		}
+		return fs.Upload(path.Join(dir, name), strings.NewReader(""), 0)
+	})
+}
+
 // transfer runs one cancellable file transfer with progress events.
 func (t *tab) transfer(name string, size int64, upload bool, run func(RemoteFS, *progress) error) error {
 	t.files.mu.Lock()

@@ -4,6 +4,7 @@ import {
     FileDownload,
     FileDownloadMany,
     FileList,
+    FileCreate,
     FileMkdir,
     FileOpen,
     FileRename,
@@ -32,6 +33,7 @@ const uploadBtn = $<HTMLButtonElement>('fUpload');
 const downloadBtn = $<HTMLButtonElement>('fDownload');
 const viewBtn = $<HTMLButtonElement>('fView');
 const mkdirBtn = $<HTMLButtonElement>('fMkdir');
+const newFileBtn = $<HTMLButtonElement>('fNewFile');
 const renameBtn = $<HTMLButtonElement>('fRename');
 const deleteBtn = $<HTMLButtonElement>('fDelete');
 const menu = $<HTMLUListElement>('fMenu');
@@ -103,7 +105,7 @@ function pickedEntries(v: View): main.FileEntry[] {
 function paintButtons(v: View) {
     if (v !== current) return;
     const n = pickedEntries(v).length;
-    for (const b of [upBtn, refreshBtn, uploadBtn, mkdirBtn]) b.disabled = v.busy;
+    for (const b of [upBtn, refreshBtn, uploadBtn, mkdirBtn, newFileBtn]) b.disabled = v.busy;
     downloadBtn.disabled = deleteBtn.disabled = v.busy || n === 0;
     renameBtn.disabled = v.busy || n !== 1;
     viewBtn.disabled = v.busy || !viewable(v);
@@ -362,6 +364,17 @@ async function mkdir(v: View) {
     });
 }
 
+async function newFile(v: View) {
+    if (v.busy) return;
+    const name = await askText('새 파일', `${v.cwd} 안에 만들 빈 파일 이름:`, '');
+    if (!name) return panel.focus();
+    await run(v, async () => {
+        await FileCreate(v.tabId, v.cwd, name);
+        setBusy(v, false);
+        await load(v, v.cwd, [name]);
+    });
+}
+
 /**
  * Opens (or shows again) the file transfer window for a tab's connection.
  * It starts in startDir (the shell's folder, may be "~/...") if that exists,
@@ -433,6 +446,7 @@ uploadBtn.addEventListener('click', () => current && upload(current));
 downloadBtn.addEventListener('click', () => current && download(current));
 viewBtn.addEventListener('click', () => current && viewFile(current));
 mkdirBtn.addEventListener('click', () => current && mkdir(current));
+newFileBtn.addEventListener('click', () => current && newFile(current));
 renameBtn.addEventListener('click', () => current && rename(current));
 deleteBtn.addEventListener('click', () => current && remove(current));
 $<HTMLButtonElement>('fClose').addEventListener('click', () => closeFiles());
@@ -488,7 +502,8 @@ panel.addEventListener('keydown', ev => {
             viewFile(v);
             break;
         case 'F4':
-            viewFile(v, true);
+            if (ev.shiftKey) newFile(v);
+            else viewFile(v, true);
             break;
         case 'F7':
             mkdir(v);
@@ -563,6 +578,9 @@ menu.addEventListener('click', ev => {
             break;
         case 'mkdir':
             mkdir(v);
+            break;
+        case 'newFile':
+            newFile(v);
             break;
         case 'upload':
             upload(v);

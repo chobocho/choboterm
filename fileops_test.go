@@ -93,6 +93,26 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// New empty file; an existing name is never replaced.
+	if err := a.FileCreate(1, wd, "empty.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.FileCreate(1, wd, "y.txt"); err == nil {
+		t.Fatal("existing file replaced")
+	}
+	if err := a.FileCreate(1, wd, "a/b"); err == nil {
+		t.Fatal("bad name accepted")
+	}
+	created := false
+	if list, err := a.FileList(1, wd); err == nil {
+		for _, e := range list {
+			created = created || (e.Name == "empty.txt" && e.Size == 0 && !e.IsDir)
+		}
+	}
+	if !created {
+		t.Fatal("empty.txt not in the list")
+	}
+
 	// Upload a folder (with a subfolder) and a single file into "new".
 	local := t.TempDir()
 	writeFiles(t, local, map[string]string{
@@ -105,7 +125,7 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 		t.Fatalf("upload: %d, %v", n, err)
 	}
 	want := []string{
-		"d/", "d/a.txt", "d/sub/", "d/sub/b.txt",
+		"d/", "d/a.txt", "d/sub/", "d/sub/b.txt", "empty.txt",
 		"new/", "new/single.bin", "new/up/", "new/up/1.txt", "new/up/inner/", "new/up/inner/2.txt",
 		"y.txt",
 	}
@@ -134,8 +154,8 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 	}
 
 	// Delete folders with their contents and a file.
-	n, err = a.FileDelete(1, wd, []FileEntry{{Name: "d", IsDir: true}, {Name: "new", IsDir: true}, {Name: "y.txt"}})
-	if err != nil || n != 3 {
+	n, err = a.FileDelete(1, wd, []FileEntry{{Name: "d", IsDir: true}, {Name: "new", IsDir: true}, {Name: "y.txt"}, {Name: "empty.txt"}})
+	if err != nil || n != 4 {
 		t.Fatalf("delete: %d, %v", n, err)
 	}
 	if got := listTree(t, root); len(got) != 0 {

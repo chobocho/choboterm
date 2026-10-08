@@ -54,6 +54,10 @@ export function FileClose(arg1) {
   return window['go']['main']['App']['FileClose'](arg1);
 }
 
+export function FileCreate(arg1, arg2, arg3) {
+  return window['go']['main']['App']['FileCreate'](arg1, arg2, arg3);
+}
+
 export function FileDelete(arg1, arg2, arg3) {
   return window['go']['main']['App']['FileDelete'](arg1, arg2, arg3);
 }

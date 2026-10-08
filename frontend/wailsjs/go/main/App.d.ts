@@ -28,6 +28,8 @@ export function FileCancel(arg1:number):Promise<void>;
 
 export function FileClose(arg1:number):Promise<void>;
 
+export function FileCreate(arg1:number,arg2:string,arg3:string):Promise<void>;
+
 export function FileDelete(arg1:number,arg2:string,arg3:Array<main.FileEntry>):Promise<number>;
 
 export function FileDownload(arg1:number,arg2:string,arg3:number):Promise<string>;
