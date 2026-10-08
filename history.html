@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261008_124635.html">history_20261008_124635.html</a></p>
 
+<h2>2026-10-08 — V0.2.0 릴리스</h2>
+<ul>
+  <li>버전 0.1.8 → 0.2.0 (main.go, wails.json, README.md). 포함: 분할 창, 색 테마·커서·스크롤백, SSH 에이전트(OpenSSH·Pageant)·암호 걸린 키, OTP 등 keyboard-interactive 질문, 로컬 셸(cmd·PowerShell·WSL)</li>
+  <li>build.bat(go test → wails build -clean → release 복사) 통과, release\choboterm.exe 갱신</li>
+  <li>main 푸시 후 GitHub 릴리스 v0.2.0 생성(choboterm.exe, THIRD_PARTY_NOTICES.txt). 새 외부 모듈 없음(ssh/agent는 x/crypto에 포함)이라 서드파티 고지는 그대로</li>
+</ul>
+
 <h2>2026-10-08 — 예시 호스트 이름 pusan → busan</h2>
 <ul>
   <li>README, 소개 페이지, 도움말, 접속 창 툴팁, 설정 미리 보기, 코드 주석, 테스트(sshconfig_test.go 등)의 예시 이름을 busan으로 변경 (29곳). 이전 작업 기록은 그대로 둠</li>
