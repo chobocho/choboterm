@@ -22,7 +22,7 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, RunScript, RunScriptFile, ScriptScreen, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    CloseTab, Connect, Disconnect, ConsoleEval, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -81,9 +81,9 @@ interface Tab {
     log?: string;
     // The Lua script running in the tab, the badge showing its time, and the
     // box with its print() output and how it ended (shown over the pane).
-    script?: {name: string; started: number};
+    script?: {name: string; started: number; console: boolean};
     run: HTMLSpanElement;
-    scriptBox?: {el: HTMLDivElement; head: HTMLSpanElement; body: HTMLDivElement; lines: string[]; timer: number};
+    scriptBox?: ScriptBox;
     // Input waiting for the Send call in flight (see sendInput).
     outbox: string;
     sending: boolean;
@@ -1010,6 +1010,7 @@ function showMenu(t: Tab, x: number, y: number) {
     enable('saveSession', !!t.req);
     enable('log', !!t.log || t.state === 'on');
     enable('script', t.state === 'on' && !t.script);
+    enable('console', t.state === 'on' && (!t.script || t.script.console));
     enable('stopScript', !!t.script);
     menu.querySelector('[data-act="log"]')!.textContent = t.log ? '로그 기록 중지' : '로그 기록 시작';
     menu.querySelector('[data-act="close"]')!.textContent = panesOf(t.group).length > 1 ? '분할 창 닫기' : '탭 닫기';
@@ -1112,6 +1113,9 @@ menu.addEventListener('click', ev => {
             break;
         case 'script':
             runScript(t, async () => void await RunScriptFile(t.id));
+            break;
+        case 'console':
+            showConsole(t);
             break;
         case 'stopScript':
             StopScript(t.id);
@@ -1664,15 +1668,40 @@ function elapsedText(ms: number): string {
     return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : mmss;
 }
 
-/** The ▶ badge on the tab and the box's heading: the running script's time so far. */
+interface ScriptBox {
+    el: HTMLDivElement;
+    head: HTMLSpanElement;
+    body: HTMLDivElement;
+    timer: number;
+    // Lua console only: the input line, earlier inputs, and the input running now.
+    input?: HTMLTextAreaElement;
+    stop?: HTMLButtonElement;
+    history: string[];
+    hpos: number;
+    busy?: {id: number; started: number};
+}
+
+/** The ▶ badge on the tab and the box's heading: the running script's (or console input's) time so far. */
 function paintScript(t: Tab) {
     const s = t.script;
     t.run.hidden = !s;
     if (!s) return;
+    const box = t.scriptBox;
+    if (s.console) {
+        const busy = box?.busy;
+        const time = busy ? elapsedText(Date.now() - busy.started) : '';
+        t.run.textContent = busy ? `▶ ${time}` : 'Lua';
+        t.run.title = busy ? 'Lua 콘솔: 실행 중 (Ctrl+C: 중지)' : 'Lua 콘솔 (Ctrl+Shift+K)';
+        if (box) {
+            box.head.textContent = busy ? `▶ Lua 콘솔 · 실행 중 ${time}` : 'Lua 콘솔';
+            box.stop!.hidden = !busy;
+        }
+        return;
+    }
     const time = elapsedText(Date.now() - s.started);
     t.run.textContent = `▶ ${time}`;
     t.run.title = `Lua 스크립트 실행 중: ${s.name}\n탭 우클릭 → 스크립트 중지`;
-    if (t.scriptBox) t.scriptBox.head.textContent = `▶ ${s.name} · ${time}`;
+    if (box) box.head.textContent = `▶ ${s.name} · ${time}`;
 }
 
 /**
@@ -1690,16 +1719,120 @@ function scriptBox(t: Tab) {
     x.type = 'button';
     x.textContent = '✕';
     x.title = '닫기';
-    x.addEventListener('click', () => closeScriptBox(t));
+    x.addEventListener('click', () => {
+        if (t.script?.console) StopScript(t.id); // closing the console ends it
+        closeScriptBox(t);
+    });
     top.append(head, x);
     const body = document.createElement('div');
     body.className = 'lines';
     el.append(top, body);
     el.addEventListener('mousedown', ev => ev.stopPropagation()); // keep the terminal's selection
     t.pane.appendChild(el);
-    t.scriptBox = {el, head, body, lines: [], timer: 0};
+    t.scriptBox = {el, head, body, timer: 0, history: [], hpos: 0};
     return t.scriptBox;
 }
+
+// ---- Lua console ----
+
+let evalSeq = 0;
+
+/** Ctrl+Shift+K / tab menu: opens the tab's Lua console, or goes to it if it is open. */
+function showConsole(t: Tab) {
+    if (t.script?.console) return t.scriptBox?.input?.focus();
+    runScript(t, () => StartConsole(t.id));
+}
+
+/** Turns the script box into a console: an input line under the output. */
+function consoleBox(t: Tab) {
+    const box = scriptBox(t);
+    if (box.input) return box;
+    box.el.classList.add('console');
+    const stop = document.createElement('button');
+    stop.type = 'button';
+    stop.className = 'stop';
+    stop.textContent = '중지';
+    stop.title = 'Ctrl+C';
+    stop.hidden = true;
+    stop.addEventListener('click', () => ConsoleInterrupt(t.id));
+    box.head.after(stop);
+    const input = document.createElement('textarea');
+    input.className = 'input';
+    input.rows = 1;
+    input.spellcheck = false;
+    input.placeholder = 'Lua · Enter 실행 · Shift+Enter 줄바꿈 · ↑↓ 이전 입력 · Esc 터미널로';
+    input.addEventListener('input', () => fitInput(input));
+    input.addEventListener('keydown', ev => consoleKey(t, box, ev));
+    box.el.appendChild(input);
+    box.input = input;
+    box.stop = stop;
+    return box;
+}
+
+function fitInput(input: HTMLTextAreaElement) {
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+    input.style.overflowY = input.scrollHeight > 120 ? 'auto' : 'hidden';
+}
+
+function consoleKey(t: Tab, box: ScriptBox, ev: KeyboardEvent) {
+    const input = box.input!;
+    const lines = input.value.split('\n');
+    const caretLine = input.value.slice(0, input.selectionStart).split('\n').length - 1;
+    if (ev.key === 'Enter' && !ev.shiftKey) {
+        ev.preventDefault();
+        consoleRun(t, box);
+    } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        focusActive();
+    } else if (ev.key === 'c' && ev.ctrlKey && !ev.shiftKey && box.busy && input.selectionStart === input.selectionEnd) {
+        ev.preventDefault();
+        ConsoleInterrupt(t.id);
+    } else if (ev.key === 'ArrowUp' && caretLine === 0 && box.hpos > 0) {
+        ev.preventDefault();
+        box.hpos--;
+        input.value = box.history[box.hpos];
+        fitInput(input);
+    } else if (ev.key === 'ArrowDown' && caretLine === lines.length - 1 && box.hpos < box.history.length) {
+        ev.preventDefault();
+        box.hpos++;
+        input.value = box.history[box.hpos] ?? '';
+        fitInput(input);
+    }
+}
+
+async function consoleRun(t: Tab, box: ScriptBox) {
+    const input = box.input!;
+    const code = input.value;
+    if (!code.trim()) return;
+    if (box.busy) return toast('앞의 입력이 실행 중입니다 (Ctrl+C: 중지)');
+    if (box.history[box.history.length - 1] !== code) box.history.push(code);
+    if (box.history.length > 100) box.history.shift();
+    box.hpos = box.history.length;
+    input.value = '';
+    fitInput(input);
+    code.split('\n').forEach((line, i) => scriptLine(t, (i ? '  ' : '> ') + line, 'in'));
+    const id = ++evalSeq;
+    box.busy = {id, started: Date.now()};
+    paintScript(t);
+    try {
+        await ConsoleEval(t.id, id, code);
+    } catch (e) {
+        box.busy = undefined;
+        scriptLine(t, String(e), 'err');
+        paintScript(t);
+    }
+}
+
+EventsOn('script:result', (id: number, req: number, value: string, err: string) => {
+    const t = tabs.get(id);
+    const box = t?.scriptBox;
+    if (!t || !box || box.busy?.id !== req) return;
+    box.busy = undefined;
+    if (err) scriptLine(t, err, 'err');
+    else if (value) scriptLine(t, value, 'val');
+    paintScript(t);
+});
 
 function closeScriptBox(t: Tab) {
     if (!t.scriptBox) return;
@@ -1725,15 +1858,17 @@ window.setInterval(() => {
     for (const t of tabs.values()) if (t.script) paintScript(t);
 }, 1000);
 
-EventsOn('script:start', (id: number, s: {name: string; started: number}) => {
+EventsOn('script:start', (id: number, s: {name: string; started: number; console: boolean}) => {
     const t = tabs.get(id);
     if (!t) return;
-    t.script = {name: s.name, started: s.started};
-    const box = scriptBox(t);
-    clearTimeout(box.timer);
-    box.el.className = 'script-box';
-    box.body.replaceChildren();
+    t.script = {name: s.name, started: s.started, console: s.console};
+    closeScriptBox(t); // a new box: the last script's may be a console, or the other way round
+    const box = s.console ? consoleBox(t) : scriptBox(t);
     paintScript(t);
+    if (s.console) {
+        scriptLine(t, 'send · expect · sleep · screen · print 사용 가능. 식을 입력하면 값을 보여 줍니다 (Lua 5.1).', 'hint');
+        box.input!.focus();
+    }
 });
 EventsOn('script:end', (id: number, ms: number, msg: string, stopped: boolean) => {
     const t = tabs.get(id);
@@ -1743,6 +1878,12 @@ EventsOn('script:end', (id: number, ms: number, msg: string, stopped: boolean) =
     paintScript(t);
     const time = elapsedText(ms);
     const box = scriptBox(t);
+    if (box.input) {
+        // The console is over: no more input.
+        box.input.remove();
+        box.stop?.remove();
+        box.input = box.stop = box.busy = undefined;
+    }
     if (stopped) {
         box.el.className = 'script-box stopped';
         box.head.textContent = `■ ${name} · 멈춤 · ${time}`;
@@ -1826,7 +1967,7 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
     if (isPaneKey(ev) || splitKey(ev)) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLH]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLHK]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
@@ -1879,6 +2020,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'H':
             showSessions();
+            break;
+        case 'K':
+            if (t) showConsole(t);
             break;
         case 'P':
             if (t) showForwards(t);

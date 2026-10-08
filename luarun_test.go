@@ -277,3 +277,97 @@ func TestScriptScreen(t *testing.T) {
 		t.Fatalf("ended with %q", msg)
 	}
 }
+
+// consoleFixture collects "script:result" events: id → "value" or "!error".
+func consoleResults(f *scriptFixture) chan string {
+	ch := make(chan string, 16)
+	orig := f.app.hooks.emit
+	f.app.hooks.emit = func(name string, data ...interface{}) {
+		if name == "script:result" {
+			d, e := data[2].(string), data[3].(string)
+			f.mu.Lock()
+			prints := strings.Join(f.prints, "|")
+			f.prints = nil
+			f.mu.Unlock()
+			if e != "" {
+				d = "!" + e
+			}
+			if prints != "" {
+				d = prints + ">" + d
+			}
+			ch <- fmt.Sprintf("%d:%s", data[1].(int), d)
+		}
+		orig(name, data...)
+	}
+	return ch
+}
+
+func TestConsoleKeepsState(t *testing.T) {
+	f := newScriptFixture(t, "host")
+	results := consoleResults(f)
+	if err := f.app.StartConsole(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.app.RunScript(1, "x", "print(1)"); err == nil {
+		t.Fatal("script started while the console is open")
+	}
+	step := func(id int, code, want string) {
+		t.Helper()
+		if err := f.app.ConsoleEval(1, id, code); err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case got := <-results:
+			if !strings.HasPrefix(got, fmt.Sprintf("%d:", id)) || !strings.Contains(got, want) {
+				t.Fatalf("%q: got %q, want %q", code, got, want)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatalf("%q: no result", code)
+		}
+	}
+	step(1, "x = 41", "1:")
+	step(2, "x + 1", "42")
+	step(3, "print('a') return 1, 'b'", "a>1\tb")
+	step(4, "=x", "41")
+	step(5, "error('boom')", "!console:1: boom")
+	step(6, "if then", "!console")
+	// An endless loop is interrupted; the console and its variables stay.
+	if err := f.app.ConsoleEval(1, 7, "while true do end"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	f.app.ConsoleInterrupt(1)
+	select {
+	case got := <-results:
+		if got != "7:!중지했습니다" {
+			t.Fatalf("interrupt: %q", got)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("interrupt: no result")
+	}
+	step(8, "x", "41")
+	// expect() sees only output after the input ran, not the prompt already there.
+	f.sess.out.Write([]byte("user@host:~$ "))
+	time.Sleep(200 * time.Millisecond)
+	if err := f.app.ConsoleEval(1, 9, `send("ls\r") return expect("%$ ", 5)`); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "ls sent", func() bool { return strings.HasSuffix(f.input(), "ls\r") })
+	f.sess.out.Write([]byte("ls\r\nfile.txt\r\nuser@host:~$ "))
+	select {
+	case got := <-results:
+		if !strings.Contains(got, "file.txt") {
+			t.Fatalf("expect after send: %q", got)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("expect: no result")
+	}
+
+	f.app.StopScript(1)
+	if msg := f.end(t, 10*time.Second); msg != "스크립트를 멈췄습니다" {
+		t.Fatalf("ended with %q", msg)
+	}
+	if err := f.app.ConsoleEval(1, 10, "x"); err == nil {
+		t.Fatal("eval after the console closed")
+	}
+}

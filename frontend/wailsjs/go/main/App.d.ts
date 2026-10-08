@@ -10,6 +10,10 @@ export function CloseTab(arg1:number):Promise<void>;
 
 export function Connect(arg1:number,arg2:main.ConnectRequest):Promise<string>;
 
+export function ConsoleEval(arg1:number,arg2:number,arg3:string):Promise<void>;
+
+export function ConsoleInterrupt(arg1:number):Promise<void>;
+
 export function DebugEnabled():Promise<boolean>;
 
 export function DebugLog(arg1:string):Promise<void>;
@@ -95,6 +99,8 @@ export function SetTabTheme(arg1:number,arg2:string):Promise<boolean>;
 export function ShowLogs(arg1:number):Promise<void>;
 
 export function ShowScripts():Promise<void>;
+
+export function StartConsole(arg1:number):Promise<void>;
 
 export function StartLog(arg1:number):Promise<string>;
 

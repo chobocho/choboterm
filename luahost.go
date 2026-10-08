@@ -30,8 +30,11 @@ type luaMsg struct {
 	Limit uint64 `json:"limit,omitempty"` // memory limit in bytes (run)
 }
 
-// App → host: run (D = source), out (terminal output), ret (reply to a call), stop.
-// Host → app: send / screen (calls, answered with ret), print, done (Err = why it failed).
+// App → host: run (D = source) or repl (a console), out (terminal output),
+// ret (reply to a call), eval (console input, D = code), interrupt (stop the
+// running eval), stop.
+// Host → app: send / screen (calls, answered with ret), print, evaldone (D =
+// the values, Err = why it failed), done (Err = why the script failed).
 
 const (
 	luaMaxLine      = 1 << 20   // longest message line either side accepts
@@ -62,6 +65,9 @@ type luaHost struct {
 
 	pmu    sync.Mutex
 	prints []string
+
+	evals      chan luaMsg        // console input waiting to run
+	evalCancel context.CancelFunc // stops the running eval (guarded by mu)
 }
 
 // runLuaHost serves one script and returns the process exit code.
@@ -70,12 +76,12 @@ func runLuaHost(in io.Reader, out io.Writer) int {
 	defer cancel()
 	h := &luaHost{
 		ctx: ctx, cancel: cancel, w: bufio.NewWriter(out),
-		notify: make(chan struct{}), calls: map[int]chan luaMsg{},
+		notify: make(chan struct{}), calls: map[int]chan luaMsg{}, evals: make(chan luaMsg, 4),
 	}
 	r := bufio.NewReaderSize(in, 64<<10)
 
 	first, err := readLuaMsg(r)
-	if err != nil || first.T != "run" {
+	if err != nil || (first.T != "run" && first.T != "repl") {
 		return 2
 	}
 	if first.Limit > 0 {
@@ -85,6 +91,10 @@ func runLuaHost(in io.Reader, out io.Writer) int {
 	go h.readLoop(r)
 	go h.printLoop()
 
+	if first.T == "repl" {
+		h.repl()
+		return 0
+	}
 	err = h.run(first.Name, first.D)
 	h.flushPrints()
 	done := luaMsg{T: "done"}
@@ -154,6 +164,18 @@ func (h *luaHost) readLoop(r *bufio.Reader) {
 			if ch != nil {
 				ch <- m
 			}
+		case "eval":
+			select {
+			case h.evals <- m:
+			default:
+				h.write(luaMsg{T: "evaldone", ID: m.ID, Err: "이전 입력이 아직 실행 중입니다"})
+			}
+		case "interrupt":
+			h.mu.Lock()
+			if h.evalCancel != nil {
+				h.evalCancel()
+			}
+			h.mu.Unlock()
 		case "stop":
 			return
 		}
@@ -211,8 +233,9 @@ func (h *luaHost) consume(text string, n int) {
 	h.skip += text[done:n]
 }
 
-// call asks the app for something and waits for the answer.
-func (h *luaHost) call(m luaMsg) (luaMsg, error) {
+// call asks the app for something and waits for the answer (or for ctx,
+// the running script or eval, to be stopped).
+func (h *luaHost) call(ctx context.Context, m luaMsg) (luaMsg, error) {
 	ch := make(chan luaMsg, 1)
 	h.mu.Lock()
 	h.nextID++
@@ -226,7 +249,7 @@ func (h *luaHost) call(m luaMsg) (luaMsg, error) {
 			return r, errors.New(r.Err)
 		}
 		return r, nil
-	case <-h.ctx.Done():
+	case <-ctx.Done():
 		return luaMsg{}, errScriptStopped
 	case <-time.After(luaCallTimeout):
 		return luaMsg{}, errors.New("choboterm이 응답하지 않습니다")
@@ -264,9 +287,16 @@ func (h *luaHost) flushPrints() {
 	h.write(luaMsg{T: "print", D: strings.Join(lines, "\n")})
 }
 
+func (h *luaHost) newState() *lua.LState {
+	L := lua.NewState(lua.Options{SkipOpenLibs: true, CallStackSize: luaCallStackMax, IncludeGoStackTrace: false})
+	openSafeLibs(L)
+	h.register(L)
+	return L
+}
+
 // run executes the script and returns its error, if any.
 func (h *luaHost) run(name, src string) (err error) {
-	L := lua.NewState(lua.Options{SkipOpenLibs: true, CallStackSize: luaCallStackMax, IncludeGoStackTrace: false})
+	L := h.newState()
 	defer L.Close()
 	defer func() {
 		// gopher-lua reports some internal failures as Go panics.
@@ -274,8 +304,6 @@ func (h *luaHost) run(name, src string) (err error) {
 			err = fmt.Errorf("Lua 실행 오류: %v", r)
 		}
 	}()
-	openSafeLibs(L)
-	h.register(L)
 	L.SetContext(h.ctx)
 
 	fn, err := L.Load(strings.NewReader(src), name)
@@ -290,6 +318,80 @@ func (h *luaHost) run(name, src string) (err error) {
 		return cleanLuaError(err)
 	}
 	return nil
+}
+
+// errInterrupted ends a console eval stopped with "interrupt".
+var errInterrupted = errors.New("중지했습니다")
+
+// repl runs console input one piece at a time in one Lua state, so
+// variables and functions stay between them, until the console is closed.
+func (h *luaHost) repl() {
+	L := h.newState()
+	defer L.Close()
+	for {
+		select {
+		case m := <-h.evals:
+			out, err := h.eval(L, m.D)
+			h.flushPrints() // what it printed comes before its result
+			done := luaMsg{T: "evaldone", ID: m.ID, D: out}
+			if err != nil {
+				done.Err = err.Error()
+			}
+			h.write(done)
+		case <-h.ctx.Done():
+			return
+		}
+	}
+}
+
+// eval runs one console input and returns its values as text. An expression
+// ("1 + 2", "x", "=x") shows its value, like the lua command line.
+func (h *luaHost) eval(L *lua.LState, code string) (out string, err error) {
+	ctx, cancel := context.WithCancel(h.ctx)
+	h.mu.Lock()
+	h.evalCancel = cancel
+	// expect() sees only output that comes from now on; the prompt already on
+	// screen would otherwise match at once, before the command has even run.
+	h.text.Reset()
+	h.skip = string(h.plain.line)
+	h.mu.Unlock()
+	defer func() {
+		h.mu.Lock()
+		h.evalCancel = nil
+		h.mu.Unlock()
+		cancel()
+	}()
+	base := L.GetTop()
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Lua 실행 오류: %v", r)
+		}
+		L.SetTop(base)
+	}()
+	L.SetContext(ctx)
+
+	code = strings.TrimSpace(code)
+	if strings.HasPrefix(code, "=") {
+		code = "return " + code[1:]
+	}
+	fn, err := L.Load(strings.NewReader("return "+code), "console")
+	if err != nil {
+		if fn, err = L.Load(strings.NewReader(code), "console"); err != nil {
+			return "", cleanLuaError(err)
+		}
+	}
+	L.Push(fn)
+	if err := L.PCall(0, lua.MultRet, nil); err != nil {
+		if ctx.Err() != nil {
+			return "", errInterrupted
+		}
+		return "", cleanLuaError(err)
+	}
+	var parts []string
+	for i := base + 1; i <= L.GetTop(); i++ {
+		parts = append(parts, L.ToStringMeta(L.Get(i)).String())
+	}
+	return strings.Join(parts, "\t"), nil
 }
 
 // cleanLuaError keeps "name:line: message" and drops the stack traceback.
@@ -342,7 +444,7 @@ func (h *luaHost) register(L *lua.LState) {
 		if len(s) > luaMaxSend {
 			L.RaiseError("send: 한 번에 %dKB까지 보낼 수 있습니다", luaMaxSend>>10)
 		}
-		if _, err := h.call(luaMsg{T: "send", D: s}); err != nil {
+		if _, err := h.call(L.Context(), luaMsg{T: "send", D: s}); err != nil {
 			L.RaiseError("send: %s", err.Error())
 		}
 		return 0
@@ -371,7 +473,7 @@ func (h *luaHost) register(L *lua.LState) {
 			case <-deadline:
 				L.Push(lua.LNil)
 				return 1
-			case <-h.ctx.Done():
+			case <-L.Context().Done():
 				L.RaiseError("%s", errScriptStopped.Error())
 			}
 		}
@@ -380,13 +482,13 @@ func (h *luaHost) register(L *lua.LState) {
 		ms := L.CheckInt(1)
 		select {
 		case <-time.After(time.Duration(ms) * time.Millisecond):
-		case <-h.ctx.Done():
+		case <-L.Context().Done():
 			L.RaiseError("%s", errScriptStopped.Error())
 		}
 		return 0
 	}))
 	L.SetGlobal("screen", L.NewFunction(func(L *lua.LState) int {
-		r, err := h.call(luaMsg{T: "screen"})
+		r, err := h.call(L.Context(), luaMsg{T: "screen"})
 		if err != nil {
 			L.RaiseError("screen: %s", err.Error())
 		}

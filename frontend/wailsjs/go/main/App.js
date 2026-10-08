@@ -18,6 +18,14 @@ export function Connect(arg1, arg2) {
   return window['go']['main']['App']['Connect'](arg1, arg2);
 }
 
+export function ConsoleEval(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ConsoleEval'](arg1, arg2, arg3);
+}
+
+export function ConsoleInterrupt(arg1) {
+  return window['go']['main']['App']['ConsoleInterrupt'](arg1);
+}
+
 export function DebugEnabled() {
   return window['go']['main']['App']['DebugEnabled']();
 }
@@ -188,6 +196,10 @@ export function ShowLogs(arg1) {
 
 export function ShowScripts() {
   return window['go']['main']['App']['ShowScripts']();
+}
+
+export function StartConsole(arg1) {
+  return window['go']['main']['App']['StartConsole'](arg1);
 }
 
 export function StartLog(arg1) {

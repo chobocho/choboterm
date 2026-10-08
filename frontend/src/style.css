@@ -168,6 +168,54 @@ html, body {
     color: #bbf7d0;
 }
 
+/* The Lua console: a bigger box with an input line at the bottom. */
+.script-box.console {
+    width: min(560px, calc(100% - 32px));
+    max-height: 55%;
+}
+
+.script-box.console .lines {
+    min-height: 60px;
+}
+
+.script-box .in {
+    color: #9ca3af;
+}
+
+.script-box .val {
+    color: #67e8f9;
+}
+
+.script-box .hint {
+    color: #6b7280;
+}
+
+.script-box .top .stop {
+    padding: 0 6px;
+    border: 1px solid #93c5fd;
+    border-radius: 3px;
+    font: 11px "Malgun Gothic", sans-serif;
+}
+
+.script-box .top .stop[hidden] {
+    display: none;
+}
+
+.script-box .input {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 4px 8px;
+    border: 0;
+    border-top: 1px solid #3b5b85;
+    background: #0b1220;
+    color: #e5e7eb;
+    font: inherit;
+    resize: none;
+    overflow-y: hidden;
+    outline: none;
+}
+
 .script-box.stopped .top {
     background: #374151;
     color: #d1d5db;

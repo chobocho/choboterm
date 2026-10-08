@@ -52,6 +52,7 @@ type scriptRun struct {
 	started time.Time
 	cmd     *exec.Cmd
 	job     *luaJob
+	console bool // a Lua console (REPL) rather than a script
 
 	toHost chan luaMsg   // messages for the host, written by writeLoop
 	sends  chan luaMsg   // send() calls, carried out one at a time by sendLoop
@@ -69,6 +70,7 @@ type scriptRun struct {
 type ScriptStatus struct {
 	Name    string `json:"name"`
 	Started int64  `json:"started"` // Unix milliseconds
+	Console bool   `json:"console"`
 }
 
 // startScript runs src in tab t. Only one script runs in a tab at a time.
@@ -76,6 +78,16 @@ func (t *tab) startScript(name, src string) error {
 	if len(src) > luaScriptMaxSrc {
 		return fmt.Errorf("스크립트가 너무 큽니다 (%dKB까지)", luaScriptMaxSrc>>10)
 	}
+	return t.startHost(name, luaMsg{T: "run", Name: name, D: src, Limit: luaMemoryLimit})
+}
+
+// startConsole opens a Lua console in tab t; it counts as the tab's script.
+func (t *tab) startConsole() error {
+	return t.startHost("Lua 콘솔", luaMsg{T: "repl", Limit: luaMemoryLimit})
+}
+
+// startHost starts a script host process and gives it first (run or repl).
+func (t *tab) startHost(name string, first luaMsg) error {
 	if t.script.Load() != nil {
 		return errors.New("이 탭에서 이미 스크립트가 실행 중입니다")
 	}
@@ -106,20 +118,20 @@ func (t *tab) startScript(name, src string) error {
 	s := &scriptRun{
 		t: t, name: name, started: time.Now(), cmd: cmd, job: job,
 		toHost: make(chan luaMsg, luaOutQueue), sends: make(chan luaMsg, 4),
-		ended: make(chan struct{}), screens: map[int]chan string{},
+		ended: make(chan struct{}), screens: map[int]chan string{}, console: first.T == "repl",
 	}
 	if !t.script.CompareAndSwap(nil, s) {
 		job.close()
 		_ = cmd.Wait()
 		return errors.New("이 탭에서 이미 스크립트가 실행 중입니다")
 	}
-	s.toHost <- luaMsg{T: "run", Name: name, D: src, Limit: luaMemoryLimit}
+	s.toHost <- first
 	go s.writeLoop(stdin)
 	go s.readLoop(stdout)
 	go s.sendLoop()
 	go s.wait()
 	debugf("tab %d script %q started (pid %d)", t.id, name, cmd.Process.Pid)
-	t.emit("script:start", ScriptStatus{Name: name, Started: s.started.UnixMilli()})
+	t.emit("script:start", ScriptStatus{Name: name, Started: s.started.UnixMilli(), Console: s.console})
 	return nil
 }
 
@@ -248,6 +260,8 @@ func (s *scriptRun) readLoop(r io.Reader) {
 			go s.screen(m.ID)
 		case "print":
 			s.t.emit("script:print", m.D)
+		case "evaldone":
+			s.t.emit("script:result", m.ID, m.D, m.Err)
 		case "done":
 			s.mu.Lock()
 			s.result = &m
@@ -373,6 +387,57 @@ func (a *App) StopScript(tabID int) {
 	if t := a.findTab(tabID); t != nil {
 		t.stopScript("스크립트를 멈췄습니다")
 	}
+}
+
+// StartConsole opens a Lua console (REPL) in a tab.
+func (a *App) StartConsole(tabID int) error {
+	t := a.findTab(tabID)
+	if t == nil {
+		return errors.New("탭이 없습니다")
+	}
+	return t.startConsole()
+}
+
+// ConsoleEval runs code in the tab's console; the result comes back as a
+// "script:result" event with the same id.
+func (a *App) ConsoleEval(tabID, id int, code string) error {
+	s := a.console(tabID)
+	if s == nil {
+		return errors.New("Lua 콘솔이 열려 있지 않습니다")
+	}
+	if len(code) > luaScriptMaxSrc {
+		return fmt.Errorf("입력이 너무 깁니다 (%dKB까지)", luaScriptMaxSrc>>10)
+	}
+	select {
+	case s.toHost <- luaMsg{T: "eval", ID: id, D: code}:
+		return nil
+	case <-s.ended:
+		return errors.New("Lua 콘솔이 닫혔습니다")
+	case <-time.After(time.Second):
+		return errors.New("Lua 콘솔이 응답하지 않습니다")
+	}
+}
+
+// ConsoleInterrupt stops what the tab's console is running; the console stays open.
+func (a *App) ConsoleInterrupt(tabID int) {
+	if s := a.console(tabID); s != nil {
+		select {
+		case s.toHost <- luaMsg{T: "interrupt"}:
+		case <-s.ended:
+		case <-time.After(time.Second):
+		}
+	}
+}
+
+func (a *App) console(tabID int) *scriptRun {
+	t := a.findTab(tabID)
+	if t == nil {
+		return nil
+	}
+	if s := t.script.Load(); s != nil && s.console {
+		return s
+	}
+	return nil
 }
 
 // scriptsDir is the folder of .lua files offered by "Lua 스크립트 실행".
