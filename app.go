@@ -89,6 +89,7 @@ type testHooks struct {
 	emit        func(name string, data ...interface{})
 	downloadDir string
 	confirmKey  func(host, fingerprint string) bool
+	prompt      func(Prompt) ([]string, bool)
 }
 
 // NewApp creates a new App application struct
@@ -247,7 +248,7 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 		if dial.Login == "" {
 			dial.Login = configGet(cfg, req.Host, "User")
 		}
-		sess, err = dialSSH(dial, a.confirmHostKey, conn, sshIdentityFiles(cfg, req.Host, dial.Login))
+		sess, err = dialSSH(dial, a.confirmHostKey, a.asker(tabID), conn, sshIdentityFiles(cfg, req.Host, dial.Login))
 	} else {
 		sess, err = dialTelnet(dial, conn)
 	}

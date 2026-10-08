@@ -1408,6 +1408,61 @@ body.resizing-col #terms .term {
     outline: 1px solid #0078d7;
 }
 
+/* ---- Login prompts (key passphrase, one-time code...) ---- */
+
+/* Above everything, including the Connect dialog that is waiting for it. */
+.overlay.auth {
+    z-index: 46;
+}
+
+.dialog.auth {
+    width: min(420px, calc(100vw - 32px));
+    outline: none;
+}
+
+.auth .body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+#authWhere {
+    color: #555;
+    font-size: 12px;
+}
+
+#authWhere[hidden],
+#authMsg[hidden] {
+    display: none;
+}
+
+#authMsg {
+    white-space: pre-line;
+    word-break: break-all;
+}
+
+#authFields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#authFields label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    white-space: pre-line;
+}
+
+.auth .buttons {
+    margin-top: 0;
+}
+
+.auth .buttons #authOk {
+    outline: 1px solid #0078d7;
+}
+
 /* ---- Multi-line paste confirmation ---- */
 
 .dialog.paste {

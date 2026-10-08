@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -76,7 +75,8 @@ type hostKeyConfirmer func(host, fingerprint string) bool
 // dialSSH opens an SSH shell. conn is an already connected socket (from
 // protocol detection) or nil to dial req.Host:req.Port. keys are private key
 // files (IdentityFile in ~/.ssh/config) to try before the default ones.
-func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, conn net.Conn, keys []string) (Session, error) {
+// ask prompts the user during login (key passphrases); nil cancels prompts.
+func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, ask asker, conn net.Conn, keys []string) (Session, error) {
 	if req.Login == "" {
 		return nil, errors.New("SSH 접속에는 Login이 필요합니다")
 	}
@@ -86,9 +86,11 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, conn net.Conn, keys [
 		return nil, err
 	}
 
+	auth := newSSHAuth(req.Pass, keys, ask)
+	defer auth.Close()
 	cfg := &ssh.ClientConfig{
 		User:            req.Login,
-		Auth:            authMethods(req.Pass, keys),
+		Auth:            auth.methods,
 		HostKeyCallback: kh.check,
 		Timeout:         10 * time.Second,
 	}
@@ -147,55 +149,6 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, conn net.Conn, keys [
 
 	go func() { debugf("ssh connection to %s ended: %v", req.Host, client.Wait()) }()
 	return &sshSession{client: client, session: session, stdin: stdin, stdout: stdout}, nil
-}
-
-// authMethods tries unencrypted private keys first (keys, then the default
-// ones in ~/.ssh), then the password (both as plain password and
-// keyboard-interactive).
-func authMethods(pass string, keys []string) []ssh.AuthMethod {
-	var methods []ssh.AuthMethod
-
-	files := slices.Clone(keys)
-	if home, err := os.UserHomeDir(); err == nil {
-		for _, name := range []string{"id_ed25519", "id_ecdsa", "id_rsa"} {
-			files = append(files, filepath.Join(home, ".ssh", name))
-		}
-	}
-	var signers []ssh.Signer
-	seen := map[string]bool{}
-	for _, f := range files {
-		key := strings.ToLower(filepath.Clean(f))
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		data, err := os.ReadFile(f)
-		if err != nil {
-			continue
-		}
-		if signer, err := ssh.ParsePrivateKey(data); err == nil {
-			signers = append(signers, signer)
-		}
-	}
-	if len(signers) > 0 {
-		methods = append(methods, ssh.PublicKeys(signers...))
-	}
-
-	if pass != "" {
-		methods = append(methods,
-			ssh.Password(pass),
-			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
-				answers := make([]string, len(questions))
-				for i := range questions {
-					if !echos[i] {
-						answers[i] = pass
-					}
-				}
-				return answers, nil
-			}),
-		)
-	}
-	return methods
 }
 
 // knownHosts verifies host keys against ~/.ssh/known_hosts. Unknown hosts are

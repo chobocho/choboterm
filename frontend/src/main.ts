@@ -13,6 +13,7 @@ import {openPrefs, prefsOpen} from './prefs';
 import {expandMacro, macroForKey, macrosOpen, openMacros} from './macros';
 import {forwardsOpen, forwardsTabClosed, openForwards} from './forwards';
 import {askOpen} from './dialog';
+import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
@@ -1292,7 +1293,8 @@ async function toggleLog(t: Tab) {
 
 /** A window that takes all keys until it is closed. */
 function modalOpen() {
-    return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen() || askOpen() || viewerOpen();
+    return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen() || askOpen() || viewerOpen() ||
+        authPromptOpen();
 }
 
 function isAppShortcut(ev: KeyboardEvent): boolean {
@@ -1385,6 +1387,15 @@ window.addEventListener('keydown', ev => {
 // ---- Start ----
 
 setActiveTabProvider(() => active?.id ?? 0);
+
+// Login prompts name the connection they are for: the Connect dialog's values while it is connecting.
+initAuthPrompt(id => {
+    const t = tabs.get(id);
+    const d = t?.dialog;
+    const r = d ? {login: d.login, host: d.host.trim(), port: d.port} : t?.req;
+    if (!r) return '';
+    return `${r.login ? r.login + '@' : ''}${r.host}:${r.port}`;
+}, focusActive);
 
 Promise.all([GetVersion(), loadSettings()]).then(([v]) => {
     version = v;

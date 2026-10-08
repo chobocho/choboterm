@@ -20,9 +20,15 @@ import (
 // any password and grants pty/shell requests.
 func startShellServer(t *testing.T, hostKeys ...ssh.Signer) string {
 	t.Helper()
-	cfg := &ssh.ServerConfig{
+	return serveShell(t, &ssh.ServerConfig{
 		PasswordCallback: func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) { return nil, nil },
-	}
+	}, hostKeys...)
+}
+
+// serveShell runs an SSH server with the given auth config and host keys
+// that grants pty/shell requests.
+func serveShell(t *testing.T, cfg *ssh.ServerConfig, hostKeys ...ssh.Signer) string {
+	t.Helper()
 	for _, k := range hostKeys {
 		cfg.AddHostKey(k)
 	}
@@ -100,7 +106,7 @@ func dialTestSSH(t *testing.T, addr string) (Session, error) {
 	host, portStr, _ := net.SplitHostPort(addr)
 	port, _ := strconv.Atoi(portStr)
 	return dialSSH(ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24},
-		func(string, string) bool { t.Fatal("unexpected host key prompt"); return false }, nil, nil)
+		func(string, string) bool { t.Fatal("unexpected host key prompt"); return false }, nil, nil, nil)
 }
 
 // The server has ECDSA and Ed25519 keys; known_hosts only has the Ed25519 one

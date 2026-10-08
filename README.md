@@ -22,7 +22,9 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
     - 탭 바에는 분할된 창들이 한 묶음(파란 배경)으로 나타나고 창마다 상태 점과 이름이 붙습니다. `Ctrl+Shift+W`나 ✕는 그 창만 닫습니다.
   - 접속 창과 파일 전송 창은 탭마다 따로 열립니다. 창이 떠 있어도 탭을 바꿀 수 있고, 돌아오면 입력값·폴더·전송 상태가 그대로 남아 있습니다. 파일 전송은 다른 탭을 보는 동안에도 계속됩니다.
 - **프로토콜 선택**: 22 = SSH, 21 = FTP, 23 = Telnet. 그 밖의 포트(예: Termux의 8022)는 접속하자마자 서버의 첫 인사말로 자동 판별합니다(`SSH-` → SSH, `220` → FTP, 그 외 → Telnet). 먼저 말을 걸지 않는 Telnet 서버는 판별에 2초가 걸립니다.
-- **SSH**: 비밀번호, keyboard-interactive, `~/.ssh` 개인키(id_ed25519 / id_ecdsa / id_rsa, 암호 없는 키) 인증
+- **SSH**: 비밀번호, keyboard-interactive, `~/.ssh` 개인키(id_ed25519 / id_ecdsa / id_rsa), SSH 에이전트 인증
+  - **SSH 에이전트**: Windows용 OpenSSH 에이전트(`ssh-agent` 서비스), PuTTY의 Pageant, `SSH_AUTH_SOCK`에 올려 둔 키를 먼저 씁니다. 따로 설정할 것은 없습니다.
+  - **암호 걸린 개인키**: 서버가 그 키를 받아들일 때만 암호를 묻습니다(맞지 않는 서버에서는 묻지 않음). 한 번 푼 키는 choboterm을 끌 때까지 기억해 다시 연결·분할 창·자동 재접속 때 다시 묻지 않습니다. 공개키가 들어 있지 않은 옛 PEM 키는 옆의 `.pub` 파일을 쓰고, 그것도 없으면 접속할 때 바로 묻습니다(취소하면 그 키는 건너뜀).
   - **`~/.ssh/config` 이름으로 접속**: Host 칸에 config에 적어 둔 이름(예: `pusan`)이나 명령처럼 `ssh pusan`, `ssh -p 2222 user@pusan`을 입력하면 `HostName` / `Port` / `User` / `IdentityFile`을 읽어 Port와 Login을 채우고 접속합니다. 탭 이름과 접속 기록에는 `pusan`이 남습니다.
     - Host 칸에 포커스를 두면 툴팁으로 입력 예와 등록된 이름을 보여 주고, config 이름을 입력하면 실제 접속할 `user@주소:포트`를 보여 줍니다. config의 이름들은 ▼ 목록에도 `ssh config`로 표시됩니다.
     - `IdentityFile`의 키를 먼저 시도하고, 안 되면 기본 키와 비밀번호를 씁니다. `Host *.corp` 같은 패턴 항목도 적용합니다. `ProxyJump`, `Match`는 아직 지원하지 않습니다.

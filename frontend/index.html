@@ -328,6 +328,25 @@
     </div>
 </div>
 
+<div id="authOverlay" class="overlay modal auth" hidden>
+    <div class="dialog auth" id="auth" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title" id="authTitle"></span>
+            <button type="button" class="close" id="authX" title="취소 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div id="authWhere"></div>
+            <div id="authMsg"></div>
+            <div id="authFields"></div>
+            <div class="buttons">
+                <button type="button" id="authOk">확인</button>
+                <button type="button" id="authCancel">취소</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="askOverlay" class="overlay modal ask" hidden>
     <div class="dialog ask" id="ask" tabindex="-1">
         <div class="titlebar">
