@@ -70,6 +70,21 @@ export const THEMES: ThemeInfo[] = [
             '#4f525d', '#df6c75', '#98c379', '#e4c07a', '#61afef', '#c577dd', '#56b5c1', '#ffffff'],
         {cursor: '#4f525d', selectionBackground: '#bfceff80'}),
     },
+    // Green-phosphor monochrome like a Hercules card on a green monitor: every
+    // color is a shade of green, kept apart enough that colored backgrounds
+    // (htop, mc) stay readable.
+    {
+        name: 'hercules', label: '허큘리스 (검은 배경 · 녹색 글자)', theme: scheme('#000000', '#33ff33', [
+            '#002200', '#1f8f1f', '#33cc33', '#66dd44', '#1a7a3a', '#4aa84a', '#3fbf7f', '#8fe68f',
+            '#2f5f2f', '#4fd24f', '#55ff55', '#aaff66', '#33aa66', '#77e077', '#66ffaa', '#ccffcc'],
+        {cursor: '#33ff33', cursorAccent: '#000000', selectionBackground: '#33ff3355'}),
+    },
+    {
+        name: 'hercules-inverse', label: '허큘리스 반전 (녹색 배경 · 검은 글자)', theme: scheme('#33cc33', '#000000', [
+            '#000000', '#0f400f', '#004d00', '#2d4d00', '#00331a', '#1a4d1a', '#003d26', '#c8f5c8',
+            '#145214', '#082808', '#002200', '#1f3300', '#001f10', '#0f330f', '#00261a', '#eaffea'],
+        {cursor: '#000000', cursorAccent: '#33cc33', selectionBackground: '#00000040'}),
+    },
 ];
 
 export function themeByName(name: string): ThemeInfo {
