@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261008_124635.html">history_20261008_124635.html</a></p>
 
+<h2>2026-10-08 — V0.2.1 릴리스</h2>
+<ul>
+  <li>버전 0.2.0 → 0.2.1 (main.go, wails.json, README.md). 포함: 서버별 색 테마, 허큘리스 테마 2종, 반투명(창 전체 / 배경만, 배경만에서 GPU 선택)</li>
+  <li>go test 통과, wails build -clean. 사용자가 release\choboterm.exe를 실행 중이라 release 폴더 복사는 건너뛰고(build.bat 3단계) build\bin\choboterm.exe를 릴리스에 올림</li>
+  <li>main 푸시 후 GitHub 릴리스 v0.2.1 생성(choboterm.exe, THIRD_PARTY_NOTICES.txt). 새 외부 모듈 없음</li>
+</ul>
+
 <h2>2026-10-08 — 배경만 반투명에서 GPU 선택</h2>
 <ul>
   <li>질문: 앱을 두 개 띄우면 두 번째는 CPU만 쓰나 → 아님. debug.log상 GPU는 정상 감지, 배경만 반투명(settings.json 공유) 때문에 의도적으로 DOM 렌더러를 쓴 것. 먼저 떠 있던 옛 빌드는 반투명을 몰라 GPU 사용</li>
