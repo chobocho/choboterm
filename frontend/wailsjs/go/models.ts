@@ -136,6 +136,20 @@ export namespace main {
 	        this.pass = source["pass"];
 	    }
 	}
+	export class ImportResult {
+	    added: number;
+	    skipped: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.added = source["added"];
+	        this.skipped = source["skipped"];
+	    }
+	}
 	export class LocalShell {
 	    name: string;
 	    label: string;

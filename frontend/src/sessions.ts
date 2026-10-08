@@ -1,7 +1,7 @@
 // Saved sessions: the "Save session" window, opened from the Connect dialog
 // (☆ Save, Alt+S) or the tab menu, and the session manager (Ctrl+Shift+H).
 
-import {DeleteSession, GetSessions, SaveSession} from '../wailsjs/go/main/App';
+import {DeleteSession, ExportSessions, GetSessions, ImportPuTTY, ImportSessions, SaveSession} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {ask, askOpen} from './dialog';
 
@@ -218,6 +218,12 @@ function paintList(selectId?: string) {
     fillForm();
 }
 
+/** Shows an error under the form, or a result (ok) in blue. */
+function say(msg: string, ok = false) {
+    smError.textContent = msg;
+    smError.classList.toggle('ok', ok);
+}
+
 function fillForm() {
     const x = current;
     smForm.classList.toggle('disabled', !x);
@@ -238,7 +244,7 @@ function fillFields(x?: main.SavedSession) {
     smPass.value = x?.pass ?? '';
     smSavePass.checked = !!x?.pass;
     smCode.value = x?.encoding || 'UTF-8';
-    smError.textContent = '';
+    say('');
 }
 
 async function select(x: main.SavedSession | undefined) {
@@ -265,7 +271,7 @@ async function flush() {
     dirty = false;
     const x = current;
     if (!smHost.value.trim()) {
-        smError.textContent = 'Host를 입력하세요';
+        say('Host를 입력하세요');
         return;
     }
     try {
@@ -279,7 +285,7 @@ async function flush() {
             encoding: smCode.value,
             pass: smPass.value,
         }), smSavePass.checked);
-        smError.textContent = '';
+        say('');
         if (current !== x) return; // another one was picked meanwhile
         current = undefined;
         const focused = document.activeElement;
@@ -293,7 +299,7 @@ async function flush() {
             }
         }
     } catch (e) {
-        smError.textContent = String(e);
+        say(String(e));
     }
 }
 
@@ -426,4 +432,49 @@ smPanel.addEventListener('keydown', ev => {
         openSelected();
     }
     ev.stopPropagation();
+});
+
+// ---- Import / export ----
+
+const smMenu = $<HTMLUListElement>('smMenu');
+const smMore = $<HTMLButtonElement>('smMore');
+
+
+function hideSmMenu() {
+    smMenu.hidden = true;
+}
+
+smMore.addEventListener('click', () => {
+    if (!smMenu.hidden) return hideSmMenu();
+    smMenu.hidden = false;
+    const b = smMore.getBoundingClientRect();
+    const m = smMenu.getBoundingClientRect();
+    smMenu.style.left = `${b.left}px`;
+    smMenu.style.top = `${Math.min(b.bottom + 2, window.innerHeight - m.height - 4)}px`;
+});
+smMore.addEventListener('mousedown', ev => ev.stopPropagation());
+smMenu.addEventListener('mousedown', ev => ev.stopPropagation());
+window.addEventListener('mousedown', hideSmMenu);
+window.addEventListener('blur', hideSmMenu);
+
+smMenu.addEventListener('click', async ev => {
+    const act = (ev.target as HTMLElement).closest('li')?.dataset.act;
+    if (!act) return;
+    hideSmMenu();
+    await flush();
+    try {
+        if (act === 'export') {
+            const p = await ExportSessions();
+            if (p) say(`${all.length}개를 내보냈습니다: ${p}`, true);
+        } else {
+            const r = await (act === 'putty' ? ImportPuTTY() : ImportSessions());
+            if (r.added + r.skipped === 0) return; // cancelled
+            current = undefined;
+            await reload();
+            say(`${r.added}개를 가져왔습니다` + (r.skipped ? ` (이미 있는 ${r.skipped}개는 건너뜀)` : ''), true);
+        }
+    } catch (e) {
+        say(String(e));
+    }
+    smList.focus();
 });

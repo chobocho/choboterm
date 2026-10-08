@@ -1430,8 +1430,17 @@ body.resizing-col #terms .term {
     width: 80px;
 }
 
-.sm .buttons #smGroupOpen {
+.sm .buttons #smMore {
     margin-right: auto;
+}
+
+#smError.ok {
+    color: #0063b1;
+}
+
+/* Above the session manager it drops down from. */
+.menu.sm-menu {
+    z-index: 41;
 }
 
 .sm .buttons #smOpen {

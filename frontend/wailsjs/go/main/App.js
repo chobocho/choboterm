@@ -34,6 +34,10 @@ export function Disconnect(arg1) {
   return window['go']['main']['App']['Disconnect'](arg1);
 }
 
+export function ExportSessions() {
+  return window['go']['main']['App']['ExportSessions']();
+}
+
 export function FileCancel(arg1) {
   return window['go']['main']['App']['FileCancel'](arg1);
 }
@@ -124,6 +128,14 @@ export function GetSettings() {
 
 export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
+}
+
+export function ImportPuTTY() {
+  return window['go']['main']['App']['ImportPuTTY']();
+}
+
+export function ImportSessions() {
+  return window['go']['main']['App']['ImportSessions']();
 }
 
 export function LogPath(arg1) {

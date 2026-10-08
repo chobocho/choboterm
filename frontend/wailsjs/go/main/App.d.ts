@@ -18,6 +18,8 @@ export function DeleteSession(arg1:string):Promise<void>;
 
 export function Disconnect(arg1:number):Promise<void>;
 
+export function ExportSessions():Promise<string>;
+
 export function FileCancel(arg1:number):Promise<void>;
 
 export function FileClose(arg1:number):Promise<void>;
@@ -63,6 +65,10 @@ export function GetSessions():Promise<Array<main.SavedSession>>;
 export function GetSettings():Promise<main.Settings>;
 
 export function GetVersion():Promise<string>;
+
+export function ImportPuTTY():Promise<main.ImportResult>;
+
+export function ImportSessions():Promise<main.ImportResult>;
 
 export function LogPath(arg1:number):Promise<string>;
 

@@ -277,12 +277,19 @@
             </div>
             <div class="buttons">
                 <button type="button" id="smGroupOpen" title="이 그룹의 세션을 모두 새 탭으로 엽니다">그룹 전체 열기</button>
+                <button type="button" id="smMore" title="가져오기 / 내보내기">가져오기 · 내보내기 ▾</button>
                 <button type="button" id="smOpen" title="Enter (목록)">접속</button>
                 <button type="button" id="smClose">닫기</button>
             </div>
         </div>
     </div>
 </div>
+
+<ul id="smMenu" class="menu sm-menu" hidden>
+    <li data-act="putty">PuTTY 세션 가져오기</li>
+    <li data-act="import">파일에서 가져오기...</li>
+    <li data-act="export">파일로 내보내기... (비밀번호 제외)</li>
+</ul>
 
 <div id="pfOverlay" class="overlay modal" hidden>
     <div class="dialog pf" id="pf" tabindex="-1">
