@@ -57,9 +57,19 @@ const TEXT: Record<Lang, HelpText> = {
                 ],
             },
             {
+                title: '세션',
+                rows: [
+                    ['Ctrl+Shift+H / ★', '세션 관리 창: 저장한 세션을 그룹별로 보고 고치기·복제·삭제·찾기. Enter: 접속 · "그룹 전체 열기": 그룹의 세션을 모두 탭으로'],
+                    ['접속 창의 ☆ Save (Alt+S)', '입력한 접속에 이름과 그룹을 붙여 저장. 비밀번호도 저장 가능 (Windows 사용자 계정으로 암호화)'],
+                    ['탭 우클릭 → 세션으로 저장', '지금 탭의 접속을 세션으로 저장. 세션으로 연 탭에는 세션 이름이 붙음'],
+                    ['Host 칸에 입력', '▼ 목록을 이름·주소·그룹으로 걸러 보여 줌. 저장한 세션은 그룹별로 맨 위에'],
+                    ['가져오기 · 내보내기', '세션 관리 창에서 PuTTY 세션 가져오기, 파일로 내보내기·가져오기 (비밀번호는 내보내지 않음)'],
+                ],
+            },
+            {
                 title: '접속',
                 rows: [
-                    ['Alt+C / Alt+A / Esc', '접속 창에서 Connect / Cancel / 닫기'],
+                    ['Alt+C / Alt+A / Alt+S / Esc', '접속 창에서 Connect / Cancel / 세션으로 저장 / 닫기'],
                     ['Ctrl+Shift+D', '연결 끊기 (탭은 유지)'],
                     ['Ctrl+Shift+E', 'UTF-8 ↔ EUC-KR 전환'],
                     ['자동 재접속', '네트워크가 끊기면 3·5·10·20·30초 간격으로 최대 10번 다시 연결 (Enter: 지금 · Esc: 취소)'],
@@ -147,9 +157,19 @@ const TEXT: Record<Lang, HelpText> = {
                 ],
             },
             {
+                title: 'Sessions',
+                rows: [
+                    ['Ctrl+Shift+H / ★', 'Session manager: saved sessions by group; edit, duplicate, delete, search. Enter: connect · "Open group": every session of the group in tabs'],
+                    ['☆ Save in the Connect dialog (Alt+S)', 'Saves what you typed with a name and group. The password can be saved too (encrypted for your Windows account)'],
+                    ['Tab right-click → Save as session', "Saves the tab's connection. A tab opened from a session shows the session's name"],
+                    ['Typing in Host', 'Narrows the ▼ list by name, address or group. Saved sessions come first, by group'],
+                    ['Import · Export', 'In the session manager: import PuTTY sessions, export to / import from a file (passwords are never exported)'],
+                ],
+            },
+            {
                 title: 'Connection',
                 rows: [
-                    ['Alt+C / Alt+A / Esc', 'Connect / Cancel / Close in the Connect dialog'],
+                    ['Alt+C / Alt+A / Alt+S / Esc', 'Connect / Cancel / Save as session / Close in the Connect dialog'],
                     ['Ctrl+Shift+D', 'Disconnect (keeps the tab)'],
                     ['Ctrl+Shift+E', 'Toggle UTF-8 ↔ EUC-KR'],
                     ['Auto reconnect', 'After a network drop, retries at 3/5/10/20/30 s, up to 10 times (Enter: now · Esc: cancel)'],

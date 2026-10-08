@@ -21,6 +21,12 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
     - 경계선을 끌어 크기를 바꾸고, 더블클릭하면 반반으로 돌아갑니다.
     - 탭 바에는 분할된 창들이 한 묶음(파란 배경)으로 나타나고 창마다 상태 점과 이름이 붙습니다. `Ctrl+Shift+W`나 ✕는 그 창만 닫습니다.
   - 접속 창과 파일 전송 창은 탭마다 따로 열립니다. 창이 떠 있어도 탭을 바꿀 수 있고, 돌아오면 입력값·폴더·전송 상태가 그대로 남아 있습니다. 파일 전송은 다른 탭을 보는 동안에도 계속됩니다.
+- **세션 관리**: 자주 쓰는 접속에 이름과 그룹(한 단계)을 붙여 저장합니다. 최근 접속 기록(20개)과 달리 지워지지 않습니다.
+  - 접속 창의 `☆ Save`(`Alt+S`)나 탭 우클릭 메뉴의 "세션으로 저장"으로 저장합니다. 비밀번호도 저장할 수 있으며 Windows DPAPI로 암호화합니다(현재 Windows 사용자만 풀 수 있음).
+  - Host 칸의 ▼ 목록 맨 위에 그룹별로 나옵니다. Host 칸에 입력하면 이름·주소·그룹으로 걸러 보여 주므로 세션이 많아도 몇 글자로 고를 수 있습니다.
+  - 세션으로 연 탭에는 세션 이름이 붙습니다.
+  - **세션 관리 창**: `Ctrl+Shift+H` 또는 탭 바 오른쪽 ★ 버튼. 세션을 고치기·추가·복제·삭제·찾기 하고, `Enter`로 접속합니다. "그룹 전체 열기"는 그룹의 세션을 모두 탭으로 엽니다. 고친 내용은 바로 저장됩니다.
+  - **가져오기 · 내보내기**: PuTTY에 저장된 SSH·Telnet 세션을 `PuTTY` 그룹으로 가져옵니다. 다른 PC로 옮길 때는 파일로 내보내고 가져옵니다(비밀번호는 내보내지 않음).
 - **프로토콜 선택**: 22 = SSH, 21 = FTP, 23 = Telnet. 그 밖의 포트(예: Termux의 8022)는 접속하자마자 서버의 첫 인사말로 자동 판별합니다(`SSH-` → SSH, `220` → FTP, 그 외 → Telnet). 먼저 말을 걸지 않는 Telnet 서버는 판별에 2초가 걸립니다.
 - **SSH**: 비밀번호, keyboard-interactive, `~/.ssh` 개인키(id_ed25519 / id_ecdsa / id_rsa), SSH 에이전트 인증
   - **2단계 인증(OTP)**: 서버가 keyboard-interactive로 묻는 `Verification code:`, `One-time password:`, Duo 같은 질문은 서버가 보낸 그대로 창에 보여 주고 답을 보냅니다. 첫 `Password:` 질문은 접속 창의 Pass로 자동으로 답합니다. Pass를 비워 두면 비밀번호도 창에서 묻습니다.
@@ -80,7 +86,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - **배경만**: Windows 터미널처럼 터미널 배경만 비치고 글자는 선명합니다. 글자를 선명하게 그리려고 이 방식에서는 기본으로 GPU 가속을 쓰지 않습니다(창 제목에 🐢CPU). "배경만에서도 GPU로 그리기"를 켜면 GPU로 그립니다(⚡GPU, 빠르지만 글자가 조금 거칠 수 있음).
   - 두 방식 모두 다시 시작하지 않아도 바로 적용됩니다.
 - **창 위치 기억**: 창 크기·위치·최대화 상태를 닫을 때 저장해 다음 실행 때 그대로 엽니다. 모니터를 뺀 경우처럼 저장된 위치가 화면 밖이면 보이는 곳으로 옮깁니다.
-- **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 Telnet만, 암호화해서 저장합니다.
+- **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 Telnet만, 암호화해서 저장합니다. 서버별 색 테마와 포트 포워딩 규칙은 기록에서 밀려나도 지워지지 않습니다.
 
 X11 포워딩은 지원하지 않습니다.
 
@@ -94,7 +100,8 @@ X11 포워딩은 지원하지 않습니다.
 | `Ctrl+Shift+W` | 탭 닫기 (분할된 탭에서는 지금 창만) |
 | `Ctrl+Shift+\` / `Ctrl+Shift+-` | 오른쪽 / 아래로 창 분할 |
 | `Alt+←` `→` `↑` `↓` (분할된 탭에서) | 옆 창으로 이동 |
-| `Alt+C` / `Alt+A` / `Esc` | 접속 창에서 Connect / Cancel / 닫기 |
+| `Alt+C` / `Alt+A` / `Alt+S` / `Esc` | 접속 창에서 Connect / Cancel / 세션으로 저장 / 닫기 |
+| `Ctrl+Shift+H` | 세션 관리 창 |
 | `Ctrl+Shift+D` | 연결 끊기 (탭은 유지) |
 | `Ctrl+Shift+E` | UTF-8 ↔ EUC-KR 전환 |
 | `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP / FTP) |
@@ -116,6 +123,7 @@ X11 포워딩은 지원하지 않습니다.
 - 다운로드(SFTP / SCP / FTP): 저장 창에서 선택합니다. 기본 위치는 `~/Downloads`입니다.
 - Zmodem 수신: `~/Downloads`에 저장합니다. 같은 이름이 있으면 `이름 (1).확장자`로 저장합니다.
 - 접속 기록: `%AppData%\choboterm\hosts.json` (Telnet 비밀번호는 DPAPI로 암호화된 값만 저장)
+- 세션, 서버별 색 테마·포트 포워딩: `%AppData%\choboterm\sessions.json` (비밀번호는 DPAPI로 암호화된 값만 저장)
 - 설정: `%AppData%\choboterm\settings.json`
 - 세션 로그: `문서\choboterm\logs` (설정 창에서 변경)
 
@@ -191,6 +199,8 @@ go test ./...
 | `zmodem.go` / `zmodem_app.go` | Zmodem 프로토콜과 앱 연결 |
 | `codec.go` | UTF-8 ↔ CP949 변환 |
 | `history_store.go` | 최근 접속 기록 |
+| `session_store.go` | 저장한 세션, 서버별 설정(색 테마·포트 포워딩) |
+| `session_import.go` / `putty_windows.go` | 세션 가져오기·내보내기, PuTTY 세션 읽기 |
 | `settings.go` | 사용자 설정 (`settings.json`) |
 | `window_windows.go` | 창 크기·위치 저장과 복원 (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` | 비밀번호 암호화 (Windows DPAPI) |
@@ -198,6 +208,7 @@ go test ./...
 | `frontend/src/files.ts` | 파일 전송 창(여러 개 선택, 끌어 놓기 업로드, 삭제·이름 바꾸기·새 폴더), 진행률 상자 |
 | `frontend/src/viewer.ts` / `viewer.go` | 텍스트 뷰어·편집기(CodeMirror, 인코딩 자동 판별·강제 지정, 서버 저장·충돌 확인, 변환 저장) |
 | `frontend/src/dialog.ts` | 확인 / 이름 입력 창 |
+| `frontend/src/sessions.ts` | 세션 저장 창, 세션 관리 창, 가져오기·내보내기 |
 | `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
 | `frontend/src/search.ts` | 스크롤백 검색 막대 |
 | `frontend/src/prefs.ts` | 설정 창 |
