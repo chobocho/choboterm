@@ -1503,6 +1503,34 @@ body.resizing-col #terms .term {
     outline: 1px solid #0078d7;
 }
 
+/* ---- Save session window ---- */
+
+.dialog.sesssave {
+    width: min(360px, calc(100vw - 32px));
+    outline: none;
+}
+
+.sesssave .where,
+.sesssave .wide {
+    grid-column: 1 / -1;
+}
+
+.sesssave .where {
+    color: #555;
+    word-break: break-all;
+}
+
+.sesssave .buttons #sessSaveOk {
+    outline: 1px solid #0078d7;
+}
+
+/* The Connect dialog's Save button sits on the left, apart from Connect / Cancel. */
+.buttons #saveSess {
+    min-width: 0;
+    margin-right: auto;
+    padding: 0 8px;
+}
+
 /* ---- Login prompts (key passphrase, one-time code...) ---- */
 
 /* Above everything, including the Connect dialog that is waiting for it. */

@@ -13,6 +13,7 @@ import {initTranslucencyPreview, openPrefs, prefsOpen} from './prefs';
 import {expandMacro, macroForKey, macrosOpen, openMacros} from './macros';
 import {forwardsOpen, forwardsTabClosed, openForwards} from './forwards';
 import {askOpen} from './dialog';
+import {openSaveSession, sessionSaveOpen} from './sessions';
 import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
@@ -67,6 +68,8 @@ interface Tab {
     encoding: string;
     // Last connection, kept in memory only, for reconnect / duplicate.
     req?: main.ConnectRequest;
+    // The saved session req came from: its name is the tab label.
+    session?: main.SavedSession;
     // This tab's Connect dialog, while it is open.
     dialog?: DialogState;
     // Created just for a Connect dialog: cancelling the dialog closes it.
@@ -736,7 +739,7 @@ function setState(t: Tab, state: TabState) {
     t.state = state;
     t.el.classList.toggle('on', state !== 'idle');
     if (t.req && t.proto === 'local') {
-        t.label.textContent = t.req.host;
+        t.label.textContent = t.session?.name ?? t.req.host;
         t.el.title = `로컬 셸: ${t.req.host}`;
         if (t.log) t.el.title += `
 로그 기록 중: ${t.log}`;
@@ -744,7 +747,7 @@ function setState(t: Tab, state: TabState) {
         const scheme = t.proto || 'telnet';
         // Show the port only when it isn't the protocol's usual one.
         const usual = [21, 22, 23].includes(Number(t.req.port));
-        t.label.textContent = usual ? t.req.host : `${t.req.host}:${t.req.port}`;
+        t.label.textContent = t.session?.name ?? (usual ? t.req.host : `${t.req.host}:${t.req.port}`);
         t.el.title = `${scheme}://${t.req.login ? t.req.login + '@' : ''}${t.req.host}:${t.req.port}`;
         if (t.log) t.el.title += `
 로그 기록 중: ${t.log}`;
@@ -855,12 +858,32 @@ async function reconnect(t: Tab) {
 async function duplicate(t: Tab) {
     if (!t.req) return;
     const n = createTab();
+    n.session = t.session;
     activate(n);
     try {
         if (await connectTab(n, main.ConnectRequest.createFrom({...t.req})) === 'ftp') await openFilesFor(n);
     } catch (e) {
         notice(n, String(e));
     }
+}
+
+/** Tab menu "세션으로 저장": saves the tab's connection; the tab then shows the session's name. */
+async function saveTabSession(t: Tab) {
+    if (!t.req) return;
+    const r = t.req;
+    const s = await openSaveSession({
+        host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass, session: t.session,
+    });
+    if (s) {
+        for (const o of tabs.values()) {
+            if (o === t || (o.session && o.session.id === s.id)) {
+                o.session = s;
+                setState(o, o.state);
+            }
+        }
+        toast(`세션 저장: ${s.group ? s.group + ' / ' : ''}${s.name}`);
+    }
+    focusActive();
 }
 
 function disconnect(t: Tab) {
@@ -976,6 +999,7 @@ function showMenu(t: Tab, x: number, y: number) {
     enable('files', t.state !== 'idle' && t.proto !== 'local');
     enable('forwards', t.state === 'on' && t.proto === 'ssh');
     enable('disconnect', t.state !== 'idle');
+    enable('saveSession', !!t.req);
     enable('log', !!t.log || t.state === 'on');
     menu.querySelector('[data-act="log"]')!.textContent = t.log ? '로그 기록 중지' : '로그 기록 시작';
     menu.querySelector('[data-act="close"]')!.textContent = panesOf(t.group).length > 1 ? '분할 창 닫기' : '탭 닫기';
@@ -1082,6 +1106,9 @@ menu.addEventListener('click', ev => {
         case 'logs':
             ShowLogs(t.id).catch(e => notice(t, String(e)));
             break;
+        case 'saveSession':
+            saveTabSession(t);
+            break;
         case 'disconnect':
             disconnect(t);
             break;
@@ -1145,6 +1172,22 @@ function updateProto() {
     proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : p === 23 ? 'Telnet' : '자동 감지';
 }
 
+/** Reads what the Host list offers: saved sessions, history, ~/.ssh/config names, local shells. */
+async function loadEntries() {
+    [history, sessions, configHosts, localShells] = await Promise.all([
+        GetHistory(), GetSessions(), GetSSHConfigHosts(), GetLocalShells(),
+    ]).then(r => r.map(x => x ?? []) as [main.HostEntry[], main.SavedSession[], main.SSHConfigHost[], main.LocalShell[]]);
+    const seen = new Set(history.map(h => h.host));
+    const saved = new Set(sessions.map(s => `${s.host}:${s.port}`));
+    entries = [...sessions.map(s => ({
+        host: s.host, port: s.port, login: s.login, encoding: s.encoding, pass: s.pass, session: s,
+    })), ...history.filter(h => !saved.has(`${h.host}:${h.port}`)), ...configHosts.filter(c => !seen.has(c.host)).map(c => ({
+        host: c.host, port: c.port, login: c.login, encoding: 'UTF-8', pass: '', fromConfig: true,
+    })), ...localShells.filter(s => !seen.has(s.name)).map(s => ({
+        host: s.name, port: 0, login: '', encoding: 'UTF-8', pass: '', label: s.label,
+    }))];
+}
+
 /**
  * Opens the Connect dialog. t: the tab to connect in, null: a new tab,
  * undefined: the active tab if it's empty, otherwise a new tab.
@@ -1161,22 +1204,11 @@ async function openDialog(t?: Tab | null, from?: Tab) {
     if (tab.dialog) return activate(tab);
     cancelRetry(tab);
 
-    history = (await GetHistory()) ?? [];
-    sessions = (await GetSessions()) ?? [];
-    configHosts = (await GetSSHConfigHosts()) ?? [];
-    localShells = (await GetLocalShells()) ?? [];
-    const seen = new Set(history.map(h => h.host));
-    const saved = new Set(sessions.map(s => `${s.host}:${s.port}`));
-    entries = [...sessions.map(s => ({
-        host: s.host, port: s.port, login: s.login, encoding: s.encoding, pass: s.pass, session: s,
-    })), ...history.filter(h => !saved.has(`${h.host}:${h.port}`)), ...configHosts.filter(c => !seen.has(c.host)).map(c => ({
-        host: c.host, port: c.port, login: c.login, encoding: 'UTF-8', pass: '', fromConfig: true,
-    })), ...localShells.filter(s => !seen.has(s.name)).map(s => ({
-        host: s.name, port: 0, login: '', encoding: 'UTF-8', pass: '', label: s.label,
-    }))];
-    const r = tab.req ?? from?.req; // a new split pane starts with its neighbour's server
+    await loadEntries();
+    const src = tab.req ? tab : from; // a new split pane starts with its neighbour's server
+    const r = src?.req;
     if (r) {
-        applyEntry({host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass});
+        applyEntry({host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass, session: src.session});
     } else if (!host.value && history.length > 0) {
         applyEntry(history[0]);
     } else {
@@ -1466,6 +1498,8 @@ async function doConnect() {
             encoding: d.encoding,
         }));
         d.connecting = false;
+        t.session = d.session;
+        setState(t, t.state); // the label is the session's name
         if (t.dialog === d) dismissDialog(t, false);
         if (protocol === 'ftp') await openFilesFor(t);
     } catch (e) {
@@ -1484,6 +1518,34 @@ form.addEventListener('submit', ev => {
 });
 cancel.addEventListener('click', cancelDialog);
 $<HTMLButtonElement>('close').addEventListener('click', cancelDialog);
+$<HTMLButtonElement>('saveSess').addEventListener('click', saveFromDialog);
+
+/** ☆ Save: saves what is typed in the Connect dialog as a session (or updates the picked one). */
+async function saveFromDialog() {
+    const t = active;
+    if (!t?.dialog || t.dialog.connecting) return;
+    hideList();
+    await resolveHost();
+    if (!host.value.trim()) {
+        error.textContent = 'Host를 입력하세요';
+        return host.focus();
+    }
+    const local = isLocal(host.value);
+    const s = await openSaveSession({
+        host: host.value.trim(),
+        port: local ? 0 : Number(port.value),
+        login: local ? '' : login.value,
+        encoding: local ? 'UTF-8' : encoding.value,
+        pass: local ? '' : pass.value,
+        session: chosen,
+    });
+    if (s) {
+        chosen = s;
+        await loadEntries();
+        toast(`세션 저장: ${s.group ? s.group + ' / ' : ''}${s.name}`);
+    }
+    if (t === active && t.dialog) ok.focus();
+}
 
 form.addEventListener('keydown', ev => {
     if (ev.key === 'Escape') {
@@ -1496,6 +1558,9 @@ form.addEventListener('keydown', ev => {
     } else if (ev.altKey && (ev.key === 'a' || ev.key === 'A')) {
         ev.preventDefault();
         cancelDialog();
+    } else if (ev.altKey && (ev.key === 's' || ev.key === 'S')) {
+        ev.preventDefault();
+        saveFromDialog();
     }
 });
 
@@ -1568,7 +1633,7 @@ async function toggleLog(t: Tab) {
 /** A window that takes all keys until it is closed. */
 function modalOpen() {
     return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen() || askOpen() || viewerOpen() ||
-        authPromptOpen();
+        authPromptOpen() || sessionSaveOpen();
 }
 
 function isAppShortcut(ev: KeyboardEvent): boolean {

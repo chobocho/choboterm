@@ -34,6 +34,7 @@
     <li data-act="forwards">포트 포워딩</li>
     <li data-act="log">로그 기록 시작</li>
     <li data-act="logs">로그 폴더 열기</li>
+    <li data-act="saveSession">세션으로 저장</li>
     <li data-act="disconnect">연결 끊기</li>
     <li class="sep"></li>
     <li data-act="close">탭 닫기</li>
@@ -78,6 +79,7 @@
             <div class="error" id="error"></div>
 
             <div class="buttons">
+                <button type="button" id="saveSess" title="지금 입력한 접속을 세션으로 저장 (Alt+S)">☆ <u>S</u>ave</button>
                 <button type="submit" id="ok"><u>C</u>onnect</button>
                 <button type="button" id="cancel">C<u>a</u>ncel</button>
             </div>
@@ -371,6 +373,30 @@
             <div class="buttons">
                 <button type="button" id="askOk">확인</button>
                 <button type="button" id="askCancel">취소</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="sessSaveOverlay" class="overlay modal ask" hidden>
+    <div class="dialog sesssave" id="sessSave" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title" id="sessSaveTitle">세션으로 저장</span>
+            <button type="button" class="close" id="sessSaveX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div class="where" id="sessSaveWhere"></div>
+            <label for="sessName">이름</label>
+            <input id="sessName" spellcheck="false" autocomplete="off"/>
+            <label for="sessGroup">그룹</label>
+            <input id="sessGroup" list="sessGroups" spellcheck="false" autocomplete="off" placeholder="비우면 그룹 없음"/>
+            <datalist id="sessGroups"></datalist>
+            <label class="check wide"><input type="checkbox" id="sessPass"/> 비밀번호도 저장 (Windows 사용자 계정으로 암호화)</label>
+            <div class="error" id="sessSaveError"></div>
+            <div class="buttons">
+                <button type="button" id="sessSaveOk">저장</button>
+                <button type="button" id="sessSaveCancel">취소</button>
             </div>
         </div>
     </div>
