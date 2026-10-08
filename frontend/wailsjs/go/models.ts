@@ -156,6 +156,20 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class LocalShell {
+	    name: string;
+	    label: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LocalShell(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.label = source["label"];
+	    }
+	}
 	export class Macro {
 	    name: string;
 	    key: string;

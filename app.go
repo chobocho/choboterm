@@ -194,11 +194,14 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	if req.Host == "" {
 		return "", errors.New("Host를 입력하세요")
 	}
-	if req.Port <= 0 || req.Port > 65535 {
-		return "", errors.New("Port가 올바르지 않습니다")
-	}
 	if req.Cols <= 0 || req.Rows <= 0 {
 		req.Cols, req.Rows = 80, 24
+	}
+	if cmdline, ok := localCommand(req.Host); ok {
+		return a.connectLocal(tabID, req, cmdline)
+	}
+	if req.Port <= 0 || req.Port > 65535 {
+		return "", errors.New("Port가 올바르지 않습니다")
 	}
 
 	// "ssh [-p port] [user@]name" and names from ~/.ssh/config: req keeps
@@ -257,17 +260,39 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	}
 
 	enc := t.codec.Set(req.Encoding)
-	t.mu.Lock()
-	t.sess = sess
-	t.host, t.port = req.Host, req.Port
-	t.mu.Unlock()
-
 	// Telnet passwords are remembered (DPAPI-encrypted) and filled in next time.
 	var savePass *string
 	if proto == "telnet" {
 		savePass = &req.Pass
 	}
 	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, savePass)
+	t.start(sess, proto, req)
+	return proto, nil
+}
+
+// connectLocal runs a local shell (cmd, PowerShell, WSL) in the tab.
+// The pseudo console always speaks UTF-8.
+func (a *App) connectLocal(tabID int, req ConnectRequest, cmdline string) (string, error) {
+	t := a.getTab(tabID)
+	t.disconnect()
+	sess, err := startPty(cmdline, localHome(), req.Cols, req.Rows)
+	if err != nil {
+		return "", err
+	}
+	t.codec.Set(EncodingUTF8)
+	req.Port = 0
+	_ = addHistory(HostEntry{Host: req.Host, Encoding: EncodingUTF8}, nil)
+	t.start(sess, "local", req)
+	return "local", nil
+}
+
+// start makes sess the tab's session and starts reading it.
+func (t *tab) start(sess Session, proto string, req ConnectRequest) {
+	t.mu.Lock()
+	t.sess = sess
+	t.host, t.port = req.Host, req.Port
+	t.mu.Unlock()
+
 	go t.pump(sess)
 	go t.keepAlive(sess, time.Duration(loadSettings().KeepAlive)*time.Second)
 	if s, ok := sess.(*sshSession); ok {
@@ -278,7 +303,6 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	} else if loadSettings().LogAuto {
 		_, _ = t.startLog() // a failure must not fail the connection
 	}
-	return proto, nil
 }
 
 // keepAlive checks the connection every interval while sess is the tab's

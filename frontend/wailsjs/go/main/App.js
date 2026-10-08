@@ -102,6 +102,10 @@ export function GetHistory() {
   return window['go']['main']['App']['GetHistory']();
 }
 
+export function GetLocalShells() {
+  return window['go']['main']['App']['GetLocalShells']();
+}
+
 export function GetSSHConfigHosts() {
   return window['go']['main']['App']['GetSSHConfigHosts']();
 }

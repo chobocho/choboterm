@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261003_190000.html">history_20261003_190000.html</a></p>
 
+<h2>2026-10-08 — 로컬 셸 탭 (cmd / PowerShell / WSL)</h2>
+<ul>
+  <li>Host에 cmd · powershell · pwsh · wsl(인자 허용: "wsl -d Ubuntu")을 쓰면 이 PC의 셸을 탭에서 실행. Windows 의사 콘솔(ConPTY) 사용 — localpty_windows.go(CreatePseudoConsole + CreateProcess, 종료 감지 후 콘솔 닫기로 출력 EOF), localshell.go(이름 → 명령줄, 설치된 셸 목록 GetLocalShells)</li>
+  <li>Connect에서 로컬 셸이면 포트 검사 전에 connectLocal로 분기. 항상 UTF-8, 사용자 폴더에서 시작, 기록에는 포트 0으로 저장. 세션 시작 공통부를 tab.start로 분리</li>
+  <li>화면: Host 입력 중 "로컬 셸" 표시, ▼ 목록에 설치된 셸 추가, 탭 이름은 셸 이름, 창 제목 "- wsl (로컬)", 파일 전송 창·인코딩 전환은 안내만 표시</li>
+  <li>테스트: cmd 실행·종료(EOF), 입력·크기 변경·탭 닫기, App.Connect로 한글 echo와 exit 후 term:closed·기록 확인, 명령줄 판별. PowerShell·WSL도 이 PC에서 실행 확인. wails build 통과, 화면은 Edge(Playwright)로 확인</li>
+</ul>
+
 <h2>2026-10-08 — keyboard-interactive 질문 (OTP · 2단계 인증)</h2>
 <ul>
   <li>예전에는 keyboard-interactive의 숨김 질문에 모두 비밀번호를 넣어서, OTP를 묻는 서버에 로그인할 수 없었음</li>

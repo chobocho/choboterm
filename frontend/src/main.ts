@@ -21,8 +21,8 @@ import {themeByName} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, GetHistory, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send, SetEncoding,
-    ShowLogs, StartLog, StopLog,
+    CloseTab, Connect, Disconnect, GetHistory, GetLocalShells, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    SetEncoding, ShowLogs, StartLog, StopLog,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
@@ -36,6 +36,13 @@ let version = '';
 
 // idle: not connected, on: terminal session, ftp: FTP (file window only)
 type TabState = 'idle' | 'on' | 'ftp';
+
+// Host field texts that run a program on this PC instead of connecting (see localshell.go).
+const LOCAL_SHELL = /^(cmd|powershell|pwsh|wsl)(\.exe)?(\s|$)/i;
+
+function isLocal(host: string): boolean {
+    return LOCAL_SHELL.test(host.trim());
+}
 
 // A tab bar entry. It shows one or more panes (split with Ctrl+Shift+R / B);
 // each pane is a Tab with its own connection and its own entry in the chip.
@@ -56,7 +63,7 @@ interface Tab {
     el: HTMLDivElement;
     label: HTMLSpanElement;
     state: TabState;
-    proto: string; // "ssh" / "telnet" / "ftp" as reported by Connect
+    proto: string; // "ssh" / "telnet" / "ftp" / "local" as reported by Connect
     encoding: string;
     // Last connection, kept in memory only, for reconnect / duplicate.
     req?: main.ConnectRequest;
@@ -613,7 +620,12 @@ function closeTab(t: Tab) {
 function setState(t: Tab, state: TabState) {
     t.state = state;
     t.el.classList.toggle('on', state !== 'idle');
-    if (t.req) {
+    if (t.req && t.proto === 'local') {
+        t.label.textContent = t.req.host;
+        t.el.title = `로컬 셸: ${t.req.host}`;
+        if (t.log) t.el.title += `
+로그 기록 중: ${t.log}`;
+    } else if (t.req) {
         const scheme = t.proto || 'telnet';
         // Show the port only when it isn't the protocol's usual one.
         const usual = [21, 22, 23].includes(Number(t.req.port));
@@ -628,7 +640,9 @@ function setState(t: Tab, state: TabState) {
 function updateTitle() {
     let title = appName;
     const t = active;
-    if (t?.req && t.state !== 'idle') {
+    if (t?.req && t.state !== 'idle' && t.proto === 'local') {
+        title += ` - ${t.req.host} (로컬)`;
+    } else if (t?.req && t.state !== 'idle') {
         const where = `${t.req.host}:${t.req.port}`;
         title += t.state === 'ftp' ? ` - ftp://${where}` : ` - ${where}`;
         title += ` [${t.encoding}]`;
@@ -654,6 +668,7 @@ async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = false):
     }
     t.req = req;
     t.proto = protocol;
+    if (protocol === 'local') req.encoding = 'UTF-8'; // the pseudo console speaks UTF-8 only
     if (!keepScreen) t.term.reset();
     applyEncoding(t, req.encoding || 'UTF-8');
     if (protocol === 'ftp') {
@@ -766,6 +781,7 @@ function shellDir(t: Tab): string {
 
 async function openFilesFor(t: Tab) {
     if (t.state === 'idle' || !t.req || t.dialog) return;
+    if (t.proto === 'local') return toast('로컬 셸에서는 파일 전송 창을 쓰지 않습니다');
     try {
         await openFiles(t.id, t.req.host, {startDir: shellDir(t), onClose: () => focusActive()});
     } catch (e) {
@@ -774,6 +790,7 @@ async function openFilesFor(t: Tab) {
 }
 
 async function toggleEncoding(t: Tab) {
+    if (t.proto === 'local' && t.state !== 'idle') return toast('로컬 셸은 UTF-8만 씁니다');
     const name = await SetEncoding(t.id, t.encoding === 'EUC-KR' ? 'UTF-8' : 'EUC-KR');
     applyEncoding(t, name);
     if (t.req) t.req.encoding = name;
@@ -838,7 +855,7 @@ function showMenu(t: Tab, x: number, y: number) {
         menu.querySelector(`[data-act="${act}"]`)!.classList.toggle('disabled', !on);
     enable('reconnect', true);
     enable('duplicate', !!t.req);
-    enable('files', t.state !== 'idle');
+    enable('files', t.state !== 'idle' && t.proto !== 'local');
     enable('forwards', t.state === 'on' && t.proto === 'ssh');
     enable('disconnect', t.state !== 'idle');
     enable('log', !!t.log || t.state === 'on');
@@ -919,15 +936,20 @@ const hostDrop = $<HTMLButtonElement>('hostDrop');
 const hostList = $<HTMLUListElement>('hostList');
 const hostTip = $<HTMLDivElement>('hostTip');
 
-type ListEntry = Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'> & {fromConfig?: boolean};
+type ListEntry = Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'> & {fromConfig?: boolean; label?: string};
 
 let history: main.HostEntry[] = [];
 let configHosts: main.SSHConfigHost[] = [];
+let localShells: main.LocalShell[] = [];
 let entries: ListEntry[] = []; // history, then ~/.ssh/config names not in it
 let activeIndex = -1;
 let resolved = '';
 
 function updateProto() {
+    if (isLocal(host.value)) {
+        proto.textContent = '로컬 셸';
+        return;
+    }
     const p = Number(port.value);
     // Other ports are detected from the server greeting when connecting.
     proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : p === 23 ? 'Telnet' : '자동 감지';
@@ -951,9 +973,12 @@ async function openDialog(t?: Tab | null, from?: Tab) {
 
     history = (await GetHistory()) ?? [];
     configHosts = (await GetSSHConfigHosts()) ?? [];
+    localShells = (await GetLocalShells()) ?? [];
     const seen = new Set(history.map(h => h.host));
     entries = [...history, ...configHosts.filter(c => !seen.has(c.host)).map(c => ({
         host: c.host, port: c.port, login: c.login, encoding: 'UTF-8', pass: '', fromConfig: true,
+    })), ...localShells.filter(s => !seen.has(s.name)).map(s => ({
+        host: s.name, port: 0, login: '', encoding: 'UTF-8', pass: '', label: s.label,
     }))];
     const r = tab.req ?? from?.req; // a new split pane starts with its neighbour's server
     if (r) {
@@ -1029,7 +1054,7 @@ function cancelDialog() {
 
 function applyEntry(e: Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'>) {
     host.value = e.host;
-    port.value = String(e.port);
+    if (e.port > 0) port.value = String(e.port); // a local shell (port 0) keeps the port for later
     login.value = e.login;
     encoding.value = e.encoding || 'UTF-8';
     pass.value = e.pass ?? '';
@@ -1044,7 +1069,7 @@ function applyEntry(e: Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encodin
  */
 async function resolveHost() {
     const text = host.value.trim();
-    if (!text || text === resolved) return;
+    if (!text || text === resolved || isLocal(text)) return;
     const r = await LookupSSH(text);
     if (host.value.trim() !== text) return; // typed on meanwhile
     host.value = r.host;
@@ -1079,6 +1104,7 @@ function showTip(r?: main.SSHTarget) {
         tipLine('주소 또는 ~/.ssh/config의 Host 이름', 'head');
         tipLine('예) pusan · ssh pusan');
         tipLine('     ssh -p 2222 user@pusan', 'pre');
+        tipLine('이 PC의 셸: cmd · powershell · wsl (wsl -d Ubuntu)');
         if (configHosts.length > 0) {
             const names = configHosts.slice(0, 6).map(c => c.host).join(', ');
             tipLine(`등록된 이름: ${names}${configHosts.length > 6 ? ' …' : ''} (▼ 목록)`, 'names');
@@ -1112,7 +1138,8 @@ function showList() {
         li.textContent = e.host;
         const meta = document.createElement('span');
         meta.className = 'meta';
-        meta.textContent = `${e.port}${e.login ? ' · ' + e.login : ''}${e.fromConfig ? ' · ssh config' : ''}`;
+        meta.textContent = isLocal(e.host) ? `로컬 셸${e.label ? ' · ' + e.label : ''}` :
+            `${e.port}${e.login ? ' · ' + e.login : ''}${e.fromConfig ? ' · ssh config' : ''}`;
         li.appendChild(meta);
         li.addEventListener('mousedown', ev => {
             ev.preventDefault();
@@ -1145,7 +1172,10 @@ host.addEventListener('blur', () => {
     hideTip();
 });
 host.addEventListener('focus', () => refreshTip());
-host.addEventListener('input', () => refreshTip());
+host.addEventListener('input', () => {
+    updateProto(); // "cmd", "wsl"... are local shells
+    refreshTip();
+});
 host.addEventListener('change', () => {
     fillSavedPass();
     resolveHost();
