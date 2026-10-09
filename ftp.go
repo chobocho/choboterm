@@ -125,6 +125,28 @@ func (f *ftpFS) Upload(remotePath string, r io.Reader, _ int64) error {
 	return f.c.Stor(f.names.EncodeString(remotePath), r)
 }
 
+// DownloadFrom sends remotePath from offset on (REST + RETR).
+func (f *ftpFS) DownloadFrom(remotePath string, offset int64, w io.Writer) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	r, err := f.c.RetrFrom(f.names.EncodeString(remotePath), uint64(offset))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, r)
+	if cerr := r.Close(); err == nil {
+		err = cerr
+	}
+	return err
+}
+
+// UploadFrom writes r at offset of remotePath (REST + STOR).
+func (f *ftpFS) UploadFrom(remotePath string, r io.Reader, offset int64) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.c.StorFrom(f.names.EncodeString(remotePath), r, uint64(offset))
+}
+
 func (f *ftpFS) Remove(p string, isDir bool) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()

@@ -19,6 +19,8 @@ type Prompt struct {
 	Title   string        `json:"title"`
 	Message string        `json:"message"`
 	Fields  []PromptField `json:"fields"`
+	OK      string        `json:"ok"`     // button labels; "" = 확인 / 취소
+	Cancel  string        `json:"cancel"` // (a question with no fields is a choice of two)
 }
 
 type promptAnswer struct {
@@ -40,7 +42,18 @@ var prompts = struct {
 
 // ask shows a prompt for tab tabID in the page and waits for the answer.
 func (a *App) ask(tabID int, title, message string, fields []PromptField) ([]string, bool) {
-	p := Prompt{Tab: tabID, Title: title, Message: message, Fields: fields}
+	return a.askPrompt(Prompt{Tab: tabID, Title: title, Message: message, Fields: fields})
+}
+
+// choose asks a question with two answers; true means the ok one. Closing the
+// window or not answering in time counts as cancel.
+func (a *App) choose(tabID int, title, message, ok, cancel string) bool {
+	_, yes := a.askPrompt(Prompt{Tab: tabID, Title: title, Message: message, OK: ok, Cancel: cancel})
+	return yes
+}
+
+func (a *App) askPrompt(p Prompt) ([]string, bool) {
+	fields := p.Fields
 	if a.hooks.prompt != nil {
 		return a.hooks.prompt(p)
 	}

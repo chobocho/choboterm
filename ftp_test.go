@@ -87,6 +87,22 @@ func TestFTPRoundTrip(t *testing.T) {
 	if _, err := fs.List(wd); err != nil {
 		t.Fatalf("list after early stop: %v", err)
 	}
+
+	// Resuming: the rest of a download, and the rest of an upload.
+	buf.Reset()
+	if err := fs.DownloadFrom(wd+"/sub/올림.bin", 500_000, &buf); err != nil || !bytes.Equal(buf.Bytes(), payload[500_000:]) {
+		t.Fatalf("download from offset: %d bytes, %v", buf.Len(), err)
+	}
+	if err := fs.Upload(wd+"/sub/올림.bin", bytes.NewReader(payload[:400_000]), 400_000); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.UploadFrom(wd+"/sub/올림.bin", bytes.NewReader(payload[400_000:]), 400_000); err != nil {
+		t.Fatal(err)
+	}
+	buf.Reset()
+	if err := fs.Download(wd+"/sub/올림.bin", &buf); err != nil || !bytes.Equal(buf.Bytes(), payload) {
+		t.Fatalf("after resumed upload: %d bytes, %v", buf.Len(), err)
+	}
 	if err := fs.Remove(wd+"/sub/올림.bin", false); err != nil {
 		t.Fatal(err)
 	}

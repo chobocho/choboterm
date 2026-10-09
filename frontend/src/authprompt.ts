@@ -11,6 +11,8 @@ interface Prompt {
     title: string;
     message: string;
     fields: {label: string; secret: boolean}[] | null;
+    ok?: string; // button labels, e.g. 이어받기 / 처음부터
+    cancel?: string;
 }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -57,6 +59,8 @@ function show(p: Prompt) {
         fieldsEl.appendChild(label);
         return input;
     });
+    $<HTMLButtonElement>('authOk').textContent = p.ok || '확인';
+    $<HTMLButtonElement>('authCancel').textContent = p.cancel || '취소';
     overlay.hidden = false;
     (inputs[0] ?? $<HTMLButtonElement>('authOk')).focus();
 }

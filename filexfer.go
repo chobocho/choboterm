@@ -30,6 +30,42 @@ type RemoteFS interface {
 	Close() error
 }
 
+// resumer is a RemoteFS that can continue a transfer part way (SFTP, FTP;
+// SCP can't).
+type resumer interface {
+	// DownloadFrom sends remotePath from offset on.
+	DownloadFrom(remotePath string, offset int64, w io.Writer) error
+	// UploadFrom writes r at offset of the existing remotePath.
+	UploadFrom(remotePath string, r io.Reader, offset int64) error
+}
+
+// partSuffix marks a download in progress; it is renamed when complete, and
+// kept when the transfer breaks so it can be resumed.
+const partSuffix = ".part"
+
+// brokenUploads remembers uploads that broke off, by server and remote path,
+// with the local file they came from. Only those are offered to be continued:
+// a smaller file on the server may just be an older version.
+var brokenUploads = struct {
+	sync.Mutex
+	m map[string]string
+}{m: map[string]string{}}
+
+func (t *tab) uploadKey(remote string) string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return fmt.Sprintf("%s:%d|%s", t.host, t.port, remote)
+}
+
+// localID identifies a local file's version: path, size and time.
+func localID(p string) string {
+	st, err := os.Stat(p)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%s|%d|%d", p, st.Size(), st.ModTime().UnixNano())
+}
+
 // FileEntry is one row of the remote file list.
 type FileEntry struct {
 	Name    string `json:"name"`
@@ -124,6 +160,73 @@ func (pr progressReader) Read(b []byte) (int, error) {
 	return n, err
 }
 
+// humanSize is n in B, KB, MB or GB, for messages.
+func humanSize(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	v, units := float64(n)/unit, []string{"KB", "MB", "GB", "TB"}
+	i := 0
+	for v >= unit && i < len(units)-1 {
+		v /= unit
+		i++
+	}
+	return fmt.Sprintf("%.1f %s", v, units[i])
+}
+
+// canResume tells whether the tab's file system can continue transfers.
+func (t *tab) canResume() bool {
+	ok := false
+	_ = t.withFS(func(fs RemoteFS) error {
+		_, ok = fs.(resumer)
+		return nil
+	})
+	return ok
+}
+
+// downloadFile downloads remotePath (size bytes) to local through local.part.
+// A .part left by a broken download of the same file is continued if the user
+// agrees; a failed download keeps its .part for next time.
+func (t *tab) downloadFile(remotePath, local string, size int64, name string) error {
+	part := local + partSuffix
+	var offset int64
+	if st, err := os.Stat(part); err == nil && st.Mode().IsRegular() && st.Size() > 0 && st.Size() < size && t.canResume() {
+		msg := fmt.Sprintf("%s\n\n받다 만 파일이 있습니다: %s / %s\n이어서 받을까요? \"처음부터\"는 새로 받습니다.",
+			filepath.Base(local), humanSize(st.Size()), humanSize(size))
+		if t.app.choose(t.id, "이어받기", msg, "이어받기", "처음부터") {
+			offset = st.Size()
+		}
+	}
+	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+	if offset > 0 {
+		flags = os.O_WRONLY | os.O_APPEND
+	}
+	f, err := os.OpenFile(part, flags, 0o644)
+	if err != nil {
+		return err
+	}
+	err = t.transfer(name, size, false, func(fs RemoteFS, p *progress) error {
+		w := progressWriter{f, p}
+		if offset > 0 {
+			p.info.Done = offset
+			return fs.(resumer).DownloadFrom(remotePath, offset, w)
+		}
+		return fs.Download(remotePath, w)
+	})
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		if st, serr := os.Stat(part); serr == nil && st.Size() == 0 {
+			_ = os.Remove(part) // nothing to resume
+		}
+		return err
+	}
+	_ = os.Remove(local) // the save dialog already asked about replacing it
+	return os.Rename(part, local)
+}
+
 func downloadsDir() string {
 	if home, err := os.UserHomeDir(); err == nil {
 		dir := filepath.Join(home, "Downloads")
@@ -207,18 +310,7 @@ func (a *App) FileDownload(tabID int, remotePath string, size int64) (string, er
 		return "", err
 	}
 
-	f, err := os.Create(local)
-	if err != nil {
-		return "", err
-	}
-	err = t.transfer(path.Base(remotePath), size, false, func(fs RemoteFS, p *progress) error {
-		return fs.Download(remotePath, progressWriter{f, p})
-	})
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		_ = os.Remove(local)
+	if err := t.downloadFile(remotePath, local, size, path.Base(remotePath)); err != nil {
 		return "", err
 	}
 	return local, nil
@@ -297,6 +389,27 @@ func (t *tab) uploadPaths(remoteDir string, paths []string) (int, error) {
 		}
 	}
 
+	// Files already partly on the server (a broken upload) may be continued.
+	resume := t.canResume()
+	listed := map[string]map[string]FileEntry{} // remote folder → its files, read when needed
+	remoteSize := func(p string) int64 {
+		dir := path.Dir(p)
+		if listed[dir] == nil {
+			listed[dir] = map[string]FileEntry{}
+			_ = t.withFS(func(fs RemoteFS) error {
+				list, err := fs.List(dir)
+				for _, e := range list {
+					listed[dir][e.Name] = e
+				}
+				return err
+			})
+		}
+		if e, ok := listed[dir][path.Base(p)]; ok && !e.IsDir {
+			return e.Size
+		}
+		return -1
+	}
+
 	done := 0
 	for _, it := range items {
 		if it.dir {
@@ -312,10 +425,39 @@ func (t *tab) uploadPaths(remoteDir string, paths []string) (int, error) {
 		if files > 1 {
 			name = fmt.Sprintf("(%d/%d) %s", done+1, files, name)
 		}
+		var offset int64
+		key := t.uploadKey(it.remote)
+		brokenUploads.Lock()
+		broke := brokenUploads.m[key]
+		brokenUploads.Unlock()
+		if resume && it.size > 0 && broke != "" && broke == localID(it.local) {
+			if have := remoteSize(it.remote); have > 0 && have < it.size {
+				msg := fmt.Sprintf("%s\n\n서버에 일부만 올라간 파일이 있습니다: %s / %s\n이어서 올릴까요? \"처음부터\"는 새로 올립니다.",
+					path.Base(it.remote), humanSize(have), humanSize(it.size))
+				if t.app.choose(t.id, "이어 올리기", msg, "이어 올리기", "처음부터") {
+					if _, err := f.Seek(have, io.SeekStart); err != nil {
+						f.Close()
+						return done, err
+					}
+					offset = have
+				}
+			}
+		}
 		err = t.transfer(name, it.size, true, func(fs RemoteFS, p *progress) error {
+			if offset > 0 {
+				p.info.Done = offset
+				return fs.(resumer).UploadFrom(it.remote, progressReader{f, p}, offset)
+			}
 			return fs.Upload(it.remote, progressReader{f, p}, it.size)
 		})
 		f.Close()
+		brokenUploads.Lock()
+		if err != nil {
+			brokenUploads.m[key] = localID(it.local)
+		} else {
+			delete(brokenUploads.m, key)
+		}
+		brokenUploads.Unlock()
 		if err != nil {
 			return done, err
 		}
@@ -394,18 +536,7 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 		if len(items) > 1 {
 			name = fmt.Sprintf("(%d/%d) %s", res.Count+1, len(items), name)
 		}
-		f, err := os.Create(it.local)
-		if err != nil {
-			return res, err
-		}
-		err = t.transfer(name, it.size, false, func(fs RemoteFS, p *progress) error {
-			return fs.Download(it.remote, progressWriter{f, p})
-		})
-		if cerr := f.Close(); err == nil {
-			err = cerr
-		}
-		if err != nil {
-			_ = os.Remove(it.local)
+		if err := t.downloadFile(it.remote, it.local, it.size, name); err != nil {
 			return res, err
 		}
 		res.Count++

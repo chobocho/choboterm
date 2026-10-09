@@ -71,6 +71,38 @@ func (s *sftpFS) Upload(remotePath string, r io.Reader, _ int64) error {
 	return f.Close()
 }
 
+// DownloadFrom sends remotePath from offset on (resuming a download).
+func (s *sftpFS) DownloadFrom(remotePath string, offset int64, w io.Writer) error {
+	f, err := s.c.Open(remotePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := f.Seek(offset, io.SeekStart); err != nil {
+		return err
+	}
+	_, err = f.WriteTo(w)
+	return err
+}
+
+// UploadFrom writes r at offset of remotePath, keeping what is before it
+// (resuming an upload).
+func (s *sftpFS) UploadFrom(remotePath string, r io.Reader, offset int64) error {
+	f, err := s.c.OpenFile(remotePath, os.O_WRONLY)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Seek(offset, io.SeekStart); err != nil {
+		f.Close()
+		return err
+	}
+	if _, err = f.ReadFrom(r); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
 func (s *sftpFS) Remove(p string, isDir bool) error {
 	// A link to a folder is removed itself, never what it points to.
 	fi, err := s.c.Lstat(p)
