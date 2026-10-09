@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>choboterm</title>
-    <meta name="description" content="ZTerm처럼 간결한 Windows용 SSH / Telnet / FTP 터미널"/>
+    <meta name="description" content="ZTerm처럼 간결한 Windows · Linux용 SSH / Telnet / FTP 터미널"/>
     <link rel="icon" type="image/png" href="favicon.png"/>
     <style>
         :root {
@@ -68,6 +68,23 @@
         }
 
         .download:hover { background: #1d4ed8; }
+
+        .downloads {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .downloads .download { margin-top: 0; }
+
+        .download.alt {
+            background: #334155;
+            box-shadow: 0 6px 24px rgba(51, 65, 85, 0.45);
+        }
+
+        .download.alt:hover { background: #1e293b; }
 
         .meta {
             margin-top: 10px;
@@ -214,14 +231,20 @@
     <header>
         <img src="icon.png" alt="choboterm 아이콘"/>
         <h1>choboterm</h1>
-        <p class="tagline">ZTerm처럼 간결한 Windows용 SSH · Telnet · FTP 터미널</p>
+        <p class="tagline">ZTerm처럼 간결한 Windows · Linux용 SSH · Telnet · FTP 터미널</p>
 
-        <a class="download" id="download"
-           href="https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe">
-            ⬇ 다운로드 (Windows)
-        </a>
+        <div class="downloads">
+            <a class="download" id="download"
+               href="https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe">
+                ⬇ Windows
+            </a>
+            <a class="download alt" id="downloadLinux"
+               href="https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz">
+                ⬇ Linux (x86_64)
+            </a>
+        </div>
         <div class="meta">
-            <span id="version">최신 버전</span> · choboterm.exe ·
+            <span id="version">최신 버전</span> ·
             <a href="https://github.com/chobocho/choboterm/releases">모든 버전</a> ·
             <a href="https://github.com/chobocho/choboterm">소스 코드</a>
         </div>
@@ -249,11 +272,11 @@ login: guest
             <li><b>점프 호스트 (ProxyJump)</b><span>배스천을 거쳐 내부 서버로. 접속 창의 Jump 칸, ~/.ssh/config의 ProxyJump, ssh -J 모두 지원, 여러 단계도 가능</span></li>
             <li><b>ssh config 이름으로 접속</b><span>Host 칸에 busan 또는 ssh busan만 입력하면 ~/.ssh/config의 주소·포트·사용자·키로 접속</span></li>
             <li><b>탭 · 분할 창</b><span>여러 접속을 탭으로, 한 탭 안을 좌우·위아래로 나눠 창마다 따로 접속. 탭마다 인코딩·파일 전송이 따로 동작</span></li>
-            <li><b>로컬 셸</b><span>Host에 cmd · powershell · wsl을 쓰면 이 PC의 셸을 탭에서 바로 실행 (WSL에서 sz / rz도 가능)</span></li>
+            <li><b>로컬 셸</b><span>Host에 cmd · powershell · wsl(Linux는 bash · zsh)을 쓰면 이 PC의 셸을 탭에서 바로 실행 (WSL에서 sz / rz도 가능)</span></li>
             <li><b>EUC-KR (CP949)</b><span>옛 BBS 한글과 ─│■▒ 특수문자 2칸 폭까지, 굴림체 등 인코딩별 글꼴 선택</span></li>
             <li><b>SFTP · SCP</b><span>SSH 접속 그대로 파일 전송, SFTP가 없으면 SCP로 자동 전환</span></li>
             <li><b>Zmodem</b><span>터미널에서 sz / rz만 입력하면 파일 송수신</span></li>
-            <li><b>안전한 저장</b><span>known_hosts 확인, Telnet 비밀번호는 Windows DPAPI로 암호화</span></li>
+            <li><b>안전한 저장</b><span>known_hosts 확인, 비밀번호는 Windows DPAPI · Linux 키링으로 암호화</span></li>
             <li><b>포트 포워딩</b><span>SSH 로컬(-L) · 원격(-R) · 동적(-D, SOCKS5). 호스트별로 저장해 다음 접속 때 자동 적용. 열린 연결 수와 같은 동작의 ssh 명령어 표시·복사. 같은 서버에 탭을 여러 개 열어도 한 탭만 수신하고, 그 탭이 끊기면 다른 탭이 이어받음</span></li>
             <li><b>도커 컨테이너</b><span>Ctrl+Shift+J로 SSH 서버나 이 PC(Docker Desktop)의 컨테이너 목록. 셸(docker exec) · 로그를 새 탭으로 바로 열고(다시 로그인 없음), 시작 · 중지 · 재시작, 포트 열기로 서버 포트를 PC로 포워딩해 브라우저로</span></li>
             <li><b>연결 유지 · 자동 재접속</b><span>쉬는 연결이 끊기지 않게 keepalive, 네트워크가 끊기면 화면을 그대로 두고 다시 연결</span></li>
@@ -274,7 +297,7 @@ login: guest
 
     <section>
         <h2>구조</h2>
-        <img class="shot" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 도커 컨테이너(서버 · Docker Desktop), 별도 프로세스의 Lua 실행기, 화면과 Go가 함께 쓰는 영어 사전" loading="lazy"/>
+        <img class="shot" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 도커 컨테이너(서버 · Docker Desktop), 별도 프로세스의 Lua 실행기, 화면과 Go가 함께 쓰는 영어 사전" loading="lazy"/>
     </section>
 
     <section>
@@ -306,9 +329,13 @@ login: guest
 
     <section>
         <h2>설치</h2>
-        <p>설치 과정 없이 <code>choboterm.exe</code>를 내려받아 실행하면 됩니다. Windows 10 / 11 (WebView2 런타임, Windows 11에는 기본 포함)에서 동작합니다.</p>
+        <p><b>Windows</b>: 설치 과정 없이 <code>choboterm.exe</code>를 내려받아 실행하면 됩니다. Windows 10 / 11 (WebView2 런타임, Windows 11에는 기본 포함)에서 동작합니다.</p>
         <p class="note">코드 서명이 없는 실행 파일이라 처음 실행할 때 "Windows의 PC 보호" 창이 뜰 수 있습니다.
             <b>추가 정보 → 실행</b>을 누르면 됩니다.</p>
+        <p><b>Linux</b> (x86_64): <code>choboterm-linux-amd64.tar.gz</code>를 풀고 <code>./choboterm</code>으로 실행합니다.
+            <code>./install.sh</code>를 실행하면 <code>~/.local/bin</code>과 프로그램 메뉴에 등록됩니다.
+            GTK 3와 WebKitGTK 4.1이 필요합니다 (Ubuntu 22.04 · Debian 12 이후: <code>sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0</code>).</p>
+        <p class="note">Linux에서는 키링(GNOME Keyring, KWallet 등)이 있을 때만 비밀번호를 저장하고, 반투명 창과 PuTTY 세션 가져오기는 지원하지 않습니다. macOS는 지원하지 않습니다.</p>
     </section>
 
     <footer>
@@ -324,11 +351,13 @@ login: guest
         .then(rel => {
             if (!rel) return;
             document.getElementById('version').textContent = rel.tag_name.replace(/^v/i, 'V');
-            const asset = (rel.assets || []).find(a => a.name === 'choboterm.exe');
-            if (asset) {
-                const mb = (asset.size / 1024 / 1024).toFixed(1);
-                document.getElementById('version').textContent += ` · ${mb} MB`;
-            }
+            const mb = name => {
+                const a = (rel.assets || []).find(a => a.name === name);
+                return a ? (a.size / 1024 / 1024).toFixed(1) + ' MB' : '';
+            };
+            const sizes = [['Windows', mb('choboterm.exe')], ['Linux', mb('choboterm-linux-amd64.tar.gz')]]
+                .filter(([, size]) => size).map(([os, size]) => `${os} ${size}`);
+            if (sizes.length) document.getElementById('version').textContent += ` · ${sizes.join(' · ')}`;
         })
         .catch(() => {});
 </script>

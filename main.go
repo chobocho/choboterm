@@ -20,7 +20,7 @@ var assets embed.FS
 var appIcon []byte
 
 // AppVersion is shown in the window title. Keep in sync with wails.json productVersion.
-const AppVersion = "0.2.9"
+const AppVersion = "0.2.10"
 
 // appName is the window title prefix, e.g. "choboterm V0.1.0".
 const appName = "choboterm V" + AppVersion
