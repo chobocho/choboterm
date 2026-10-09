@@ -1364,6 +1364,32 @@ body.resizing-col #terms .term {
     white-space: nowrap;
 }
 
+/* Keyword highlighting: a colour chip, then its words. */
+.prefs label.row.hl input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+}
+
+.prefs .swatch {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+}
+
+.prefs .swatch.red {
+    background: #c0392b;
+}
+
+.prefs .swatch.yellow {
+    background: #e0b000;
+}
+
+.prefs .swatch.green {
+    background: #1e8449;
+}
+
 .prefs label.row input#pScrollback {
     width: 70px;
 }

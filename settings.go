@@ -41,6 +41,8 @@ type Settings struct {
 	LogDir string `json:"logDir"`
 	// LogRaw keeps escape codes in session logs instead of plain text.
 	LogRaw bool `json:"logRaw"`
+	// Highlight colours keywords in the output.
+	Highlight Highlight `json:"highlight"`
 	// ConsoleHeight is the Lua console's height in pixels, set by dragging
 	// its top edge (0 = the default).
 	ConsoleHeight int `json:"consoleHeight"`
@@ -48,6 +50,22 @@ type Settings struct {
 	Macros []Macro `json:"macros"`
 	// Window is the main window's last position, kept by the Go side only.
 	Window *WindowState `json:"window,omitempty"`
+}
+
+// Highlight lists the words shown on a red, yellow or green background,
+// separated by commas. Plain words match whole words, ignoring case.
+type Highlight struct {
+	On     bool   `json:"on"`
+	Red    string `json:"red"`
+	Yellow string `json:"yellow"`
+	Green  string `json:"green"`
+}
+
+var defaultHighlight = Highlight{
+	On:     true,
+	Red:    "error, errors, fail, failed, failure, fatal, denied, refused, exception, panic, critical, 오류, 에러, 실패",
+	Yellow: "warn, warning, warnings, timeout, deprecated, 경고",
+	Green:  "success, successful, succeeded, passed, 성공, 완료",
 }
 
 // Macro is a named text sent to the terminal. Key is "" or a function key
@@ -80,6 +98,7 @@ func defaultSettings() Settings {
 		Theme: "choboterm", CursorStyle: "block", CursorBlink: true, Scrollback: 5000,
 		Translucency: "off", Opacity: 85,
 		KeepAlive: 60, AutoReconnect: true, Macros: []Macro{},
+		Highlight: defaultHighlight,
 	}
 }
 

@@ -2,6 +2,7 @@
 
 import {saveSettings, settings} from './settings';
 import {ChooseLogDir} from '../wailsjs/go/main/App';
+import {main} from '../wailsjs/go/models';
 import {FONTS} from './cjkwidth';
 import {paletteOf, themeByName, THEMES} from './themes';
 
@@ -31,6 +32,10 @@ const autoReconnect = $<HTMLInputElement>('pReconnect');
 const pasteConfirm = $<HTMLInputElement>('pPaste');
 const logAuto = $<HTMLInputElement>('pLogAuto');
 const logPlain = $<HTMLInputElement>('pLogPlain');
+const hlOn = $<HTMLInputElement>('pHl');
+const hlRed = $<HTMLInputElement>('pHlRed');
+const hlYellow = $<HTMLInputElement>('pHlYellow');
+const hlGreen = $<HTMLInputElement>('pHlGreen');
 const logDir = $<HTMLInputElement>('pLogDir');
 const error = $<HTMLDivElement>('pError');
 
@@ -85,6 +90,11 @@ export function openPrefs(apply: () => void, close: () => void) {
     logAuto.checked = settings.logAuto;
     logPlain.checked = !settings.logRaw;
     logDir.value = settings.logDir;
+    hlOn.checked = settings.highlight.on;
+    hlRed.value = settings.highlight.red;
+    hlYellow.value = settings.highlight.yellow;
+    hlGreen.value = settings.highlight.green;
+    paintHighlight();
     error.textContent = '';
     overlay.hidden = false;
     fontSize.focus();
@@ -122,6 +132,12 @@ function paintPreview() {
 }
 
 theme.addEventListener('change', paintPreview);
+
+function paintHighlight() {
+    for (const el of [hlRed, hlYellow, hlGreen]) el.disabled = !hlOn.checked;
+}
+
+hlOn.addEventListener('change', paintHighlight);
 
 function closePrefs() {
     if (overlay.hidden) return;
@@ -168,6 +184,12 @@ function apply() {
         s.logAuto = logAuto.checked;
         s.logRaw = !logPlain.checked;
         s.logDir = logDir.value.trim();
+        s.highlight = main.Highlight.createFrom({
+            on: hlOn.checked,
+            red: hlRed.value.trim(),
+            yellow: hlYellow.value.trim(),
+            green: hlGreen.value.trim(),
+        });
     });
     const cb = onApply;
     closePrefs();

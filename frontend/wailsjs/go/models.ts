@@ -132,6 +132,24 @@ export namespace main {
 	        this.conns = source["conns"];
 	    }
 	}
+	export class Highlight {
+	    on: boolean;
+	    red: string;
+	    yellow: string;
+	    green: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Highlight(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.on = source["on"];
+	        this.red = source["red"];
+	        this.yellow = source["yellow"];
+	        this.green = source["green"];
+	    }
+	}
 	export class HostEntry {
 	    host: string;
 	    port: number;
@@ -321,6 +339,7 @@ export namespace main {
 	    logAuto: boolean;
 	    logDir: string;
 	    logRaw: boolean;
+	    highlight: Highlight;
 	    consoleHeight: number;
 	    macros: Macro[];
 	    window?: WindowState;
@@ -347,6 +366,7 @@ export namespace main {
 	        this.logAuto = source["logAuto"];
 	        this.logDir = source["logDir"];
 	        this.logRaw = source["logRaw"];
+	        this.highlight = this.convertValues(source["highlight"], Highlight);
 	        this.consoleHeight = source["consoleHeight"];
 	        this.macros = this.convertValues(source["macros"], Macro);
 	        this.window = this.convertValues(source["window"], WindowState);

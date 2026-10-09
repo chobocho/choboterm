@@ -192,6 +192,13 @@
                 <label class="check"><input type="checkbox" id="pReconnect"/> 연결이 끊기면 자동으로 다시 연결</label>
             </fieldset>
             <fieldset>
+                <legend>키워드 강조</legend>
+                <label class="check"><input type="checkbox" id="pHl"/> 출력에 나온 단어를 색으로 강조 <span class="hint">(쉼표로 구분, 영어는 단어 단위·대소문자 무시)</span></label>
+                <label class="row hl"><span class="swatch red"></span><input id="pHlRed" spellcheck="false" autocomplete="off"/></label>
+                <label class="row hl"><span class="swatch yellow"></span><input id="pHlYellow" spellcheck="false" autocomplete="off"/></label>
+                <label class="row hl"><span class="swatch green"></span><input id="pHlGreen" spellcheck="false" autocomplete="off"/></label>
+            </fieldset>
+            <fieldset>
                 <legend>세션 로그</legend>
                 <label class="check"><input type="checkbox" id="pLogAuto"/> 접속할 때마다 자동으로 기록</label>
                 <label class="check"><input type="checkbox" id="pLogPlain"/> 색상·제어 코드를 빼고 일반 텍스트로 저장</label>

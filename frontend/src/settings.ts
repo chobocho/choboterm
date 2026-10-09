@@ -21,6 +21,12 @@ export let settings: main.Settings = main.Settings.createFrom({
     logDir: '',
     logRaw: false,
     consoleHeight: 0,
+    highlight: {
+        on: true,
+        red: 'error, errors, fail, failed, failure, fatal, denied, refused, exception, panic, critical, 오류, 에러, 실패',
+        yellow: 'warn, warning, warnings, timeout, deprecated, 경고',
+        green: 'success, successful, succeeded, passed, 성공, 완료',
+    },
     macros: [],
 });
 

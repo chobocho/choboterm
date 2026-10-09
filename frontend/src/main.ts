@@ -16,6 +16,7 @@ import {askOpen} from './dialog';
 import {openSaveSession, openSessionManager, sessionManagerOpen, sessionSaveOpen} from './sessions';
 import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
+import {attachHighlight, Highlighter, loadRules} from './highlight';
 import {imageOpen} from './imageview';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
@@ -61,6 +62,7 @@ interface Tab {
     term: Terminal;
     fit: FitAddon;
     search: ReturnType<typeof attachSearch>;
+    hl: Highlighter;
     pane: HTMLDivElement;
     el: HTMLDivElement;
     label: HTMLSpanElement;
@@ -267,7 +269,8 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     if (split) split.from.el.after(el);
     else group.chip.appendChild(el);
 
-    const t: Tab = {id, group, term, fit, search, pane, el, label, run, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false};
+    const hl = attachHighlight(term);
+    const t: Tab = {id, group, term, fit, search, hl, pane, el, label, run, state: 'idle', proto: '', encoding: 'UTF-8', outbox: '', sending: false};
     tabs.set(id, t);
     chooseRenderer(t);
     applyLook(t);
@@ -554,6 +557,8 @@ function lookOptions(t?: Tab) {
 function applySettings() {
     applyTranslucency(settings.translucency || 'off', settings.opacity || 85, settings.glassGpu);
     applyFontSize();
+    loadRules();
+    for (const t of tabs.values()) t.hl.reset();
 }
 
 function applyLook(t: Tab) {
@@ -966,7 +971,10 @@ EventsOn('term:data', (id: number, b64: string) => {
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const t0 = performance.now();
-    t.term.write(bytes, () => dbg(`tab ${id} wrote ${bytes.length} bytes in ${Math.round(performance.now() - t0)}ms`));
+    t.term.write(bytes, () => {
+        dbg(`tab ${id} wrote ${bytes.length} bytes in ${Math.round(performance.now() - t0)}ms`);
+        t.hl.schedule();
+    });
     if (t.group !== active?.group) t.el.classList.add('activity');
 });
 
