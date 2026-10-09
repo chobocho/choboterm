@@ -255,6 +255,7 @@ login: guest
             <li><b>Zmodem</b><span>터미널에서 sz / rz만 입력하면 파일 송수신</span></li>
             <li><b>안전한 저장</b><span>known_hosts 확인, Telnet 비밀번호는 Windows DPAPI로 암호화</span></li>
             <li><b>포트 포워딩</b><span>SSH 로컬(-L) · 원격(-R) · 동적(-D, SOCKS5). 호스트별로 저장해 다음 접속 때 자동 적용. 열린 연결 수와 같은 동작의 ssh 명령어 표시·복사</span></li>
+            <li><b>도커 컨테이너</b><span>Ctrl+Shift+J로 SSH 서버나 이 PC(Docker Desktop)의 컨테이너 목록. 셸(docker exec) · 로그를 새 탭으로 바로 열고(다시 로그인 없음), 시작 · 중지 · 재시작, 포트 열기로 서버 포트를 PC로 포워딩해 브라우저로</span></li>
             <li><b>연결 유지 · 자동 재접속</b><span>쉬는 연결이 끊기지 않게 keepalive, 네트워크가 끊기면 화면을 그대로 두고 다시 연결</span></li>
             <li><b>Lua 스크립트</b><span>send · expect · sleep · screen으로 자동 로그인, 반복 명령 자동화. 매크로 F키나 .lua 파일로 실행, 별도 프로세스에서 돌아 스크립트가 멈춰도 터미널은 그대로</span></li>
             <li><b>Lua 콘솔</b><span>Ctrl+Shift+K로 한 줄씩 바로 실행하는 REPL. 변수 유지, 식의 값 표시, .lua 파일 불러오기(Ctrl+O), 입력·출력 저장(Ctrl+S), 끌어서 높이 조절</span></li>
@@ -273,7 +274,7 @@ login: guest
 
     <section>
         <h2>구조</h2>
-        <img class="shot" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 별도 프로세스의 Lua 실행기, 화면과 Go가 함께 쓰는 영어 사전" loading="lazy"/>
+        <img class="shot" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 도커 컨테이너(서버 · Docker Desktop), 별도 프로세스의 Lua 실행기, 화면과 Go가 함께 쓰는 영어 사전" loading="lazy"/>
     </section>
 
     <section>
@@ -296,6 +297,7 @@ login: guest
             <tr><td><kbd>Ctrl+Shift+K</kbd></td><td>Lua 콘솔 (<kbd>Ctrl+O</kbd> 파일 불러오기 · <kbd>Ctrl+S</kbd> 저장)</td></tr>
             <tr><td><kbd>Ctrl+Shift+H</kbd></td><td>세션 관리</td></tr>
             <tr><td><kbd>Ctrl+Shift+P</kbd></td><td>SSH 포트 포워딩</td></tr>
+            <tr><td><kbd>Ctrl+Shift+J</kbd></td><td>도커 컨테이너</td></tr>
             <tr><td><kbd>Ctrl+Shift+L</kbd></td><td>세션 로그 기록 시작 / 중지</td></tr>
             <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>설정 (색 테마, 커서, 언어, 키워드 강조, 연결 유지 간격, 로그 등)</td></tr>
             <tr><td><kbd>F1</kbd></td><td>도움말 (한국어 / English)</td></tr>

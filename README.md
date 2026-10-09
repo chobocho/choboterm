@@ -1,4 +1,4 @@
-# choboterm V0.2.7
+# choboterm V0.2.8
 
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows용 SSH / Telnet / FTP 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다. 텍스트 뷰어는 [CodeMirror 6](https://codemirror.net)(MIT)을 씁니다.
@@ -230,6 +230,7 @@ go test ./...
 - Lua 스크립트는 `choboterm.exe --lua-host`로 띄운 별도 프로세스에서 돌아서, 스크립트가 멈추거나 메모리를 다 써도 앱은 영향을 받지 않습니다.
 - SSH는 점프 호스트를 거칠 수 있습니다(`sshjump.go`): 단계마다 앞 연결의 채널 위에서 다음 서버에 로그인합니다.
 - 키워드 강조(`highlight.ts`)는 서버 출력을 바꾸지 않고 xterm 데코레이션으로 화면 위에만 칠합니다.
+- 도커 컨테이너(`docker.go`, `containers.ts`): 서버에서는 탭의 SSH 접속에 세션을 하나 더 열어 `docker ps` · `docker exec`를 실행하므로 다시 로그인하지 않습니다. 이 PC에서는 Docker Desktop의 `docker`를 직접 실행하고, 셸 탭은 ConPTY로 엽니다.
 - 영어 화면은 사전 `i18n_en.json` 하나를 화면(`i18n.ts`, 나타나는 문구를 번역)과 Go(`i18n.go`, 파일 대화상자·터미널 안내·로그)가 함께 씁니다.
 
 ## 소스 구성
