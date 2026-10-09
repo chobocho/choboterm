@@ -16,7 +16,7 @@
 
   <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.10 · <tspan class="new">NEW</tspan> = 이번 버전에 추가</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.11 · <tspan class="new">NEW</tspan> = 이번 버전에 추가</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -49,7 +49,7 @@
   <text x="47" y="521" class="title">i18n.ts</text>
   <text x="47" y="538" class="sub">영어 화면: 나타나는 문구를 사전으로 번역</text>
   <text x="47" y="579" class="title">help · search · dialog · platform <tspan class="new">NEW</tspan></text>
-  <text x="47" y="596" class="sub">도움말, 검색, 확인 창, OS별 항목 숨김</text>
+  <text x="47" y="596" class="sub">도움말, 검색, 확인 창, Linux 화면 보정</text>
 
   <!-- Wails bridge -->
   <line x1="292" y1="160" x2="398" y2="160" class="link" marker-end="url(#arrow)"/>
@@ -87,7 +87,7 @@
   <text x="585" y="236" text-anchor="middle" class="sub">(프로토콜 판별)</text>
   <text x="702" y="204" text-anchor="middle" class="title">localpty</text>
   <text x="702" y="220" text-anchor="middle" class="sub">Win: ConPTY</text>
-  <text x="702" y="236" text-anchor="middle" class="sub">Linux: PTY <tspan class="new">NEW</tspan></text>
+  <text x="702" y="236" text-anchor="middle" class="sub">Linux: PTY</text>
 
   <g class="item" stroke="#2f8f5b">
     <rect x="415" y="262" width="223" height="62" rx="5"/>
@@ -107,7 +107,7 @@
   <rect x="415" y="399" width="340" height="94" rx="5" class="item" stroke="#2f8f5b"/>
   <text x="427" y="418" class="title">저장소 — %AppData% · ~/.config · i18n.go</text>
   <text x="427" y="437" class="sub">settings.go · session_store.go · history_store.go</text>
-  <text x="427" y="455" class="sub">settings.json · sessions.json · hosts.json (DPAPI · 키링 <tspan class="new">NEW</tspan>)</text>
+  <text x="427" y="455" class="sub">settings.json · sessions.json · hosts.json (DPAPI · 키링)</text>
   <text x="427" y="473" class="sub">i18n_en.json: 화면과 Go가 함께 쓰는 영어 사전</text>
   <text x="427" y="487" class="sub" font-size="10">(Go는 파일 대화상자 · 터미널 안내 · 로그 표시를 번역)</text>
 
@@ -117,7 +117,7 @@
   <rect x="400" y="545" width="370" height="80" rx="8" fill="#fff4e5" stroke="#d9822b" stroke-width="1.5" stroke-dasharray="6 4"/>
   <text x="415" y="567" class="head" fill="#a35a10">Lua 실행기 — choboterm.exe --lua-host</text>
   <text x="415" y="587" class="sub">별도 프로세스 · gopher-lua (Lua 5.1) · send · expect · screen</text>
-  <text x="415" y="605" class="sub">luajob: 메모리 제한 (Job Object · Linux /proc <tspan class="new">NEW</tspan>)</text>
+  <text x="415" y="605" class="sub">luajob: 메모리 제한 (Job Object · Linux /proc)</text>
 
   <!-- External -->
   <line x1="772" y1="230" x2="808" y2="230" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
@@ -140,14 +140,14 @@
   <rect x="810" y="388" width="180" height="94" rx="8" fill="#f1f3f4" stroke="#80868b" stroke-width="1.5"/>
   <text x="825" y="412" class="head" fill="#3c4043">로컬 프로그램</text>
   <text x="825" y="432" class="sub">cmd · PowerShell · WSL</text>
-  <text x="825" y="450" class="sub">bash · zsh (Linux) <tspan class="new">NEW</tspan></text>
+  <text x="825" y="450" class="sub">bash · zsh (Linux)</text>
   <text x="825" y="468" class="sub">Docker Desktop · docker</text>
   <!-- Releases -->
   <rect x="810" y="498" width="180" height="127" rx="8" fill="#f3e8fd" stroke="#8e44ad" stroke-width="1.5"/>
-  <text x="825" y="522" class="head" fill="#6a1b9a">배포 <tspan class="new">NEW</tspan></text>
+  <text x="825" y="522" class="head" fill="#6a1b9a">배포</text>
   <text x="825" y="543" class="sub">Windows: choboterm.exe</text>
   <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
   <text x="825" y="579" class="sub">Ubuntu 22.04 컨테이너 빌드</text>
   <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
-  <text x="825" y="615" class="sub">install.sh · 메뉴 등록</text>
+  <text x="825" y="615" class="sub">curl로 받기 · install.sh <tspan class="new">NEW</tspan></text>
 </svg>

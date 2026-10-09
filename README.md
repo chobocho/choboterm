@@ -1,4 +1,4 @@
-# choboterm V0.2.10
+# choboterm V0.2.11
 
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows · Linux용 SSH / Telnet / FTP 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다. 텍스트 뷰어는 [CodeMirror 6](https://codemirror.net)(MIT)을 씁니다.
@@ -7,6 +7,15 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 
 - **Windows**: 설치 없이 내려받아 실행하면 됩니다. 코드 서명이 없어 처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요.
 - **Linux**: 압축을 풀고 `./choboterm`으로 실행합니다. `./install.sh`를 실행하면 `~/.local/bin`과 프로그램 메뉴에 등록됩니다.
+
+  ```sh
+  curl -LO https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz
+  tar xzf choboterm-linux-amd64.tar.gz
+  cd choboterm-linux-amd64
+  ./install.sh                          # ~/.local/bin/choboterm, 프로그램 메뉴 등록
+  setsid ~/.local/bin/choboterm >/dev/null 2>&1 &   # 터미널을 닫아도 창이 유지됨
+  ```
+
   - GTK 3와 WebKitGTK 4.1이 필요합니다(Ubuntu 22.04 · Debian 12 이후): `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0`
   - 비밀번호 저장은 키링(GNOME Keyring, KWallet 등)이 있을 때만 됩니다. 키링이 없으면 저장하지 않습니다.
   - 반투명 창과 PuTTY 세션 가져오기는 Windows에서만 됩니다. macOS는 지원하지 않습니다.

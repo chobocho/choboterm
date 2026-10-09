@@ -69,6 +69,17 @@
 
         .download:hover { background: #1d4ed8; }
 
+        pre.cmd {
+            margin: 10px 0 14px;
+            padding: 12px 14px;
+            overflow-x: auto;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #0b1020;
+            color: #d6e2ff;
+            font: 13px/1.6 Consolas, "D2Coding", monospace;
+        }
+
         .downloads {
             display: flex;
             flex-wrap: wrap;
@@ -335,6 +346,12 @@ login: guest
         <p><b>Linux</b> (x86_64): <code>choboterm-linux-amd64.tar.gz</code>를 풀고 <code>./choboterm</code>으로 실행합니다.
             <code>./install.sh</code>를 실행하면 <code>~/.local/bin</code>과 프로그램 메뉴에 등록됩니다.
             GTK 3와 WebKitGTK 4.1이 필요합니다 (Ubuntu 22.04 · Debian 12 이후: <code>sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0</code>).</p>
+        <p>터미널에서 바로 받아 설치하려면:</p>
+        <pre class="cmd"><code>curl -LO https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz
+tar xzf choboterm-linux-amd64.tar.gz
+cd choboterm-linux-amd64
+./install.sh                          # ~/.local/bin/choboterm, 프로그램 메뉴 등록
+setsid ~/.local/bin/choboterm >/dev/null 2>&1 &   # 터미널을 닫아도 창이 유지됨</code></pre>
         <p class="note">Linux에서는 키링(GNOME Keyring, KWallet 등)이 있을 때만 비밀번호를 저장하고, 반투명 창과 PuTTY 세션 가져오기는 지원하지 않습니다. macOS는 지원하지 않습니다.</p>
     </section>
 
