@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>choboterm</title>
-    <meta name="description" content="ZTerm처럼 간결한 Windows · Linux용 SSH / Telnet / FTP 터미널"/>
+    <meta name="description" content="A simple SSH / Telnet / FTP terminal for Windows and Linux · ZTerm처럼 간결한 Windows · Linux용 SSH / Telnet / FTP 터미널"/>
     <link rel="icon" type="image/png" href="favicon.png"/>
     <style>
         :root {
@@ -23,7 +23,7 @@
             margin: 0;
             background: radial-gradient(1200px 600px at 50% -200px, #1d2b5c 0%, var(--bg) 60%) no-repeat, var(--bg);
             color: var(--text);
-            font: 16px/1.6 "Malgun Gothic", "Segoe UI", system-ui, sans-serif;
+            font: 16px/1.6 "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
         }
 
         main {
@@ -231,6 +231,26 @@
 
         footer a { color: var(--mint); }
 
+        /* One language at a time (set on <html lang> by the script). */
+        html[lang="en"] .ko,
+        html[lang="ko"] .en { display: none !important; }
+
+        .lang {
+            text-align: right;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .lang a {
+            color: var(--muted);
+            text-decoration: none;
+        }
+
+        .lang a.on {
+            color: var(--mint);
+            font-weight: bold;
+        }
+
         @media (max-width: 560px) {
             h1 { font-size: 32px; }
             td:first-child { white-space: normal; }
@@ -239,10 +259,14 @@
 </head>
 <body>
 <main>
+    <nav class="lang" aria-label="Language">
+        <a href="?lang=en" data-lang="en">English</a> · <a href="?lang=ko" data-lang="ko">한국어</a>
+    </nav>
     <header>
-        <img src="icon.png" alt="choboterm 아이콘"/>
+        <img src="icon.png" alt="choboterm"/>
         <h1>choboterm</h1>
-        <p class="tagline">ZTerm처럼 간결한 Windows · Linux용 SSH · Telnet · FTP 터미널</p>
+        <p class="tagline ko">ZTerm처럼 간결한 Windows · Linux용 SSH · Telnet · FTP 터미널</p>
+        <p class="tagline en">A simple SSH · Telnet · FTP terminal for Windows and Linux, in the spirit of ZTerm</p>
 
         <div class="downloads">
             <a class="download" id="download"
@@ -255,9 +279,9 @@
             </a>
         </div>
         <div class="meta">
-            <span id="version">최신 버전</span> ·
-            <a href="https://github.com/chobocho/choboterm/releases">모든 버전</a> ·
-            <a href="https://github.com/chobocho/choboterm">소스 코드</a>
+            <span id="version"><span class="ko">최신 버전</span><span class="en">Latest version</span></span> ·
+            <a href="https://github.com/chobocho/choboterm/releases"><span class="ko">모든 버전</span><span class="en">All versions</span></a> ·
+            <a href="https://github.com/chobocho/choboterm"><span class="ko">소스 코드</span><span class="en">Source code</span></a>
         </div>
 
         <div class="term" aria-hidden="true">
@@ -265,17 +289,17 @@
             <pre>Welcome to <span class="y">choboterm</span>
 login: guest
 <span class="g">guest@bbs</span>:~$ sz report.hwp
-<span class="y">[Zmodem] 1개 파일을 받았습니다: C:\Users\me\Downloads</span>
+<span class="y ko">[Zmodem] 1개 파일을 받았습니다: C:\Users\me\Downloads</span><span class="y en">[Zmodem] Received 1 file: C:\Users\me\Downloads</span>
 <span class="g">guest@bbs</span>:~$ <span class="g">▌</span></pre>
         </div>
     </header>
 
     <section>
-        <h2>화면</h2>
-        <img class="shot" src="screen_shot.png" alt="choboterm 실행 화면" loading="lazy"/>
+        <h2><span class="ko">화면</span><span class="en">Screenshot</span></h2>
+        <img class="shot" src="screen_shot.png" alt="choboterm" loading="lazy"/>
     </section>
 
-    <section>
+    <section class="ko">
         <h2>기능</h2>
         <ul class="features">
             <li><b>SSH · Telnet · FTP</b><span>22/23/21번 포트는 바로, 다른 포트는 서버 응답으로 자동 판별 (예: Termux 8022)</span></li>
@@ -305,13 +329,44 @@ login: guest
             <li><b>검색 · 글꼴 · 링크</b><span>스크롤백 검색, Ctrl+휠 글꼴 크기, Ctrl+클릭으로 URL 열기, 창 위치 기억</span></li>
         </ul>
     </section>
-
-    <section>
-        <h2>구조</h2>
-        <img class="shot" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 도커 컨테이너(서버 · Docker Desktop), 별도 프로세스의 Lua 실행기, 화면과 Go가 함께 쓰는 영어 사전" loading="lazy"/>
+    <section class="en">
+        <h2>Features</h2>
+        <ul class="features">
+            <li><b>SSH · Telnet · FTP</b><span>Ports 22/23/21 directly; other ports are detected from the server's greeting (e.g. Termux on 8022)</span></li>
+            <li><b>SSH keys · agent · OTP</b><span>Keys from the OpenSSH agent and Pageant, passphrase-protected private keys, and two-factor questions such as one-time codes</span></li>
+            <li><b>Jump hosts (ProxyJump)</b><span>Reach inner servers through a bastion: the Jump field, ProxyJump in ~/.ssh/config and ssh -J, several hops too</span></li>
+            <li><b>Connect by ssh config name</b><span>Type busan or ssh busan in Host and the address, port, user and key come from ~/.ssh/config</span></li>
+            <li><b>Tabs · split panes</b><span>Connections in tabs; split a tab left/right or top/bottom with a connection in each pane. Encoding and file transfer per tab</span></li>
+            <li><b>Local shells</b><span>cmd · powershell · wsl (bash · zsh on Linux) in Host runs this PC's shell in a tab (sz / rz work in WSL too)</span></li>
+            <li><b>EUC-KR (CP949)</b><span>Korean text of old BBSes, with ─│■▒ symbols two cells wide, and a font per encoding such as GulimChe</span></li>
+            <li><b>SFTP · SCP</b><span>File transfer over the same SSH connection; falls back to SCP when the server has no SFTP</span></li>
+            <li><b>Zmodem</b><span>Type sz / rz in the terminal to send and receive files</span></li>
+            <li><b>Safe storage</b><span>known_hosts checks; passwords encrypted with Windows DPAPI or the Linux keyring</span></li>
+            <li><b>Port forwarding</b><span>SSH local (-L) · remote (-R) · dynamic (-D, SOCKS5). Saved per host and started on the next connection. Shows open connections and the equivalent ssh command to copy. With several tabs to one server only one listens, and another takes over when it ends</span></li>
+            <li><b>Docker containers</b><span>Ctrl+Shift+J lists the containers of the SSH server or of this PC (Docker Desktop). Shell (docker exec) and logs open in new tabs without logging in again; start · stop · restart; open a port forwards it to this PC and opens the browser</span></li>
+            <li><b>Keepalive · reconnect</b><span>Keepalive so idle connections stay up; when the network drops it reconnects, keeping the screen</span></li>
+            <li><b>Lua scripts</b><span>send · expect · sleep · screen for auto login and repeated commands. Run from a macro F key or a .lua file, in a separate process so a stuck script never freezes the terminal</span></li>
+            <li><b>Lua console</b><span>Ctrl+Shift+K: a REPL running one line at a time. Variables kept, expression values shown, load a .lua file (Ctrl+O), save input and output (Ctrl+S), drag to resize</span></li>
+            <li><b>Macros</b><span>Save frequent commands and send them from the window or an F key</span></li>
+            <li><b>Session log</b><span>Keeps writing the output to a file (starts on connect, plain text or raw), each line with the time it came [2026-10-09 21:30:15.123]</span></li>
+            <li><b>Keyword highlighting</b><span>error · fail in red, warning in yellow, success in green behind the text. Words are set in Settings; program colors and logs stay as they are</span></li>
+            <li><b>Handy file window</b><span>Opens in the shell's current folder. Multiple selection, whole folders up and down, drag and drop from Explorer, delete · rename · new folder · new file, .. at the top and Alt+↑ for the parent. Interrupted transfers resume (SFTP · FTP)</span></li>
+            <li><b>View · edit remote files</b><span>F3 / F4 open files without downloading. UTF-8 · EUC-KR detected, find and replace, Ctrl+S saves to the server (keeps encoding and line endings, checks for conflicts). F3 on JPG · PNG · GIF · BMP · WebP shows the image (zoom · previous / next)</span></li>
+            <li><b>English UI</b><span>Auto / 한국어 / English in Settings. Menus, windows, error messages and file dialogs in English</span></li>
+            <li><b>Copy · paste</b><span>Selecting copies, right click pastes. Several lines are confirmed before they run</span></li>
+            <li><b>GPU-accelerated screen</b><span>Drawn with WebGL, so TUIs like htop and vim run smoothly. ⚡GPU / 🐢CPU in the window title</span></li>
+            <li><b>Color themes</b><span>12 themes such as Campbell · PuTTY · Dracula · Solarized · Hercules (green monitor), a theme per server, translucency (whole window / background only), cursor shape, scrollback lines</span></li>
+            <li><b>Search · fonts · links</b><span>Scrollback search, Ctrl+wheel font size, Ctrl+click opens URLs, window position remembered</span></li>
+        </ul>
     </section>
 
     <section>
+        <h2><span class="ko">구조</span><span class="en">Architecture</span></h2>
+        <img class="shot ko" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 도커 컨테이너, 별도 프로세스의 Lua 실행기" loading="lazy"/>
+        <img class="shot en" src="architecture_en.svg" alt="choboterm architecture: frontend (WebView2 · WebKitGTK) ↔ Wails ↔ Go backend ↔ servers (through jump hosts too), Docker containers, Lua runner in its own process" loading="lazy"/>
+    </section>
+
+    <section class="ko">
         <h2>단축키</h2>
         <table>
             <tr><td><kbd>Ctrl+Shift+T</kbd></td><td>새 탭으로 접속</td></tr>
@@ -337,8 +392,34 @@ login: guest
             <tr><td><kbd>F1</kbd></td><td>도움말 (한국어 / English)</td></tr>
         </table>
     </section>
+    <section class="en">
+        <h2>Shortcuts</h2>
+        <table>
+            <tr><td><kbd>Ctrl+Shift+T</kbd></td><td>Connect in a new tab</td></tr>
+            <tr><td><kbd>Ctrl+Tab</kbd> / <kbd>Ctrl+Shift+Tab</kbd></td><td>Next / previous tab</td></tr>
+            <tr><td><kbd>Ctrl+Shift+W</kbd></td><td>Close the tab (only the current pane of a split tab)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+\</kbd> / <kbd>Ctrl+Shift+-</kbd></td><td>Split right / down</td></tr>
+            <tr><td><kbd>Alt+←→↑↓</kbd> (split tab)</td><td>Move to the next pane</td></tr>
+            <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>File transfer (SFTP / SCP / FTP)</td></tr>
+            <tr><td><kbd>Backspace</kbd> / <kbd>Alt+↑</kbd> (file window)</td><td>Parent folder (same as <code>..</code> at the top)</td></tr>
+            <tr><td><kbd>F3</kbd> / <kbd>F4</kbd> (file window)</td><td>View / edit a remote text file (<kbd>Ctrl+S</kbd> saves to the server)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+E</kbd></td><td>UTF-8 ↔ EUC-KR</td></tr>
+            <tr><td><kbd>Ctrl+Shift+D</kbd></td><td>Disconnect</td></tr>
+            <tr><td><kbd>Ctrl+Shift+C</kbd> / <kbd>Ctrl+Shift+V</kbd></td><td>Copy / paste (selecting copies, right click pastes)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+S</kbd></td><td>Search the scrollback</td></tr>
+            <tr><td><kbd>Ctrl+wheel</kbd> / <kbd>Ctrl+=</kbd> / <kbd>Ctrl+-</kbd></td><td>Larger / smaller font</td></tr>
+            <tr><td><kbd>Ctrl+Shift+M</kbd></td><td>Macros</td></tr>
+            <tr><td><kbd>Ctrl+Shift+K</kbd></td><td>Lua console (<kbd>Ctrl+O</kbd> load a file · <kbd>Ctrl+S</kbd> save)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+H</kbd></td><td>Sessions</td></tr>
+            <tr><td><kbd>Ctrl+Shift+P</kbd></td><td>SSH port forwarding</td></tr>
+            <tr><td><kbd>Ctrl+Shift+J</kbd></td><td>Docker containers</td></tr>
+            <tr><td><kbd>Ctrl+Shift+L</kbd></td><td>Start / stop the session log</td></tr>
+            <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>Settings (color theme, cursor, language, keyword highlighting, keepalive, logs...)</td></tr>
+            <tr><td><kbd>F1</kbd></td><td>Help (한국어 / English)</td></tr>
+        </table>
+    </section>
 
-    <section>
+    <section class="ko">
         <h2>설치</h2>
         <p><b>Windows</b>: 설치 과정 없이 <code>choboterm.exe</code>를 내려받아 실행하면 됩니다. Windows 10 / 11 (WebView2 런타임, Windows 11에는 기본 포함)에서 동작합니다.</p>
         <p class="note">코드 서명이 없는 실행 파일이라 처음 실행할 때 "Windows의 PC 보호" 창이 뜰 수 있습니다.
@@ -354,14 +435,50 @@ cd choboterm-linux-amd64
 setsid ~/.local/bin/choboterm >/dev/null 2>&1 &   # 터미널을 닫아도 창이 유지됨</code></pre>
         <p class="note">Linux에서는 키링(GNOME Keyring, KWallet 등)이 있을 때만 비밀번호를 저장하고, 반투명 창과 PuTTY 세션 가져오기는 지원하지 않습니다. macOS는 지원하지 않습니다.</p>
     </section>
+    <section class="en">
+        <h2>Install</h2>
+        <p><b>Windows</b>: no installer; download <code>choboterm.exe</code> and run it. Works on Windows 10 / 11 (WebView2 runtime, built into Windows 11).</p>
+        <p class="note">The executable is not code-signed, so the first run may show "Windows protected your PC".
+            Click <b>More info → Run anyway</b>.</p>
+        <p><b>Linux</b> (x86_64): extract <code>choboterm-linux-amd64.tar.gz</code> and run <code>./choboterm</code>.
+            <code>./install.sh</code> puts it in <code>~/.local/bin</code> and the application menu.
+            Needs GTK 3 and WebKitGTK 4.1 (Ubuntu 22.04 · Debian 12 or later: <code>sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0</code>).</p>
+        <p>To download and install from a terminal:</p>
+        <pre class="cmd"><code>curl -LO https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz
+tar xzf choboterm-linux-amd64.tar.gz
+cd choboterm-linux-amd64
+./install.sh                          # ~/.local/bin/choboterm and a menu entry
+setsid ~/.local/bin/choboterm >/dev/null 2>&1 &   # keeps running after the terminal closes</code></pre>
+        <p class="note">On Linux passwords are saved only when a keyring (GNOME Keyring, KWallet...) is available; translucent windows and PuTTY session import are Windows only. macOS is not supported.</p>
+    </section>
 
     <footer>
         <a href="https://github.com/chobocho/choboterm/blob/main/LICENSE">MIT License</a> ·
-        <a href="https://github.com/chobocho/choboterm/blob/main/THIRD_PARTY_NOTICES.txt">서드파티 라이선스</a> ·
+        <a href="https://github.com/chobocho/choboterm/blob/main/THIRD_PARTY_NOTICES.txt"><span class="ko">서드파티 라이선스</span><span class="en">Third-party licenses</span></a> ·
         <a href="https://github.com/chobocho/choboterm">github.com/chobocho/choboterm</a>
     </footer>
 </main>
 <script>
+    // Language: ?lang=en|ko, else the one chosen before, else the browser's (Korean or English).
+    (() => {
+        const ok = l => l === 'ko' || l === 'en';
+        const param = new URLSearchParams(location.search).get('lang');
+        let saved = null;
+        try { saved = localStorage.getItem('lang'); } catch {}
+        const lang = ok(param) ? param : ok(saved) ? saved : (navigator.language || '').toLowerCase().startsWith('ko') ? 'ko' : 'en';
+        const apply = l => {
+            document.documentElement.lang = l;
+            document.title = 'choboterm';
+            document.querySelectorAll('.lang a').forEach(a => a.classList.toggle('on', a.dataset.lang === l));
+        };
+        apply(lang);
+        document.querySelectorAll('.lang a').forEach(a => a.addEventListener('click', ev => {
+            ev.preventDefault();
+            try { localStorage.setItem('lang', a.dataset.lang); } catch {}
+            apply(a.dataset.lang);
+        }));
+    })();
+
     // Show the latest release version (best effort; the download link works without it).
     fetch('https://api.github.com/repos/chobocho/choboterm/releases/latest')
         .then(r => (r.ok ? r.json() : null))

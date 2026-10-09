@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1010" height="660" viewBox="0 0 1010 660" font-family="'Segoe UI', 'Malgun Gothic', 'Noto Sans', sans-serif" font-size="11" fill="#202124">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5f6368"/>
+    </marker>
+    <style>
+      .title { font-size: 12px; font-weight: bold; }
+      .head { font-size: 13px; font-weight: bold; }
+      .sub { fill: #5f6368; }
+      .note { font-size: 10.5px; fill: #3c4043; }
+      .item { fill: #ffffff; stroke-width: 1; }
+      .link { stroke: #5f6368; stroke-width: 1.5; fill: none; }
+      .new { fill: #c5221f; font-size: 9.5px; font-weight: bold; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
+  <text x="20" y="36" font-size="18" font-weight="bold">choboterm Architecture</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.11 · <tspan class="new">NEW</tspan> = added in this version</text>
+
+  <!-- Frontend -->
+  <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
+  <text x="35" y="82" class="head" fill="#1a4fa3">Frontend (WebView2 · WebKitGTK)</text>
+  <g class="item" stroke="#4a7bd0">
+    <rect x="35" y="95" width="240" height="48" rx="5"/>
+    <rect x="35" y="153" width="240" height="48" rx="5"/>
+    <rect x="35" y="211" width="240" height="48" rx="5"/>
+    <rect x="35" y="269" width="240" height="48" rx="5"/>
+    <rect x="35" y="327" width="240" height="48" rx="5"/>
+    <rect x="35" y="385" width="240" height="48" rx="5"/>
+    <rect x="35" y="443" width="240" height="48" rx="5"/>
+    <rect x="35" y="501" width="240" height="48" rx="5"/>
+    <rect x="35" y="559" width="240" height="48" rx="5"/>
+  </g>
+  <text x="47" y="115" class="title">main.ts</text>
+  <text x="47" y="132" class="sub">Tabs · xterm.js terminal · connect · keys</text>
+  <text x="47" y="173" class="title">highlight.ts</text>
+  <text x="47" y="190" class="sub">Keyword highlight (xterm decorations)</text>
+  <text x="47" y="231" class="title">files.ts</text>
+  <text x="47" y="248" class="sub">File transfer window (SFTP · SCP · FTP)</text>
+  <text x="47" y="289" class="title">viewer.ts · imageview.ts</text>
+  <text x="47" y="306" class="sub">Text viewer/editor (CodeMirror), images</text>
+  <text x="47" y="347" class="title">Lua console · script box</text>
+  <text x="47" y="364" class="sub">main.ts — input · output · open · save</text>
+  <text x="47" y="405" class="title">containers.ts</text>
+  <text x="47" y="422" class="sub">Docker window (shell · logs · open port)</text>
+  <text x="47" y="463" class="title">sessions · prefs · macros · forwards</text>
+  <text x="47" y="480" class="sub">Sessions, settings, macros, port forwards</text>
+  <text x="47" y="521" class="title">i18n.ts</text>
+  <text x="47" y="538" class="sub">English UI: translates text via dictionary</text>
+  <text x="47" y="579" class="title">help · search · dialog · platform <tspan class="new">NEW</tspan></text>
+  <text x="47" y="596" class="sub">Help, search, confirm dialog, Linux UI fixes</text>
+
+  <!-- Wails bridge -->
+  <line x1="292" y1="160" x2="398" y2="160" class="link" marker-end="url(#arrow)"/>
+  <text x="345" y="96" text-anchor="middle" class="note" font-weight="bold">Go method calls</text>
+  <text x="345" y="112" text-anchor="middle" class="note">Connect · Send</text>
+  <text x="345" y="128" text-anchor="middle" class="note">Resize · ConsoleEval</text>
+  <text x="345" y="144" text-anchor="middle" class="note">DockerList etc.</text>
+  <line x1="398" y1="300" x2="292" y2="300" class="link" marker-end="url(#arrow)"/>
+  <text x="345" y="320" text-anchor="middle" class="note" font-weight="bold">Events</text>
+  <text x="345" y="336" text-anchor="middle" class="note">term:data</text>
+  <text x="345" y="352" text-anchor="middle" class="note">(base64 batches)</text>
+  <text x="345" y="368" text-anchor="middle" class="note">script:* · progress</text>
+  <text x="345" y="230" text-anchor="middle" font-size="12" font-weight="bold" fill="#5f6368">Wails v2</text>
+  <text x="345" y="246" text-anchor="middle" class="note">bindings</text>
+
+  <!-- Go backend -->
+  <rect x="400" y="60" width="370" height="445" rx="8" fill="#e6f4ea" stroke="#2f8f5b" stroke-width="1.5"/>
+  <text x="415" y="82" class="head" fill="#1e6b41">Go backend — choboterm.exe</text>
+
+  <rect x="415" y="95" width="340" height="75" rx="5" class="item" stroke="#2f8f5b"/>
+  <text x="427" y="114" class="title">app.go — App · tab (one per tab)</text>
+  <text x="427" y="133" class="sub">pump: batches output per 16ms · 256KB, detects Zmodem</text>
+  <text x="427" y="151" class="sub">codec.go UTF-8↔CP949 · sessionlog.go (timestamps) · keepalive</text>
+
+  <g class="item" stroke="#2f8f5b">
+    <rect x="415" y="185" width="106" height="62" rx="5"/>
+    <rect x="532" y="185" width="106" height="62" rx="5"/>
+    <rect x="649" y="185" width="106" height="62" rx="5"/>
+  </g>
+  <text x="468" y="204" text-anchor="middle" class="title">ssh.go</text>
+  <text x="468" y="220" text-anchor="middle" class="sub">sshauth · forward</text>
+  <text x="468" y="236" text-anchor="middle" class="sub">sshjump · openPty</text>
+  <text x="585" y="204" text-anchor="middle" class="title">telnet.go</text>
+  <text x="585" y="220" text-anchor="middle" class="sub">detect.go</text>
+  <text x="585" y="236" text-anchor="middle" class="sub">(protocol detect)</text>
+  <text x="702" y="204" text-anchor="middle" class="title">localpty</text>
+  <text x="702" y="220" text-anchor="middle" class="sub">Win: ConPTY</text>
+  <text x="702" y="236" text-anchor="middle" class="sub">Linux: PTY</text>
+
+  <g class="item" stroke="#2f8f5b">
+    <rect x="415" y="262" width="223" height="62" rx="5"/>
+    <rect x="649" y="262" width="106" height="62" rx="5"/>
+  </g>
+  <text x="427" y="281" class="title">filexfer.go — RemoteFS</text>
+  <text x="427" y="297" class="sub">sftp.go · scp.go · ftp.go · viewer.go</text>
+  <text x="427" y="313" class="sub">Progress · cancel · resume (.part)</text>
+  <text x="702" y="281" text-anchor="middle" class="title">zmodem.go</text>
+  <text x="702" y="297" text-anchor="middle" class="sub">zmodem_app.go</text>
+  <text x="702" y="313" text-anchor="middle" class="sub">rz / sz</text>
+
+  <rect x="415" y="339" width="340" height="50" rx="5" class="item" stroke="#2f8f5b"/>
+  <text x="427" y="358" class="title">docker.go — list · start/stop · exec · logs</text>
+  <text x="427" y="377" class="sub">Server: extra session on SSH · PC: ConPTY/PTY · podman fallback</text>
+
+  <rect x="415" y="399" width="340" height="94" rx="5" class="item" stroke="#2f8f5b"/>
+  <text x="427" y="418" class="title">Storage — %AppData% · ~/.config · i18n.go</text>
+  <text x="427" y="437" class="sub">settings.go · session_store.go · history_store.go</text>
+  <text x="427" y="455" class="sub">settings.json · sessions.json · hosts.json (DPAPI · keyring)</text>
+  <text x="427" y="473" class="sub">i18n_en.json: English dictionary shared by UI and Go</text>
+  <text x="427" y="487" class="sub" font-size="10">(Go translates file dialogs · terminal notices · log view)</text>
+
+  <!-- Lua host -->
+  <line x1="585" y1="507" x2="585" y2="543" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="597" y="529" class="note">luarun.go ⇄ luahost.go · line-delimited JSON</text>
+  <rect x="400" y="545" width="370" height="80" rx="8" fill="#fff4e5" stroke="#d9822b" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="415" y="567" class="head" fill="#a35a10">Lua runner — choboterm.exe --lua-host</text>
+  <text x="415" y="587" class="sub">Separate process · gopher-lua (Lua 5.1) · send · expect · screen</text>
+  <text x="415" y="605" class="sub">luajob: memory limit (Job Object · Linux /proc)</text>
+
+  <!-- External -->
+  <line x1="772" y1="230" x2="808" y2="230" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="790" y="222" text-anchor="middle" class="note">TCP</text>
+  <line x1="772" y1="430" x2="808" y2="430" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="790" y="422" text-anchor="middle" class="note" font-size="9.5">PTY</text>
+
+  <rect x="810" y="150" width="180" height="222" rx="8" fill="#f1f3f4" stroke="#80868b" stroke-width="1.5"/>
+  <text x="825" y="174" class="head" fill="#3c4043">Remote servers</text>
+  <text x="825" y="198" class="sub">SSH (22) · Telnet (23)</text>
+  <text x="825" y="218" class="sub">SFTP · SCP · FTP</text>
+  <text x="825" y="238" class="sub">Port forwarding -L · -R · -D</text>
+  <text x="825" y="258" class="sub">Zmodem (rz / sz)</text>
+  <text x="825" y="278" class="sub">CP949 · UTF-8 servers</text>
+  <text x="825" y="298" class="sub">Docker · podman</text>
+  <rect x="822" y="312" width="156" height="46" rx="5" fill="#ffffff" stroke="#80868b" stroke-dasharray="4 3"/>
+  <text x="900" y="331" text-anchor="middle" class="sub">Via jump host (bastion)</text>
+  <text x="900" y="348" text-anchor="middle" class="sub">ProxyJump · ssh -J</text>
+
+  <rect x="810" y="388" width="180" height="94" rx="8" fill="#f1f3f4" stroke="#80868b" stroke-width="1.5"/>
+  <text x="825" y="412" class="head" fill="#3c4043">Local programs</text>
+  <text x="825" y="432" class="sub">cmd · PowerShell · WSL</text>
+  <text x="825" y="450" class="sub">bash · zsh (Linux)</text>
+  <text x="825" y="468" class="sub">Docker Desktop · docker</text>
+  <!-- Releases -->
+  <rect x="810" y="498" width="180" height="127" rx="8" fill="#f3e8fd" stroke="#8e44ad" stroke-width="1.5"/>
+  <text x="825" y="522" class="head" fill="#6a1b9a">Releases</text>
+  <text x="825" y="543" class="sub">Windows: choboterm.exe</text>
+  <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
+  <text x="825" y="579" class="sub">Built in Ubuntu 22.04 container</text>
+  <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
+  <text x="825" y="615" class="sub">Get via curl · install.sh <tspan class="new">NEW</tspan></text>
+</svg>
