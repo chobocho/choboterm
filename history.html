@@ -5,6 +5,17 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-10 — 리눅스 버전 (tar.gz, 키링, macOS 미지원)</h2>
+<ul>
+  <li>WSL에 Go 1.26.3·Wails CLI(~/sdk), gnome-keyring·xdotool·imagemagick·fonts-noto-cjk 설치. 원래 코드도 리눅스 빌드는 됐고 실패 테스트는 비밀번호 저장 2개·Lua 메모리 1개뿐</li>
+  <li>localpty_linux.go(creack/pty): bash·zsh·fish·sh 로컬 탭, 이 PC의 docker exec 탭. 셸 목록·명령줄 인용을 localshell_windows/unix로 분리</li>
+  <li>secret_linux.go: 키링(Secret Service)에 둔 키로 AES-GCM. 키링 없으면 저장 안 함(테스트는 건너뜀). luajob_linux.go: /proc로 메모리 감시해 한도 넘으면 종료, Pdeathsig로 앱과 함께 종료</li>
+  <li>폴더 열기 xdg-open, 리눅스 창 아이콘. 화면: platform.ts로 반투명·PuTTY 가져오기 숨김, 셸 안내·글꼴 대체·문구(시스템 언어, 키링) 정리</li>
+  <li>WSLg로 실제 실행: 접속 창, bash 탭(색상), 설정, 도커 창, 컨테이너 셸 확인. 도커 창 체크박스 겹침 발견·수정(.body input 100% 폭이 WebKitGTK에서 체크박스를 넓힘). 참고: 테스트 시 앱을 setsid로 띄워야 wsl.exe 종료와 함께 WebKit 프로세스가 죽지 않음</li>
+  <li>build_linux.sh: Ubuntu 22.04 컨테이너에서 테스트·빌드(GLIBC 2.34까지만 요구, 22.04에서 라이브러리 연결 확인) → release/choboterm-linux-amd64.tar.gz(실행 파일, 아이콘, .desktop, install.sh, README). .gitattributes로 sh는 LF. install.sh 임시 홈에서 확인</li>
+  <li>README: Linux 다운로드·요구 사항·파일 위치·빌드·릴리스 절차, macOS 미지원. 소개 페이지는 릴리스 때 갱신 예정</li>
+</ul>
+
 <h2>2026-10-09 — 도커 기능 실제 Docker로 검증 (WSL)</h2>
 <ul>
   <li>WSL(Ubuntu 24.04)에 root로 docker.io(29.1.3)·openssh-server·리눅스 빌드 패키지(libgtk-3-dev, libwebkit2gtk-4.1-dev, pkg-config) 설치, chobocho를 docker 그룹에 추가, docker·ssh 서비스 켬</li>
