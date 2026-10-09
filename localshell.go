@@ -9,18 +9,8 @@ import (
 
 // LocalShell is a program on this PC that can run in a tab instead of a connection.
 type LocalShell struct {
-	Name  string `json:"name"`  // what goes in the Host field: "cmd", "powershell", "pwsh", "wsl"
+	Name  string `json:"name"`  // what goes in the Host field: "cmd", "powershell", "wsl", "bash"...
 	Label string `json:"label"` // for the list: "명령 프롬프트 (cmd)"...
-}
-
-// localShells are the Host field names that start a local program, in list order.
-var localShells = []struct {
-	name, label, exe, args string
-}{
-	{"cmd", "명령 프롬프트 (cmd)", "cmd.exe", ""},
-	{"powershell", "Windows PowerShell", "powershell.exe", "-NoLogo"},
-	{"pwsh", "PowerShell 7 (pwsh)", "pwsh.exe", "-NoLogo"},
-	{"wsl", "WSL (Linux)", "wsl.exe", "--cd ~"},
 }
 
 // localCommand returns the command line for a local shell named in the Host
@@ -47,14 +37,6 @@ func localCommand(host string) (cmdline string, ok bool) {
 		return cmd, true
 	}
 	return "", false
-}
-
-// quoteArg quotes a program path for a Windows command line when it has spaces.
-func quoteArg(s string) string {
-	if strings.ContainsAny(s, " \t") {
-		return `"` + s + `"`
-	}
-	return s
 }
 
 // GetLocalShells lists the local shells installed on this PC.

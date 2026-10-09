@@ -298,11 +298,7 @@ func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int)
 		if err != nil {
 			return err
 		}
-		cmd := winQuote(exe)
-		for _, a := range args {
-			cmd += " " + winQuote(a)
-		}
-		if sess, err = startPty(cmd, localHome(), cols, rows); err != nil {
+		if sess, err = startPty(commandLine(exe, args), localHome(), cols, rows); err != nil {
 			return err
 		}
 	} else {

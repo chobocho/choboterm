@@ -3,10 +3,14 @@
 package main
 
 import (
+	"errors"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
+
+// errNoSecretStore: DPAPI is always there on Windows.
+var errNoSecretStore = errors.New("비밀번호를 저장할 수 없습니다")
 
 // protectSecret encrypts data with DPAPI for the current Windows user.
 func protectSecret(plain []byte) ([]byte, error) {

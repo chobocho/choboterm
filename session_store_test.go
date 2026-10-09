@@ -18,6 +18,7 @@ func useTempHistory(t *testing.T) string {
 }
 
 func TestSessionsSaveUpdateDelete(t *testing.T) {
+	requireSecretStore(t)
 	useTempHistory(t)
 
 	s, err := saveSession(SavedSession{Host: " prod.example.com ", Port: 22, Login: "deploy", Group: "회사", Pass: "pw"}, true)
