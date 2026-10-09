@@ -194,6 +194,14 @@ go test ./...
   CHOBOTERM_WSL=1 go test -run SCPFallback -v
   ```
 
+## 아키텍처
+
+![choboterm 아키텍처](./docs/architecture.svg)
+
+- 화면은 WebView2 안의 TypeScript(xterm.js)가, 접속·파일 전송·저장은 Go가 맡습니다. 둘은 Wails 바인딩(Go 메서드 호출)과 이벤트로 주고받습니다.
+- 탭마다 Go 쪽에 `tab`이 하나 있고, 서버 출력은 16ms·256KB 단위로 묶어 `term:data` 이벤트로 보냅니다. 이때 인코딩 변환, Zmodem 감지, 세션 로그, Lua 스크립트 전달이 함께 일어납니다.
+- Lua 스크립트는 `choboterm.exe --lua-host`로 띄운 별도 프로세스에서 돌아서, 스크립트가 멈추거나 메모리를 다 써도 앱은 영향을 받지 않습니다.
+
 ## 소스 구성
 
 | 파일 | 내용 |
