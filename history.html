@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-10 — V0.2.11 릴리스</h2>
+<ul>
+  <li>버전 0.2.11(리눅스 화면 보정: select 한글 잘림, Save 버튼 줄바꿈, 리눅스 한글 UI 글꼴). build.bat + build_linux.sh(WSL에 docker.io만 잠시 설치, Ubuntu 22.04 컨테이너에서 테스트 통과)로 두 파일 빌드, 리눅스 바이너리에 새 CSS 포함 확인</li>
+  <li>main 푸시, GitHub 릴리스 v0.2.11(exe + tar.gz, 최신 링크 둘 다 200), V0.2.10 릴리스 삭제(태그 유지)</li>
+  <li>아키텍처 그림 V0.2.11: platform(리눅스 화면 보정)·curl로 받기를 NEW, 지난 NEW 표시 제거. README · 소개 페이지에 curl로 받아 설치·실행하는 명령 추가(실행은 setsid ~/.local/bin/choboterm). Pages 반영 확인</li>
+  <li>curl 설치 절차를 WSL 임시 HOME에서 그대로 실행해 V0.2.11 설치·라이브러리 연결 확인</li>
+  <li>정리: 빌드용 docker.io와 의존 패키지 16개(새로 깔린 것만), Docker 데이터, docker 그룹 삭제. WSL 사용량 3.2GB(사용자가 설치한 실행용 라이브러리·글꼴 포함)</li>
+</ul>
+
 <h2>2026-10-10 — 리눅스: 설정 창 select 한글 잘림 수정</h2>
 <ul>
   <li>증상: 리눅스 설정 창의 "한국어" 등 select 글자가 아래로 내려가 잘림. 원인: WebKitGTK는 select를 GTK 버튼(자체 여백)으로 그리는데 높이가 22px 고정, Noto CJK 한글은 줄 높이가 커서 더 잘림(앞서 넣은 글꼴 목록 때문에 오히려 심해짐)</li>
