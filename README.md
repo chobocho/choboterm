@@ -85,6 +85,12 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 규칙은 호스트별로 접속 기록에 저장되어 다음 접속(자동 재접속 포함) 때 자동으로 다시 열립니다. 포트가 이미 사용 중이면 규칙은 남기고 오류를 보여 줍니다.
   - 대상은 서버에서 본 주소입니다. 예) 서버에서 `localhost`로만 열린 Jupyter(8888)는 `127.0.0.1:8888 → 127.0.0.1:8888`
   - 상태 칸에 지금 열려 있는 연결 수가 나오고, 창 아래에는 같은 포워딩을 여는 `ssh` 명령어(`-L`/`-R`/`-D`, `-J`, `-p` 포함)가 나와 복사할 수 있습니다.
+- **도커 컨테이너**: `Ctrl+Shift+J` 또는 탭 우클릭 메뉴로 컨테이너 창을 엽니다. 지금 탭의 SSH 서버, 또는 이 PC(Docker Desktop)의 컨테이너를 보여 줍니다. docker가 없으면 podman을 씁니다.
+  - **셸 열기**(`Enter` / 더블클릭): 새 탭에서 `docker exec -it` (bash가 있으면 bash, 없으면 sh). **로그 보기**: 새 탭에서 `docker logs -f --tail 200`
+  - 서버의 컨테이너 탭은 그 탭의 SSH 접속에 세션을 하나 더 여는 방식이라 다시 로그인하지 않습니다. 원래 탭의 접속이 끊기면 함께 닫히고, `Enter`로 다시 엽니다.
+  - 시작 / 중지 / 재시작(중지·재시작은 확인 후), 중지된 컨테이너 표시, 새로고침(`F5`)
+  - **포트 열기**: 서버의 게시된 포트를 이 PC의 같은 포트로 포워딩(`-L`)하고 브라우저로 엽니다. 이 PC의 컨테이너는 바로 `http://localhost:포트`를 엽니다.
+  - 서버 사용자가 docker 그룹에 없으면 권한 오류와 함께 `sudo usermod -aG docker $USER` 안내가 나옵니다.
 - **매크로**: `Ctrl+Shift+M`으로 매크로 창을 열어 자주 쓰는 명령을 저장해 두고 보냅니다(목록에서 `Enter` / 더블클릭).
   - 매크로마다 `F2`~`F12`, `Shift+F1`~`F12`, `Ctrl+F1`~`F12` 중 하나를 지정하면 그 키로 바로 보냅니다. 지정하지 않은 키는 mc, htop 같은 프로그램에 그대로 전달됩니다.
   - 내용의 줄바꿈은 `Enter`로 보내고, `\t`(Tab), `\e`(Esc), `\xHH`(예: `\x03` = Ctrl+C), `\\`(역슬래시)를 쓸 수 있습니다.
@@ -131,6 +137,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Ctrl+Shift+O` | 설정 창 |
 | `Ctrl+Shift+M` | 매크로 창 (매크로에 지정한 F키로 바로 보내기) |
 | `Ctrl+Shift+P` | SSH 포트 포워딩 창 |
+| `Ctrl+Shift+J` | 도커 컨테이너 창 |
 | `Ctrl+Shift+L` | 세션 로그 기록 시작 / 중지 |
 | `Ctrl+클릭` | 화면의 URL을 브라우저에서 열기 |
 | `Ctrl+Shift+C` / `Ctrl+Shift+V` | 복사 / 붙여넣기 (마우스 선택 = 복사, 우클릭 = 붙여넣기) |
@@ -208,6 +215,12 @@ go test ./...
   CHOBOTERM_WSL=1 go test -run SCPFallback -v
   ```
 
+- 도커: 같은 방식의 테스트 SSH 서버와 WSL의 가짜 `docker` 스크립트로 목록·동작·exec 탭을 확인합니다.
+
+  ```sh
+  CHOBOTERM_WSL=1 go test -run DockerRemote -v
+  ```
+
 ## 아키텍처
 
 ![choboterm 아키텍처](./docs/architecture.svg)
@@ -227,6 +240,7 @@ go test ./...
 | `ssh.go` / `telnet.go` / `ftp.go` / `sftp.go` / `scp.go` | 프로토콜 |
 | `detect.go` | 표준이 아닌 포트의 프로토콜 자동 판별 |
 | `forward.go` | SSH 포트 포워딩 (-L / -R / -D SOCKS5) |
+| `docker.go` | 도커 컨테이너 목록·동작, `docker exec` / `docker logs` 탭 (서버: 같은 SSH 접속, PC: 로컬 PTY) |
 | `filexfer.go` | 파일 전송 공통 계층(RemoteFS), 진행률, 취소 |
 | `zmodem.go` / `zmodem_app.go` | Zmodem 프로토콜과 앱 연결 |
 | `codec.go` | UTF-8 ↔ CP949 변환 |
@@ -247,6 +261,7 @@ go test ./...
 | `frontend/src/search.ts` | 스크롤백 검색 막대 |
 | `frontend/src/prefs.ts` | 설정 창 |
 | `frontend/src/forwards.ts` | 포트 포워딩 창 |
+| `frontend/src/containers.ts` | 도커 컨테이너 창 |
 | `frontend/src/macros.ts` | 매크로 창, 매크로 단축키, 이스케이프 처리 |
 | `frontend/src/paste.ts` | 여러 줄 붙여넣기 확인 창 |
 | `frontend/src/settings.ts` | 설정 읽기 / 저장 |

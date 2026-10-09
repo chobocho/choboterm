@@ -33,6 +33,7 @@
     <li data-act="theme" class="sub">색 테마 (이 서버)</li>
     <li data-act="files">파일 전송</li>
     <li data-act="forwards">포트 포워딩</li>
+    <li data-act="containers">도커 컨테이너 (Ctrl+Shift+J)</li>
     <li data-act="script">Lua 스크립트 실행...</li>
     <li data-act="console">Lua 콘솔 (Ctrl+Shift+K)</li>
     <li data-act="stopScript">스크립트 중지</li>
@@ -319,6 +320,43 @@
     <li data-act="import">파일에서 가져오기...</li>
     <li data-act="export">파일로 내보내기... (비밀번호 제외)</li>
 </ul>
+
+<div id="dkOverlay" class="overlay modal" hidden>
+    <div class="dialog dk" id="dk" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title">도커 컨테이너</span>
+            <button type="button" class="close" id="dkX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div class="dktop">
+                <select id="dkSrc" title="컨테이너가 있는 곳"></select>
+                <label><input type="checkbox" id="dkAll"/> 중지된 컨테이너도 표시</label>
+                <button type="button" id="dkRefresh" title="F5">새로고침</button>
+            </div>
+            <div class="dklist">
+                <table>
+                    <thead><tr><th>이름</th><th>이미지</th><th>상태</th><th>포트</th></tr></thead>
+                    <tbody id="dkBody"></tbody>
+                </table>
+            </div>
+            <div class="dkacts">
+                <button type="button" id="dkShell" title="docker exec -it (Enter · 더블클릭)">셸 열기</button>
+                <button type="button" id="dkLogs" title="docker logs -f --tail 200">로그 보기</button>
+                <button type="button" id="dkStart">시작</button>
+                <button type="button" id="dkStop">중지</button>
+                <button type="button" id="dkRestart">재시작</button>
+                <select id="dkPort" title="게시된 포트"></select>
+                <button type="button" id="dkOpenPort">포트 열기</button>
+            </div>
+            <div class="hint" id="dkHint"></div>
+            <div class="error" id="dkError"></div>
+            <div class="buttons">
+                <button type="button" id="dkClose">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="pfOverlay" class="overlay modal" hidden>
     <div class="dialog pf" id="pf" tabindex="-1">

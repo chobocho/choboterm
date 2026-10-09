@@ -1812,6 +1812,119 @@ body.resizing-col #terms .term {
     margin-top: 0;
 }
 
+/* ---- Docker container window ---- */
+
+.dialog.dk {
+    width: min(760px, calc(100vw - 32px));
+    outline: none;
+}
+
+.dk .body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.dk .dktop,
+.dk .dkacts {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dk .dktop select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dk .dktop label {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.dk .dktop button,
+.dk .dkacts button {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 10px;
+    border: 1px solid #adadad;
+    background: #e1e1e1;
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.dk .dkacts button:disabled {
+    color: #999;
+    cursor: default;
+}
+
+.dk #dkPort {
+    margin-left: auto;
+    width: 150px;
+}
+
+.dk .dklist {
+    height: min(240px, calc(100vh - 300px));
+    overflow: auto;
+    border: 1px solid #7a7a7a;
+    background: #fff;
+}
+
+.dk table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.dk th {
+    position: sticky;
+    top: 0;
+    padding: 3px 6px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    font-weight: normal;
+    text-align: left;
+    color: #444;
+}
+
+.dk th:nth-child(1) { width: 150px; }
+.dk th:nth-child(2) { width: 170px; }
+.dk th:nth-child(3) { width: 170px; }
+
+.dk td {
+    padding: 2px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: default;
+}
+
+.dk td.ok { color: #107c10; }
+.dk td.off { color: #888; }
+.dk td.empty { color: #888; }
+
+.dk tbody tr.sel {
+    background: #0078d7;
+}
+
+.dk tbody tr.sel td {
+    color: #fff;
+}
+
+.dk .hint {
+    color: #555;
+    font-size: 12px;
+}
+
+.dk .buttons {
+    margin-top: 0;
+}
+
 /* ---- Question / text input window ---- */
 
 /* Above the file window it is opened from. */

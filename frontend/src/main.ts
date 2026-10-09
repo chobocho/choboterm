@@ -12,6 +12,7 @@ import {confirmPaste, pasteConfirmOpen} from './paste';
 import {initTranslucencyPreview, openPrefs, prefsOpen} from './prefs';
 import {expandMacro, macroForKey, macrosOpen, openMacros} from './macros';
 import {forwardsOpen, forwardsTabClosed, openForwards} from './forwards';
+import {containersOpen, containersTabClosed, DockerMode, DockerSource, openContainers} from './containers';
 import {askOpen} from './dialog';
 import {openSaveSession, openSessionManager, sessionManagerOpen, sessionSaveOpen} from './sessions';
 import {authPromptOpen, initAuthPrompt} from './authprompt';
@@ -25,7 +26,7 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, GetLanguage, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    CloseTab, Connect, Disconnect, DockerOpen, GetLanguage, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -72,6 +73,8 @@ interface Tab {
     encoding: string;
     // Last connection, kept in memory only, for reconnect / duplicate.
     req?: main.ConnectRequest;
+    // A docker exec / logs tab (no req): what to open again on reconnect.
+    docker?: {src: DockerSource; id: string; name: string; mode: DockerMode};
     // The saved session req came from: its name is the tab label.
     session?: main.SavedSession;
     // This tab's Connect dialog, while it is open.
@@ -307,7 +310,7 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
                 cancelRetry(t);
                 reconnectHint(t, '자동 재접속을 취소했습니다');
             }
-        } else if (data === '\r') openDialog(t);
+        } else if (data === '\r') t.docker ? reconnect(t) : openDialog(t);
     });
     term.onResize(({cols, rows}) => {
         if (t.state === 'on') Resize(t.id, cols, rows);
@@ -760,7 +763,13 @@ function closeTab(t: Tab) {
 function setState(t: Tab, state: TabState) {
     t.state = state;
     t.el.classList.toggle('on', state !== 'idle');
-    if (t.req && t.proto === 'local') {
+    if (t.docker) {
+        const d = t.docker;
+        t.label.textContent = d.mode === 'logs' ? `📜 ${d.name}` : `🐳 ${d.name}`;
+        t.el.title = `${d.mode === 'logs' ? 'docker logs' : 'docker exec'}: ${d.name} @ ${d.src.label}`;
+        if (t.log) t.el.title += `
+로그 기록 중: ${t.log}`;
+    } else if (t.req && t.proto === 'local') {
         t.label.textContent = t.session?.name ?? t.req.host;
         t.el.title = `로컬 셸: ${t.req.host}`;
         if (t.log) t.el.title += `
@@ -780,7 +789,9 @@ function setState(t: Tab, state: TabState) {
 function updateTitle() {
     let title = appName;
     const t = active;
-    if (t?.req && t.state !== 'idle' && t.proto === 'local') {
+    if (t?.docker && t.state !== 'idle') {
+        title += ` - ${t.docker.name} @ ${t.docker.src.label} (docker)`;
+    } else if (t?.req && t.state !== 'idle' && t.proto === 'local') {
         title += ` - ${t.req.host} (로컬)`;
     } else if (t?.req && t.state !== 'idle') {
         const where = `${t.req.host}:${t.req.port}`;
@@ -869,6 +880,7 @@ async function retryNow(t: Tab) {
 }
 
 async function reconnect(t: Tab) {
+    if (t.docker) return startDocker(t).catch(e => notice(t, String(e)));
     if (!t.req) return openDialog(t);
     try {
         if (await connectTab(t, t.req) === 'ftp') await openFilesFor(t);
@@ -878,6 +890,7 @@ async function reconnect(t: Tab) {
 }
 
 async function duplicate(t: Tab) {
+    if (t.docker) return openDockerTab(t.docker.src, t.docker.id, t.docker.name, t.docker.mode);
     if (!t.req) return;
     const n = createTab();
     n.session = t.session;
@@ -992,6 +1005,7 @@ EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
     dbg(`tab ${id} term:closed "${msg}" lost=${lost} autoReconnect=${settings.autoReconnect}`);
     forgetFiles(t.id);
     forwardsTabClosed(t.id);
+    containersTabClosed(t.id);
     setState(t, 'idle');
     if (lost && settings.autoReconnect && t.req) scheduleRetry(t, 1, msg);
     else {
@@ -1024,8 +1038,8 @@ function showMenu(t: Tab, x: number, y: number) {
     const enable = (act: string, on: boolean) =>
         menu.querySelector(`[data-act="${act}"]`)!.classList.toggle('disabled', !on);
     enable('reconnect', true);
-    enable('duplicate', !!t.req);
-    enable('files', t.state !== 'idle' && t.proto !== 'local');
+    enable('duplicate', !!t.req || !!t.docker);
+    enable('files', t.state !== 'idle' && !!t.req && t.proto !== 'local');
     enable('forwards', t.state === 'on' && t.proto === 'ssh');
     enable('disconnect', t.state !== 'idle');
     enable('saveSession', !!t.req);
@@ -1119,6 +1133,9 @@ menu.addEventListener('click', ev => {
             break;
         case 'duplicate':
             duplicate(t);
+            break;
+        case 'containers':
+            showContainers();
             break;
         case 'splitRight':
             splitTab(t, 'row');
@@ -2063,6 +2080,46 @@ function showForwards(t: Tab) {
     openForwards(t.id, t.req, focusActive);
 }
 
+// ---- Docker containers ----
+
+function showContainers() {
+    if (modalOpen()) return;
+    const t = active;
+    const srcs: DockerSource[] = [];
+    if (t && t.state === 'on' && t.proto === 'ssh' && t.req) {
+        srcs.push({tab: t.id, label: `${t.req.login ? t.req.login + '@' : ''}${t.req.host}`});
+    }
+    openContainers(srcs, (src, c, mode) => openDockerTab(src, c.id, c.name, mode), focusActive);
+}
+
+async function openDockerTab(src: DockerSource, id: string, name: string, mode: DockerMode) {
+    const n = createTab();
+    n.docker = {src, id, name, mode};
+    activate(n);
+    try {
+        await startDocker(n);
+    } catch (e) {
+        notice(n, String(e));
+    }
+}
+
+/** Opens (again) tab t's docker exec / logs session. Throws on failure. */
+async function startDocker(t: Tab) {
+    const d = t.docker!;
+    cancelRetry(t);
+    forgetFiles(t.id);
+    await DockerOpen(t.id, d.src.tab, d.id, d.mode, `${d.name}@${d.src.label}`, t.term.cols, t.term.rows);
+    if (!tabs.has(t.id)) {
+        CloseTab(t.id); // the tab was closed while opening
+        return;
+    }
+    t.proto = 'docker';
+    t.term.reset();
+    applyEncoding(t, 'UTF-8');
+    setState(t, 'on');
+    applyLook(t);
+}
+
 // ---- Session log ----
 
 /** Starts or stops writing tab t's output to a file; log:changed reports the result. */
@@ -2080,7 +2137,7 @@ async function toggleLog(t: Tab) {
 
 /** A window that takes all keys until it is closed. */
 function modalOpen() {
-    return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen() || askOpen() || viewerOpen() || imageOpen() ||
+    return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen() || containersOpen() || askOpen() || viewerOpen() || imageOpen() ||
         authPromptOpen() || sessionSaveOpen() || sessionManagerOpen();
 }
 
@@ -2091,7 +2148,7 @@ function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
     if (isPaneKey(ev) || splitKey(ev)) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLHK]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLHKJ]$/i.test(ev.key);
 }
 
 window.addEventListener('keydown', ev => {
@@ -2150,6 +2207,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'P':
             if (t) showForwards(t);
+            break;
+        case 'J':
+            showContainers();
             break;
         case 'L':
             if (t) toggleLog(t);

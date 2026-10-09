@@ -132,42 +132,50 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, ask asker, conn net.C
 		return nil, err
 	}
 
-	session, err := client.NewSession()
+	sess, err := openPty(client, req.Cols, req.Rows, "")
 	if err != nil {
 		client.Close()
 		return nil, err
 	}
+	go func() { debugf("ssh connection to %s ended: %v", req.Host, client.Wait()) }()
+	return sess, nil
+}
 
+// openPty starts a session with a terminal on client: the login shell, or
+// command when it isn't "". Closing it on failure is left to the caller.
+func openPty(client *ssh.Client, cols, rows int, command string) (*sshSession, error) {
+	session, err := client.NewSession()
+	if err != nil {
+		return nil, err
+	}
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,
 		ssh.TTY_OP_ISPEED: 38400,
 		ssh.TTY_OP_OSPEED: 38400,
 	}
-	if err := session.RequestPty("xterm-256color", req.Rows, req.Cols, modes); err != nil {
+	if err := session.RequestPty("xterm-256color", rows, cols, modes); err != nil {
 		session.Close()
-		client.Close()
 		return nil, fmt.Errorf("PTY 요청 실패: %w", err)
 	}
-
 	stdin, err := session.StdinPipe()
 	if err != nil {
 		session.Close()
-		client.Close()
 		return nil, err
 	}
 	stdout, err := session.StdoutPipe()
 	if err != nil {
 		session.Close()
-		client.Close()
 		return nil, err
 	}
-	if err := session.Shell(); err != nil {
+	if command == "" {
+		err = session.Shell()
+	} else {
+		err = session.Start(command)
+	}
+	if err != nil {
 		session.Close()
-		client.Close()
 		return nil, fmt.Errorf("셸 시작 실패: %w", err)
 	}
-
-	go func() { debugf("ssh connection to %s ended: %v", req.Host, client.Wait()) }()
 	return &sshSession{client: client, session: session, stdin: stdin, stdout: stdout}, nil
 }
 

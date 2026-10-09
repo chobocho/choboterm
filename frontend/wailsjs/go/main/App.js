@@ -50,6 +50,18 @@ export function Disconnect(arg1) {
   return window['go']['main']['App']['Disconnect'](arg1);
 }
 
+export function DockerAction(arg1, arg2, arg3) {
+  return window['go']['main']['App']['DockerAction'](arg1, arg2, arg3);
+}
+
+export function DockerList(arg1, arg2) {
+  return window['go']['main']['App']['DockerList'](arg1, arg2);
+}
+
+export function DockerOpen(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['DockerOpen'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
 export function ExportSessions() {
   return window['go']['main']['App']['ExportSessions']();
 }
