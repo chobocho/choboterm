@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-10 — 리눅스: 설정 창 select 한글 잘림 수정</h2>
+<ul>
+  <li>증상: 리눅스 설정 창의 "한국어" 등 select 글자가 아래로 내려가 잘림. 원인: WebKitGTK는 select를 GTK 버튼(자체 여백)으로 그리는데 높이가 22px 고정, Noto CJK 한글은 줄 높이가 커서 더 잘림(앞서 넣은 글꼴 목록 때문에 오히려 심해짐)</li>
+  <li>수정: 리눅스에서만 select를 기본 모양 대신 입력칸처럼(appearance none + SVG 화살표, 줄 높이 20px) 그림. Windows는 그대로</li>
+  <li>확인: WSL에 python3-gi-cairo · gir1.2-webkit2-4.1을 잠시 설치해 WebKitGTK 4.1로 설정·접속·포트 포워딩 창 HTML을 직접 렌더링(수정 전 재현 → 수정 후 정상, Save 버튼 한 줄도 확인). 확인 후 새로 설치한 패키지만 정확히 제거</li>
+</ul>
+
 <h2>2026-10-10 — 리눅스: 접속 창 Save 버튼 줄바꿈 수정</h2>
 <ul>
   <li>증상: 리눅스에서 접속 창의 "☆ Save"가 두 줄로 꺾임. 원인: Save 버튼은 줄어들 수 있게(min-width 0) 되어 있고, 리눅스는 맑은 고딕이 없어 넓은 DejaVu Sans로 대체됨</li>
