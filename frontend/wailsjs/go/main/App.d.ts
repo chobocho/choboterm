@@ -14,7 +14,7 @@ export function ConsoleEval(arg1:number,arg2:number,arg3:string):Promise<void>;
 
 export function ConsoleInterrupt(arg1:number):Promise<void>;
 
-export function ConsoleOpen():Promise<string>;
+export function ConsoleOpen():Promise<main.ConsoleFile>;
 
 export function ConsoleSave(arg1:string):Promise<string>;
 

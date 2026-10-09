@@ -1677,6 +1677,7 @@ interface ScriptBox {
     // Lua console only: the input line, earlier inputs, and the input running now.
     input?: HTMLTextAreaElement;
     stop?: HTMLButtonElement;
+    open?: HTMLButtonElement;
     history: string[];
     hpos: number;
     log: string[]; // every line shown, for saving: the box itself keeps only the last 200
@@ -1787,6 +1788,7 @@ function consoleBox(t: Tab) {
     box.input = input;
     requestAnimationFrame(() => consoleMinHeight(box.el));
     box.stop = stop;
+    box.open = open;
     return box;
 }
 
@@ -1803,7 +1805,7 @@ function resizeConsole(el: HTMLElement, ev: MouseEvent) {
     const up = () => {
         window.removeEventListener('mousemove', move);
         window.removeEventListener('mouseup', up);
-        saveSettings(s => s.consoleHeight = el.offsetHeight);
+        if (el.isConnected) saveSettings(s => s.consoleHeight = el.offsetHeight); // the box may have closed mid-drag
     };
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
@@ -1858,20 +1860,21 @@ function consoleKey(t: Tab, box: ScriptBox, ev: KeyboardEvent) {
 
 /** Puts a Lua file's text in the input line, to look at or edit before Enter runs it. */
 async function consoleOpen(box: ScriptBox) {
-    const input = box.input!;
+    if (!box.input) return;
     try {
-        const code = await ConsoleOpen();
-        if (code) {
-            input.value = code.replace(/\n+$/, '');
-            box.hpos = box.history.length;
-            fitInput(input);
-            input.setSelectionRange(0, 0);
-            input.scrollTop = 0;
-        }
+        const f = await ConsoleOpen();
+        const input = box.input; // the console may have ended while the dialog was open
+        if (!f.name || !input) return box.input?.focus();
+        input.value = f.text.replace(/\n+$/, '');
+        box.hpos = box.history.length;
+        fitInput(input);
+        input.setSelectionRange(0, 0);
+        input.scrollTop = 0;
+        if (!input.value) toast(`빈 파일입니다: ${f.name}`);
     } catch (e) {
         toast(`불러오지 못했습니다: ${e}`);
     }
-    input.focus();
+    box.input?.focus();
 }
 
 async function consoleSave(box: ScriptBox) {
@@ -1935,7 +1938,7 @@ function scriptLine(t: Tab, text: string, cls = '') {
         box.body.appendChild(div);
         box.log.push(line);
     }
-    if (box.log.length > 20000) box.log.splice(0, box.log.length - 20000);
+    if (box.log.length > 22000) box.log.splice(0, box.log.length - 20000); // trimmed in batches, not a line at a time
     while (box.body.childElementCount > 200) box.body.firstElementChild!.remove();
     box.body.scrollTop = box.body.scrollHeight;
 }
@@ -1966,9 +1969,12 @@ EventsOn('script:end', (id: number, ms: number, msg: string, stopped: boolean) =
     const box = scriptBox(t);
     if (box.input) {
         // The console is over: no more input.
+        // Save stays: what was typed and shown can still be kept.
         box.input.remove();
         box.stop?.remove();
-        box.input = box.stop = box.busy = undefined;
+        box.open?.remove();
+        box.input = box.stop = box.open = box.busy = undefined;
+        box.el.style.minHeight = '';
     }
     if (stopped) {
         box.el.className = 'script-box stopped';
