@@ -171,8 +171,18 @@ html, body {
 /* The Lua console: a bigger box with an input line at the bottom. */
 .script-box.console {
     width: min(560px, calc(100% - 32px));
-    height: min(400px, calc(100% - 16px));
-    max-height: none;
+    height: 300px;
+    max-height: 80%;
+}
+
+/* Dragging the console's top edge sets its height. */
+.script-box .grip {
+    position: absolute;
+    top: -3px;
+    left: 0;
+    right: 0;
+    height: 6px;
+    cursor: ns-resize;
 }
 
 .script-box.console .lines {
