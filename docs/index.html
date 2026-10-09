@@ -255,6 +255,8 @@ login: guest
             <li><b>안전한 저장</b><span>known_hosts 확인, Telnet 비밀번호는 Windows DPAPI로 암호화</span></li>
             <li><b>포트 포워딩</b><span>SSH 로컬(-L) · 원격(-R) · 동적(-D, SOCKS5). 호스트별로 저장해 다음 접속 때 자동 적용</span></li>
             <li><b>연결 유지 · 자동 재접속</b><span>쉬는 연결이 끊기지 않게 keepalive, 네트워크가 끊기면 화면을 그대로 두고 다시 연결</span></li>
+            <li><b>Lua 스크립트</b><span>send · expect · sleep · screen으로 자동 로그인, 반복 명령 자동화. 매크로 F키나 .lua 파일로 실행, 별도 프로세스에서 돌아 스크립트가 멈춰도 터미널은 그대로</span></li>
+            <li><b>Lua 콘솔</b><span>Ctrl+Shift+K로 한 줄씩 바로 실행하는 REPL. 변수 유지, 식의 값 표시, .lua 파일 불러오기(Ctrl+O), 입력·출력 저장(Ctrl+S), 끌어서 높이 조절</span></li>
             <li><b>매크로</b><span>자주 쓰는 명령을 저장해 두고 창이나 F키로 바로 보내기</span></li>
             <li><b>세션 로그</b><span>받은 출력을 파일에 계속 저장 (접속할 때 자동 시작, 일반 텍스트 또는 원본)</span></li>
             <li><b>편한 파일 창</b><span>셸의 현재 폴더에서 바로 열림. 여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더</span></li>
@@ -264,6 +266,11 @@ login: guest
             <li><b>색 테마</b><span>Campbell · PuTTY · Dracula · Solarized · 허큘리스(녹색 모니터) 등 12가지 색 테마, 서버별로 다른 테마 지정, 반투명(창 전체 / 배경만), 커서 모양, 스크롤백 줄 수</span></li>
             <li><b>검색 · 글꼴 · 링크</b><span>스크롤백 검색, Ctrl+휠 글꼴 크기, Ctrl+클릭으로 URL 열기, 창 위치 기억</span></li>
         </ul>
+    </section>
+
+    <section>
+        <h2>구조</h2>
+        <img class="shot" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2) ↔ Wails ↔ Go 백엔드 ↔ 서버, 별도 프로세스의 Lua 실행기" loading="lazy"/>
     </section>
 
     <section>
@@ -282,6 +289,8 @@ login: guest
             <tr><td><kbd>Ctrl+Shift+S</kbd></td><td>스크롤백 검색</td></tr>
             <tr><td><kbd>Ctrl+휠</kbd> / <kbd>Ctrl+=</kbd> / <kbd>Ctrl+-</kbd></td><td>글꼴 크게 / 작게</td></tr>
             <tr><td><kbd>Ctrl+Shift+M</kbd></td><td>매크로</td></tr>
+            <tr><td><kbd>Ctrl+Shift+K</kbd></td><td>Lua 콘솔 (<kbd>Ctrl+O</kbd> 파일 불러오기 · <kbd>Ctrl+S</kbd> 저장)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+H</kbd></td><td>세션 관리</td></tr>
             <tr><td><kbd>Ctrl+Shift+P</kbd></td><td>SSH 포트 포워딩</td></tr>
             <tr><td><kbd>Ctrl+Shift+L</kbd></td><td>세션 로그 기록 시작 / 중지</td></tr>
             <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>설정 (색 테마, 커서, 연결 유지 간격, 자동 재접속 등)</td></tr>
