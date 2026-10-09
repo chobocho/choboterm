@@ -20,7 +20,7 @@ html, body {
     background: #1e1f22;
     border-bottom: 1px solid #3a3b3f;
     user-select: none;
-    font: 12px "Malgun Gothic", "Segoe UI", sans-serif;
+    font: 12px "Malgun Gothic", "Segoe UI", "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif;
 }
 
 #tabs {
@@ -460,7 +460,7 @@ body.resizing-col #terms .term {
     border-radius: 4px;
     background: rgba(40, 42, 46, 0.92);
     color: #fff;
-    font: 13px "Malgun Gothic", "Segoe UI", sans-serif;
+    font: 13px "Malgun Gothic", "Segoe UI", "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif;
     pointer-events: none;
 }
 
@@ -483,7 +483,7 @@ body.resizing-col #terms .term {
     border: 1px solid #4a4c52;
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    font: 12px "Malgun Gothic", "Segoe UI", sans-serif;
+    font: 12px "Malgun Gothic", "Segoe UI", "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif;
     color: #ddd;
 }
 
@@ -550,7 +550,7 @@ body.resizing-col #terms .term {
     background: #f0f0f0;
     border: 1px solid #a0a0a0;
     box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.4);
-    font: 12px "Malgun Gothic", "Segoe UI", sans-serif;
+    font: 12px "Malgun Gothic", "Segoe UI", "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif;
     color: #000;
 }
 
@@ -642,7 +642,7 @@ body.resizing-col #terms .term {
     background: #f0f0f0;
     border: 1px solid #6b6b6b;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
-    font: 13px "Malgun Gothic", "Segoe UI", sans-serif;
+    font: 13px "Malgun Gothic", "Segoe UI", "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif;
     color: #000;
 }
 
@@ -863,6 +863,7 @@ body.resizing-col #terms .term {
 }
 
 .buttons button {
+    flex: none; /* never squeezed narrower than its label */
     min-width: 90px;
     height: 26px;
     border: 1px solid #adadad;
@@ -1077,7 +1078,7 @@ body.resizing-col #terms .term {
     gap: 4px 8px;
     padding: 6px 28px 6px 8px;
     background: #f5f5f5;
-    font: 12px "Malgun Gothic", "Segoe UI", sans-serif;
+    font: 12px "Malgun Gothic", "Segoe UI", "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif;
 }
 
 #vText .cm-search br {
@@ -2114,7 +2115,7 @@ label.check {
     background: #f0f0f0;
     border: 1px solid #6b6b6b;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
-    font: 12px "Malgun Gothic", "Segoe UI", sans-serif;
+    font: 12px "Malgun Gothic", "Segoe UI", "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif;
     color: #000;
 }
 
@@ -2170,4 +2171,15 @@ label.check {
 /* Windows-only settings and menu items (see platform.ts). */
 body.linux .win-only {
     display: none !important;
+}
+
+/* Linux UI fonts run wider: a little more room for the plain dialogs (Connect, login). */
+:where(body.linux) .dialog { /* only where .dialog alone sets the width */
+    width: 330px;
+}
+
+/* A button label stays on one line: Linux fonts are wider than Windows' and
+   would break e.g. "☆ Save" in two. */
+button {
+    white-space: nowrap;
 }
