@@ -2178,6 +2178,17 @@ body.linux .win-only {
     width: 330px;
 }
 
+/* WebKitGTK draws a select as a GTK button with padding of its own: at a
+   fixed 22px the text sinks and Korean glyphs are cut at the bottom. Draw it
+   like the text boxes instead, with an arrow of our own. */
+body.linux select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0 20px 0 4px;
+    line-height: 20px;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0h8L4 5z' fill='%23444'/%3E%3C/svg%3E") no-repeat right 6px center;
+}
+
 /* A button label stays on one line: Linux fonts are wider than Windows' and
    would break e.g. "☆ Save" in two. */
 button {
