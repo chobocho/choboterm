@@ -7,11 +7,17 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
+
+// The window icon on Linux (Windows takes it from the exe).
+//
+//go:embed build/appicon.png
+var appIcon []byte
 
 // AppVersion is shown in the window title. Keep in sync with wails.json productVersion.
 const AppVersion = "0.2.9"
@@ -59,6 +65,12 @@ func main() {
 			WindowIsTranslucent:  true,
 			// No blur: Acrylic turns solid gray whenever the window is inactive.
 			BackdropType: windows.None,
+		},
+		// Translucency is Windows only; the page stays opaque on Linux.
+		Linux: &linux.Options{
+			Icon:             appIcon,
+			ProgramName:      "choboterm",
+			WebviewGpuPolicy: linux.WebviewGpuPolicyOnDemand,
 		},
 		// Files dropped on the file window are uploaded (see files.ts).
 		DragAndDrop: &options.DragAndDrop{

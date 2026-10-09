@@ -547,13 +547,13 @@ func runScriptFile(t *tab, p string) (string, error) {
 	return name, t.startScript(name, string(src))
 }
 
-// ShowScripts opens the scripts folder in Explorer.
+// ShowScripts opens the scripts folder in Explorer (the file manager on Linux).
 func (a *App) ShowScripts() error {
 	dir, err := ensureScriptsDir()
 	if err != nil {
 		return err
 	}
-	return exec.Command("explorer", dir).Start()
+	return openFolder(dir)
 }
 
 // ScriptScreen is the frontend's answer to a "script:screen" event.

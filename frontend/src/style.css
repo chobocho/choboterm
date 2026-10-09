@@ -1840,11 +1840,16 @@ body.resizing-col #terms .term {
 }
 
 .dk .dktop label {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    flex: none;
+    display: block;
     white-space: nowrap;
+}
+
+.dk .dktop label input {
+    width: auto; /* not .body input's 100% */
+    height: auto;
+    margin: 0 4px 0 0;
+    vertical-align: middle;
 }
 
 .dk .dktop button,
@@ -2160,4 +2165,9 @@ label.check {
     background: #e1e1e1;
     font: inherit;
     cursor: pointer;
+}
+
+/* Windows-only settings and menu items (see platform.ts). */
+body.linux .win-only {
+    display: none !important;
 }

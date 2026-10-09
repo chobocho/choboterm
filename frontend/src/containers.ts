@@ -6,6 +6,7 @@ import {DockerAction, DockerList, ForwardAdd, ForwardList, ForwardRemove} from '
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL} from '../wailsjs/runtime/runtime';
 import {ask} from './dialog';
+import {isLinux} from './platform';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -119,7 +120,9 @@ async function refresh() {
 function paintHint() {
     hint.textContent = current().tab
         ? '셸 · 로그는 이 접속을 함께 쓰는 새 탭으로 엽니다(접속을 끊으면 함께 닫힘). 포트 열기: 서버의 포트를 이 PC의 같은 포트로 포워딩(-L)하고 브라우저로 엽니다.'
-        : '이 PC의 Docker Desktop(또는 podman)입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.';
+        : isLinux
+            ? '이 PC의 docker(또는 podman)입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.'
+            : '이 PC의 Docker Desktop(또는 podman)입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.';
 }
 
 function open(mode: DockerMode) {
@@ -190,7 +193,7 @@ async function openPort() {
  * "this PC" is added at the end. open makes the tab for a shell or a log.
  */
 export async function openContainers(srcs: DockerSource[], openTab: typeof onOpen, close: () => void) {
-    fillSources([...srcs, {tab: 0, label: '이 PC (Docker Desktop)'}]);
+    fillSources([...srcs, {tab: 0, label: isLinux ? '이 PC' : '이 PC (Docker Desktop)'}]);
     onOpen = openTab;
     onClose = close;
     list = [];

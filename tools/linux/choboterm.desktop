@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=choboterm
+Comment=SSH / Telnet / FTP terminal
+Exec=choboterm
+Icon=choboterm
+Terminal=false
+Categories=System;TerminalEmulator;Network;
+StartupWMClass=choboterm

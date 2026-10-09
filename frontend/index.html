@@ -167,7 +167,7 @@
                 <label class="row">글꼴 (EUC-KR) <select id="pFontEucKr"></select> <span class="hint">굴림체 등은 ▒─■ 기호를 2칸으로 그림</span></label>
                 <label class="check"><input type="checkbox" id="pPaste"/> 여러 줄을 붙여넣기 전에 확인</label>
                 <label class="row">언어 (Language) <select id="pLang">
-                    <option value="">자동 (Windows 언어)</option>
+                    <option value="">자동 (시스템 언어)</option>
                     <option value="ko">한국어</option>
                     <option value="en">English</option>
                 </select> <span class="hint">다시 시작하면 적용됩니다</span></label>
@@ -183,14 +183,14 @@
                 </select></label>
                 <label class="check"><input type="checkbox" id="pBlink"/> 커서 깜빡임</label>
                 <label class="row">스크롤백 <input id="pScrollback" inputmode="numeric"/> <span class="hint">줄, 1000~100000 (탭마다 위로 남겨 두는 출력)</span></label>
-                <label class="row">반투명 <select id="pTrans">
+                <label class="row win-only">반투명 <select id="pTrans">
                     <option value="off">끄기</option>
                     <option value="window">창 전체 (글자도 함께)</option>
                     <option value="background">배경만 (글자는 선명하게)</option>
                 </select></label>
-                <label class="row">불투명도 <input type="range" id="pOpacity" min="20" max="100" step="5"/> <span id="pOpacityVal"></span></label>
-                <label class="check"><input type="checkbox" id="pGlassGpu"/> 배경만에서도 GPU로 그리기 (빠르지만 글자가 조금 거칠 수 있음)</label>
-                <span class="hint" id="pTransHint"></span>
+                <label class="row win-only">불투명도 <input type="range" id="pOpacity" min="20" max="100" step="5"/> <span id="pOpacityVal"></span></label>
+                <label class="check win-only"><input type="checkbox" id="pGlassGpu"/> 배경만에서도 GPU로 그리기 (빠르지만 글자가 조금 거칠 수 있음)</label>
+                <span class="hint win-only" id="pTransHint"></span>
             </fieldset>
             <fieldset>
                 <legend>연결</legend>
@@ -296,7 +296,7 @@
                     <input id="smJump" spellcheck="false" autocomplete="off" placeholder="SSH 점프 호스트 (선택) 예: user@bastion"/>
                     <label for="smPass">Pass</label>
                     <input id="smPass" type="password" autocomplete="off"/>
-                    <label class="check wide"><input type="checkbox" id="smSavePass"/> 비밀번호 저장 (Windows 사용자 계정으로 암호화)</label>
+                    <label class="check wide"><input type="checkbox" id="smSavePass"/> 비밀번호 저장 (Windows 사용자 계정 · Linux 키링으로 암호화)</label>
                     <label for="smCode">Code</label>
                     <select id="smCode">
                         <option value="UTF-8">UTF-8</option>
@@ -316,7 +316,7 @@
 </div>
 
 <ul id="smMenu" class="menu sm-menu" hidden>
-    <li data-act="putty">PuTTY 세션 가져오기</li>
+    <li data-act="putty" class="win-only">PuTTY 세션 가져오기</li>
     <li data-act="import">파일에서 가져오기...</li>
     <li data-act="export">파일로 내보내기... (비밀번호 제외)</li>
 </ul>
@@ -545,7 +545,7 @@
             <label for="sessGroup">그룹</label>
             <input id="sessGroup" list="sessGroups" spellcheck="false" autocomplete="off" placeholder="비우면 그룹 없음"/>
             <datalist id="sessGroups"></datalist>
-            <label class="check wide"><input type="checkbox" id="sessPass"/> 비밀번호도 저장 (Windows 사용자 계정으로 암호화)</label>
+            <label class="check wide"><input type="checkbox" id="sessPass"/> 비밀번호도 저장 (Windows 사용자 계정 · Linux 키링으로 암호화)</label>
             <div class="error" id="sessSaveError"></div>
             <div class="buttons">
                 <button type="button" id="sessSaveOk">저장</button>

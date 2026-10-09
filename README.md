@@ -1,11 +1,15 @@
 # choboterm V0.2.9
 
-옛 ZTerm처럼 간결하게 쓸 수 있는 Windows용 SSH / Telnet / FTP 터미널입니다.
+옛 ZTerm처럼 간결하게 쓸 수 있는 Windows · Linux용 SSH / Telnet / FTP 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다. 텍스트 뷰어는 [CodeMirror 6](https://codemirror.net)(MIT)을 씁니다.
 
-**[⬇ 최신 버전 다운로드 (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · [소개 페이지](https://chobocho.github.io/choboterm/) · [모든 버전](https://github.com/chobocho/choboterm/releases)
+**[⬇ Windows (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · **[⬇ Linux x86_64 (tar.gz)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz)** · [소개 페이지](https://chobocho.github.io/choboterm/) · [모든 버전](https://github.com/chobocho/choboterm/releases)
 
-설치 없이 내려받아 실행하면 됩니다. 코드 서명이 없어 처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요.
+- **Windows**: 설치 없이 내려받아 실행하면 됩니다. 코드 서명이 없어 처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요.
+- **Linux**: 압축을 풀고 `./choboterm`으로 실행합니다. `./install.sh`를 실행하면 `~/.local/bin`과 프로그램 메뉴에 등록됩니다.
+  - GTK 3와 WebKitGTK 4.1이 필요합니다(Ubuntu 22.04 · Debian 12 이후): `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0`
+  - 비밀번호 저장은 키링(GNOME Keyring, KWallet 등)이 있을 때만 됩니다. 키링이 없으면 저장하지 않습니다.
+  - 반투명 창과 PuTTY 세션 가져오기는 Windows에서만 됩니다. macOS는 지원하지 않습니다.
 
 ![choboterm 스크린샷](./docs/screen_shot.png)
 
@@ -155,6 +159,7 @@ X11 포워딩은 지원하지 않습니다.
 - 세션, 서버별 색 테마·포트 포워딩: `%AppData%\choboterm\sessions.json` (비밀번호는 DPAPI로 암호화된 값만 저장)
 - 설정: `%AppData%\choboterm\settings.json`
 - 세션 로그: `문서\choboterm\logs` (설정 창에서 변경)
+- Linux에서는 `%AppData%\choboterm` 대신 `~/.config/choboterm`, `문서` 대신 `~/Documents`를 씁니다. 비밀번호는 키링에 보관한 키로 AES-GCM 암호화합니다.
 
 ## 빌드
 
@@ -169,14 +174,20 @@ wails build   # build/bin/choboterm.exe 생성
 
 `build.bat`을 실행하면 테스트 → `wails build` → `release\choboterm.exe` 복사까지 한 번에 합니다. (`release` 폴더는 git에 올리지 않습니다.)
 
+Linux 버전은 `build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`를 만듭니다. 오래된 배포판에서도 돌도록 Ubuntu 22.04 Docker 컨테이너(`tools/linux/Dockerfile`) 안에서 테스트·빌드하고, `--native`를 주면 이 PC의 Go와 라이브러리(`libgtk-3-dev`, `libwebkit2gtk-4.1-dev`)로 빌드합니다. Windows에서는 WSL에서 실행합니다(프론트엔드는 `build.bat`이 만든 `frontend/dist`를 그대로 씀).
+
+```sh
+wsl -- ./build_linux.sh
+```
+
 ## 릴리스
 
 1. `main.go`의 `AppVersion`과 `wails.json`의 `productVersion`을 올립니다.
-2. `build.bat`으로 `release\choboterm.exe`를 만듭니다. (실행 중인 choboterm은 먼저 종료)
+2. `build.bat`으로 `release\choboterm.exe`를, 이어서 `wsl -- ./build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`를 만듭니다. (실행 중인 choboterm은 먼저 종료)
 3. 커밋·푸시 후 GitHub Release를 만듭니다.
 
    ```sh
-   gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" --title "choboterm V0.2.0" --notes "..."
+   gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" --title "choboterm V0.2.0" --notes "..."
    ```
 
 소개 페이지(`docs/`, GitHub Pages 기준: `main` 브랜치 `/docs`)의 다운로드 버튼은 항상 최신 릴리스의 `choboterm.exe`를 가리키므로 따로 고칠 필요가 없습니다.
@@ -249,6 +260,7 @@ go test ./...
 | `ssh.go` / `telnet.go` / `ftp.go` / `sftp.go` / `scp.go` | 프로토콜 |
 | `detect.go` | 표준이 아닌 포트의 프로토콜 자동 판별 |
 | `forward.go` | SSH 포트 포워딩 (-L / -R / -D SOCKS5) |
+| `localshell*.go` · `localpty_windows.go` · `localpty_linux.go` | 로컬 셸 탭 (Windows: cmd · PowerShell · WSL을 ConPTY로, Linux: bash · zsh 등을 PTY로) |
 | `docker.go` | 도커 컨테이너 목록·동작, `docker exec` / `docker logs` 탭 (서버: 같은 SSH 접속, PC: 로컬 PTY) |
 | `filexfer.go` | 파일 전송 공통 계층(RemoteFS), 진행률, 취소 |
 | `zmodem.go` / `zmodem_app.go` | Zmodem 프로토콜과 앱 연결 |
@@ -258,13 +270,15 @@ go test ./...
 | `session_import.go` / `putty_windows.go` | 세션 가져오기·내보내기, PuTTY 세션 읽기 |
 | `settings.go` | 사용자 설정 (`settings.json`) |
 | `window_windows.go` | 창 크기·위치 저장과 복원 (Win32 WINDOWPLACEMENT) |
-| `secret_windows.go` | 비밀번호 암호화 (Windows DPAPI) |
+| `secret_windows.go` · `secret_linux.go` | 비밀번호 암호화 (Windows DPAPI, Linux 키링의 키로 AES-GCM) |
 | `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
 | `frontend/src/files.ts` | 파일 전송 창(여러 개 선택, 끌어 놓기 업로드, 삭제·이름 바꾸기·새 폴더), 진행률 상자 |
 | `frontend/src/viewer.ts` / `viewer.go` | 텍스트 뷰어·편집기(CodeMirror, 인코딩 자동 판별·강제 지정, 서버 저장·충돌 확인, 변환 저장) |
 | `frontend/src/dialog.ts` | 확인 / 이름 입력 창 |
 | `luahost.go` / `luarun.go` | Lua 스크립트: 별도 프로세스의 실행기와 앱 쪽 관리(출력 전달, 입력 보내기 제한, 정지·강제 종료) |
-| `luajob_windows.go` | 스크립트 프로세스의 메모리 제한 (Windows Job Object) |
+| `luajob_windows.go` · `luajob_linux.go` | 스크립트 프로세스의 메모리 제한 (Windows Job Object, Linux는 `/proc` 감시) |
+| `build_linux.sh` · `tools/linux/` | Linux 빌드(Ubuntu 22.04 컨테이너)와 tar.gz 묶음(설치 스크립트, 데스크톱 항목) |
+| `frontend/src/platform.ts` | 실행 중인 OS (Linux에서 Windows 전용 항목 숨김) |
 | `frontend/src/sessions.ts` | 세션 저장 창, 세션 관리 창, 가져오기·내보내기 |
 | `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
 | `frontend/src/search.ts` | 스크롤백 검색 막대 |
@@ -286,6 +300,7 @@ go test ./...
 - X11 포워딩
 - FTPS(TLS)
 - SCP의 이어받기 (SFTP·FTP만 지원)
+- macOS
 
 ## 라이선스
 

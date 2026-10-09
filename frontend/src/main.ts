@@ -30,7 +30,8 @@ import {
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
-import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
+import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, Environment, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
+import {isLinux, setPlatform} from './platform';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -525,6 +526,7 @@ function glassOn() {
  * background see-through.
  */
 function applyTranslucency(mode: string, opacity: number, gpu: boolean) {
+    if (isLinux) mode = 'off'; // the window can't be see-through there
     translucency = {mode, opacity, gpu};
     const body = document.body.classList;
     body.toggle('seethrough', seeThroughOn());
@@ -1404,7 +1406,7 @@ function showTip(r?: main.SSHTarget) {
         tipLine('주소 또는 ~/.ssh/config의 Host 이름', 'head');
         tipLine('예) busan · ssh busan');
         tipLine('     ssh -p 2222 user@busan', 'pre');
-        tipLine('이 PC의 셸: cmd · powershell · wsl (wsl -d Ubuntu)');
+        tipLine(isLinux ? '이 PC의 셸: bash · zsh · fish · sh' : '이 PC의 셸: cmd · powershell · wsl (wsl -d Ubuntu)');
         if (configHosts.length > 0) {
             const names = configHosts.slice(0, 6).map(c => c.host).join(', ');
             tipLine(`등록된 이름: ${names}${configHosts.length > 6 ? ' …' : ''} (▼ 목록)`, 'names');
@@ -2253,8 +2255,9 @@ initAuthPrompt(id => {
     return `${r.login ? r.login + '@' : ''}${r.host}:${r.port}`;
 }, focusActive);
 
-Promise.all([GetVersion(), loadSettings(), GetLanguage()]).then(([v, , lang]) => {
+Promise.all([GetVersion(), loadSettings(), GetLanguage(), Environment()]).then(([v, , lang, env]) => {
     version = v;
+    setPlatform(env.platform);
     startI18n(lang === 'en' ? 'en' : 'ko' as Lang);
     initTranslucencyPreview(applyTranslucency);
     appName = `choboterm V${v}`;

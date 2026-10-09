@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -385,10 +384,11 @@ func (a *App) LogPath(tabID int) string {
 	return ""
 }
 
-// ShowLogs opens the tab's log file selected in Explorer, or the log folder.
+// ShowLogs opens the tab's log file selected in Explorer (its folder on
+// Linux), or the log folder.
 func (a *App) ShowLogs(tabID int) error {
 	if p := a.LogPath(tabID); p != "" {
-		return exec.Command("explorer", "/select,", p).Start()
+		return showFile(p)
 	}
 	dir := loadSettings().LogDir
 	if dir == "" {
@@ -397,7 +397,7 @@ func (a *App) ShowLogs(tabID int) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	return exec.Command("explorer", dir).Start()
+	return openFolder(dir)
 }
 
 // ChooseLogDir asks for the log folder; "" means the dialog was cancelled.

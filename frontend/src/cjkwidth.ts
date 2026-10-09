@@ -102,9 +102,13 @@ export const FONTS: ReadonlyArray<{name: string; label: string; legacy?: boolean
     {name: 'BatangChe', label: '바탕체', legacy: true},
     {name: 'GungsuhChe', label: '궁서체', legacy: true},
     {name: 'Consolas', label: 'Consolas'},
+    {name: 'Noto Sans Mono CJK KR', label: 'Noto Sans Mono CJK KR'},
+    {name: 'NanumGothicCoding', label: '나눔고딕코딩'},
+    {name: 'DejaVu Sans Mono', label: 'DejaVu Sans Mono'},
 ];
 
-const FALLBACK = '"D2Coding", "Consolas", "Malgun Gothic", monospace';
+// Windows fonts first, then what Linux desktops usually have.
+const FALLBACK = '"D2Coding", "Consolas", "Malgun Gothic", "Noto Sans Mono CJK KR", "NanumGothicCoding", "DejaVu Sans Mono", monospace';
 
 /** The CSS font-family for a chosen font, in wide (EUC-KR) or narrow mode. */
 export function fontFamily(name: string, wide: boolean): string {

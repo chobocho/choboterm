@@ -1,1 +1,4 @@
 *.bat text eol=crlf working-tree-encoding=CP949
+# Shell scripts and Linux files keep LF (they run on Linux, also from a Windows checkout).
+*.sh text eol=lf
+tools/linux/* text eol=lf
