@@ -532,5 +532,18 @@
   "시리얼 포트에서는 파일 전송 창 대신 sz / rz(Zmodem)를 쓰세요": "On a serial port, use sz / rz (Zmodem) instead of the file window",
   "시리얼 포트: COM3 · COM3 9600 7E1 rtscts (Port 칸 = 속도)": "Serial port: COM3 · COM3 9600 7E1 rtscts (Port field = speed)",
   "시리얼 포트: /dev/ttyUSB0 · /dev/ttyUSB0 9600 7E1 (Port 칸 = 속도)": "Serial port: /dev/ttyUSB0 · /dev/ttyUSB0 9600 7E1 (Port field = speed)",
-  "최근 · ssh config · 로컬 셸 · 시리얼": "Recent · ssh config · local shells · serial"
+  "최근 · ssh config · 로컬 셸 · 시리얼": "Recent · ssh config · local shells · serial",
+  "업데이트": "Updates",
+  "시작할 때 새 버전 확인": "Check for a new version at start",
+  "(하루 한 번 GitHub에 물어봄, 끄면 아무것도 보내지 않음)": "(asks GitHub once a day; nothing is sent when off)",
+  "지금 확인": "Check now",
+  "확인하는 중...": "Checking...",
+  "최신 버전입니다 (V{})": "Up to date (V{})",
+  "새 버전 V{}이(가) 있습니다": "New version V{} is available",
+  "새 버전": "New version",
+  "choboterm V{}이(가) 나왔습니다. 지금은 V{}입니다.\n다운로드 페이지를 열까요?": "choboterm V{} is out. This is V{}.\nOpen the download page?",
+  "다운로드 페이지 열기": "Open download page",
+  "새 버전을 확인하지 못했습니다: {}": "Couldn't check for a new version: {}",
+  "GitHub 응답 {}": "GitHub replied {}",
+  "알 수 없는 버전: {}": "Unknown version: {}"
 }

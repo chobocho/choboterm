@@ -1355,6 +1355,12 @@ body.resizing-col #terms .term {
     gap: 6px;
 }
 
+.prefs .updrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .prefs .dirrow input {
     flex: 1 1 auto;
     min-width: 0;

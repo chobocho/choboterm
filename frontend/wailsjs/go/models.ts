@@ -379,6 +379,39 @@ export namespace main {
 	        this.label = source["label"];
 	    }
 	}
+	export class UpdateState {
+	    // Go type: time
+	    last: any;
+	    notified: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.last = this.convertValues(source["last"], null);
+	        this.notified = source["notified"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class WindowState {
 	    left: number;
 	    top: number;
@@ -421,7 +454,9 @@ export namespace main {
 	    highlight: Highlight;
 	    consoleHeight: number;
 	    macros: Macro[];
+	    updateCheck: boolean;
 	    window?: WindowState;
+	    update?: UpdateState;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -450,7 +485,9 @@ export namespace main {
 	        this.highlight = this.convertValues(source["highlight"], Highlight);
 	        this.consoleHeight = source["consoleHeight"];
 	        this.macros = this.convertValues(source["macros"], Macro);
+	        this.updateCheck = source["updateCheck"];
 	        this.window = this.convertValues(source["window"], WindowState);
+	        this.update = this.convertValues(source["update"], UpdateState);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -517,6 +554,27 @@ export namespace main {
 	        this.data = source["data"];
 	    }
 	}
+	export class UpdateInfo {
+	    checked: boolean;
+	    current: string;
+	    latest: string;
+	    newer: boolean;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.checked = source["checked"];
+	        this.current = source["current"];
+	        this.latest = source["latest"];
+	        this.newer = source["newer"];
+	        this.url = source["url"];
+	    }
+	}
+	
 	export class ViewResult {
 	    data: string;
 	    truncated: boolean;

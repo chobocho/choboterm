@@ -32,6 +32,7 @@ import {
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, Environment, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
 import {isLinux, setPlatform} from './platform';
+import {checkUpdate} from './update';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -2345,4 +2346,6 @@ Promise.all([GetVersion(), loadSettings(), GetLanguage(), Environment()]).then((
     const first = createTab();
     activate(first);
     openDialog(first);
+    // Only when turned on in the settings; the Go side skips it otherwise.
+    if (settings.updateCheck) window.setTimeout(() => void checkUpdate(false), 3000);
 });

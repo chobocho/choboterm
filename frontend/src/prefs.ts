@@ -5,6 +5,7 @@ import {ChooseLogDir} from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {FONTS} from './cjkwidth';
 import {paletteOf, themeByName, THEMES} from './themes';
+import {checkUpdate} from './update';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -33,6 +34,9 @@ const pasteConfirm = $<HTMLInputElement>('pPaste');
 const logAuto = $<HTMLInputElement>('pLogAuto');
 const logPlain = $<HTMLInputElement>('pLogPlain');
 const logTime = $<HTMLInputElement>('pLogTime');
+const updateCheck = $<HTMLInputElement>('pUpdate');
+const updateNow = $<HTMLButtonElement>('pUpdateNow');
+const updateMsg = $<HTMLSpanElement>('pUpdateMsg');
 const language = $<HTMLSelectElement>('pLang');
 const hlOn = $<HTMLInputElement>('pHl');
 const hlRed = $<HTMLInputElement>('pHlRed');
@@ -92,6 +96,8 @@ export function openPrefs(apply: () => void, close: () => void) {
     logAuto.checked = settings.logAuto;
     logPlain.checked = !settings.logRaw;
     logTime.checked = settings.logTime;
+    updateCheck.checked = settings.updateCheck;
+    updateMsg.textContent = '';
     language.value = settings.language || '';
     logDir.value = settings.logDir;
     hlOn.checked = settings.highlight.on;
@@ -171,6 +177,7 @@ function apply() {
     if (lines === undefined) return;
     const ka = readInt(keepAlive, 0, 3600, '연결 유지 간격');
     if (ka === undefined) return;
+    const updateOn = updateCheck.checked && !settings.updateCheck;
     saveSettings(s => {
         s.fontSize = font;
         s.fontUtf8 = fontUtf8.value;
@@ -188,6 +195,7 @@ function apply() {
         s.logAuto = logAuto.checked;
         s.logRaw = !logPlain.checked;
         s.logTime = logTime.checked;
+        s.updateCheck = updateCheck.checked;
         s.language = language.value;
         s.logDir = logDir.value.trim();
         s.highlight = main.Highlight.createFrom({
@@ -200,7 +208,21 @@ function apply() {
     const cb = onApply;
     closePrefs();
     cb?.();
+    // Just turned on: check now rather than at the next start (once saved).
+    if (updateOn) window.setTimeout(() => void checkUpdate(false), 500);
 }
+
+updateNow.addEventListener('click', async () => {
+    updateNow.disabled = true;
+    updateMsg.textContent = '확인하는 중...';
+    try {
+        updateMsg.textContent = await checkUpdate(true);
+    } catch (e) {
+        updateMsg.textContent = String(e);
+    }
+    updateNow.disabled = false;
+    updateNow.focus();
+});
 
 $<HTMLButtonElement>('pLogBrowse').addEventListener('click', async () => {
     try {

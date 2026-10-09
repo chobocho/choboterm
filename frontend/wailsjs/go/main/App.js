@@ -6,6 +6,10 @@ export function AnswerPrompt(arg1, arg2, arg3) {
   return window['go']['main']['App']['AnswerPrompt'](arg1, arg2, arg3);
 }
 
+export function CheckUpdate(arg1) {
+  return window['go']['main']['App']['CheckUpdate'](arg1);
+}
+
 export function ChooseLogDir(arg1) {
   return window['go']['main']['App']['ChooseLogDir'](arg1);
 }

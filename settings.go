@@ -52,8 +52,13 @@ type Settings struct {
 	ConsoleHeight int `json:"consoleHeight"`
 	// Macros are texts sent to the terminal, optionally bound to a key.
 	Macros []Macro `json:"macros"`
+	// UpdateCheck asks GitHub for a newer release at start, once a day.
+	// Off unless the user turns it on: nothing is sent otherwise.
+	UpdateCheck bool `json:"updateCheck"`
 	// Window is the main window's last position, kept by the Go side only.
 	Window *WindowState `json:"window,omitempty"`
+	// Update is when the last check ran and what it found, kept by the Go side only.
+	Update *UpdateState `json:"update,omitempty"`
 }
 
 // Highlight lists the words shown on a red, yellow or green background,
@@ -168,11 +173,12 @@ func (a *App) GetSettings() Settings {
 	return loadSettings()
 }
 
-// SaveSettings stores the user preferences. The window position is kept as stored.
+// SaveSettings stores the user preferences. The window position and the
+// update check state are kept as stored.
 func (a *App) SaveSettings(s Settings) error {
 	return updateSettings(func(cur *Settings) {
-		w := cur.Window
+		w, u := cur.Window, cur.Update
 		*cur = s
-		cur.Window = w
+		cur.Window, cur.Update = w, u
 	})
 }

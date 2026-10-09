@@ -22,6 +22,7 @@ export let settings: main.Settings = main.Settings.createFrom({
     logRaw: false,
     logTime: true,
     consoleHeight: 0,
+    updateCheck: false,
     language: '',
     highlight: {
         on: true,

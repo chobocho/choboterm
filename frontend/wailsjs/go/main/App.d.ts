@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function AnswerPrompt(arg1:number,arg2:Array<string>,arg3:boolean):Promise<void>;
 
+export function CheckUpdate(arg1:boolean):Promise<main.UpdateInfo>;
+
 export function ChooseLogDir(arg1:string):Promise<string>;
 
 export function CloseTab(arg1:number):Promise<void>;

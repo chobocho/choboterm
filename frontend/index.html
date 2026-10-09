@@ -216,6 +216,14 @@
                 </div>
                 <span class="hint">폴더를 비우면 문서\choboterm\logs · 직접 시작 / 중지: Ctrl+Shift+L 또는 탭 우클릭 메뉴</span>
             </fieldset>
+            <fieldset>
+                <legend>업데이트</legend>
+                <label class="check"><input type="checkbox" id="pUpdate"/> 시작할 때 새 버전 확인 <span class="hint">(하루 한 번 GitHub에 물어봄, 끄면 아무것도 보내지 않음)</span></label>
+                <div class="updrow">
+                    <button type="button" id="pUpdateNow">지금 확인</button>
+                    <span class="hint" id="pUpdateMsg"></span>
+                </div>
+            </fieldset>
             <div class="error" id="pError"></div>
             <div class="buttons">
                 <button type="button" id="pOk">확인</button>
