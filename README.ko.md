@@ -1,8 +1,8 @@
-# choboterm V0.2.12
+# choboterm V0.2.13
 
 [English](README.md) · **한국어**
 
-옛 ZTerm처럼 간결하게 쓸 수 있는 Windows · Linux용 SSH / Telnet / FTP 터미널입니다.
+옛 ZTerm처럼 간결하게 쓸 수 있는 Windows · Linux용 SSH / Telnet / FTP / 시리얼 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다. 텍스트 뷰어는 [CodeMirror 6](https://codemirror.net)(MIT)을 씁니다.
 
 **[⬇ Windows (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · **[⬇ Linux x86_64 (tar.gz)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz)** · [소개 페이지](https://chobocho.github.io/choboterm/) · [모든 버전](https://github.com/chobocho/choboterm/releases)

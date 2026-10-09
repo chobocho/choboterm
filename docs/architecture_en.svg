@@ -16,7 +16,7 @@
 
   <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm Architecture</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.12 · <tspan class="new">NEW</tspan> = added in this version</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.13 · <tspan class="new">NEW</tspan> = added in this version</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -33,14 +33,14 @@
     <rect x="35" y="559" width="240" height="48" rx="5"/>
   </g>
   <text x="47" y="115" class="title">main.ts <tspan class="new">NEW</tspan></text>
-  <text x="47" y="132" class="sub">Tabs · terminal · drag to copy · keys</text>
+  <text x="47" y="132" class="sub">Tabs · terminal · connect (Port ↔ Baud)</text>
   <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">Keyword highlight (xterm decorations)</text>
   <text x="47" y="231" class="title">files.ts</text>
   <text x="47" y="248" class="sub">File transfer window (SFTP · SCP · FTP)</text>
   <text x="47" y="289" class="title">viewer.ts · imageview.ts</text>
   <text x="47" y="306" class="sub">Text viewer/editor (CodeMirror), images</text>
-  <text x="47" y="347" class="title">Lua console · script box <tspan class="new">NEW</tspan></text>
+  <text x="47" y="347" class="title">Lua console · script box</text>
   <text x="47" y="364" class="sub">Ctrl+Shift+K open/close · input · save</text>
   <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">Docker window (shell · logs · open port)</text>
@@ -90,15 +90,19 @@
   <text x="702" y="236" text-anchor="middle" class="sub">Linux: PTY</text>
 
   <g class="item" stroke="#2f8f5b">
-    <rect x="415" y="262" width="223" height="62" rx="5"/>
-    <rect x="649" y="262" width="106" height="62" rx="5"/>
+    <rect x="415" y="262" width="164" height="62" rx="5"/>
+    <rect x="588" y="262" width="79" height="62" rx="5"/>
+    <rect x="676" y="262" width="79" height="62" rx="5"/>
   </g>
   <text x="427" y="281" class="title">filexfer.go — RemoteFS</text>
-  <text x="427" y="297" class="sub">sftp.go · scp.go · ftp.go · viewer.go</text>
-  <text x="427" y="313" class="sub">Progress · cancel · resume (.part)</text>
-  <text x="702" y="281" text-anchor="middle" class="title">zmodem.go</text>
-  <text x="702" y="297" text-anchor="middle" class="sub">zmodem_app.go</text>
-  <text x="702" y="313" text-anchor="middle" class="sub">rz / sz</text>
+  <text x="427" y="297" class="sub">sftp · scp · ftp · viewer.go</text>
+  <text x="427" y="313" class="sub">Progress · cancel · resume</text>
+  <text x="627" y="281" text-anchor="middle" class="title">zmodem.go</text>
+  <text x="627" y="297" text-anchor="middle" class="sub">zmodem_app</text>
+  <text x="627" y="313" text-anchor="middle" class="sub">rz / sz</text>
+  <text x="715" y="281" text-anchor="middle" class="title">serial.go <tspan class="new">NEW</tspan></text>
+  <text x="715" y="297" text-anchor="middle" class="sub">Win: COM</text>
+  <text x="715" y="313" text-anchor="middle" class="sub">Linux: tty</text>
 
   <rect x="415" y="339" width="340" height="50" rx="5" class="item" stroke="#2f8f5b"/>
   <text x="427" y="358" class="title">docker.go — list · start/stop · exec · logs</text>
@@ -124,6 +128,7 @@
   <text x="790" y="222" text-anchor="middle" class="note">TCP</text>
   <line x1="772" y1="430" x2="808" y2="430" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
   <text x="790" y="422" text-anchor="middle" class="note" font-size="9.5">PTY</text>
+  <text x="790" y="446" text-anchor="middle" class="note" font-size="9.5">COM</text>
 
   <rect x="810" y="150" width="180" height="222" rx="8" fill="#f1f3f4" stroke="#80868b" stroke-width="1.5"/>
   <text x="825" y="174" class="head" fill="#3c4043">Remote servers</text>
@@ -137,14 +142,15 @@
   <text x="900" y="331" text-anchor="middle" class="sub">Via jump host (bastion)</text>
   <text x="900" y="348" text-anchor="middle" class="sub">ProxyJump · ssh -J</text>
 
-  <rect x="810" y="388" width="180" height="94" rx="8" fill="#f1f3f4" stroke="#80868b" stroke-width="1.5"/>
-  <text x="825" y="412" class="head" fill="#3c4043">Local programs</text>
-  <text x="825" y="432" class="sub">cmd · PowerShell · WSL</text>
-  <text x="825" y="450" class="sub">bash · zsh (Linux)</text>
-  <text x="825" y="468" class="sub">Docker Desktop · docker</text>
+  <rect x="810" y="384" width="180" height="108" rx="8" fill="#f1f3f4" stroke="#80868b" stroke-width="1.5"/>
+  <text x="825" y="406" class="head" fill="#3c4043">This PC</text>
+  <text x="825" y="426" class="sub">cmd · PowerShell · WSL</text>
+  <text x="825" y="443" class="sub">bash · zsh (Linux)</text>
+  <text x="825" y="460" class="sub">Docker Desktop · docker</text>
+  <text x="825" y="478" class="sub">Serial COM · /dev/ttyUSB <tspan class="new">NEW</tspan></text>
   <!-- Releases -->
-  <rect x="810" y="498" width="180" height="127" rx="8" fill="#f3e8fd" stroke="#8e44ad" stroke-width="1.5"/>
-  <text x="825" y="522" class="head" fill="#6a1b9a">Releases</text>
+  <rect x="810" y="500" width="180" height="125" rx="8" fill="#f3e8fd" stroke="#8e44ad" stroke-width="1.5"/>
+  <text x="825" y="523" class="head" fill="#6a1b9a">Releases</text>
   <text x="825" y="543" class="sub">Windows: choboterm.exe</text>
   <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
   <text x="825" y="579" class="sub">Built in Ubuntu 22.04 container</text>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>choboterm</title>
-    <meta name="description" content="A simple SSH / Telnet / FTP terminal for Windows and Linux · ZTerm처럼 간결한 Windows · Linux용 SSH / Telnet / FTP 터미널"/>
+    <meta name="description" content="A simple SSH / Telnet / FTP / serial terminal for Windows and Linux · ZTerm처럼 간결한 Windows · Linux용 SSH / Telnet / FTP / 시리얼 터미널"/>
     <link rel="icon" type="image/png" href="favicon.png"/>
     <style>
         :root {
@@ -265,8 +265,8 @@
     <header>
         <img src="icon.png" alt="choboterm"/>
         <h1>choboterm</h1>
-        <p class="tagline ko">ZTerm처럼 간결한 Windows · Linux용 SSH · Telnet · FTP 터미널</p>
-        <p class="tagline en">A simple SSH · Telnet · FTP terminal for Windows and Linux, in the spirit of ZTerm</p>
+        <p class="tagline ko">ZTerm처럼 간결한 Windows · Linux용 SSH · Telnet · FTP · 시리얼 터미널</p>
+        <p class="tagline en">A simple SSH · Telnet · FTP · serial terminal for Windows and Linux, in the spirit of ZTerm</p>
 
         <div class="downloads">
             <a class="download" id="download"
@@ -308,6 +308,7 @@ login: guest
             <li><b>ssh config 이름으로 접속</b><span>Host 칸에 busan 또는 ssh busan만 입력하면 ~/.ssh/config의 주소·포트·사용자·키로 접속</span></li>
             <li><b>탭 · 분할 창</b><span>여러 접속을 탭으로, 한 탭 안을 좌우·위아래로 나눠 창마다 따로 접속. 탭마다 인코딩·파일 전송이 따로 동작</span></li>
             <li><b>로컬 셸</b><span>Host에 cmd · powershell · wsl(Linux는 bash · zsh)을 쓰면 이 PC의 셸을 탭에서 바로 실행 (WSL에서 sz / rz도 가능)</span></li>
+            <li><b>시리얼 포트</b><span>Host에 COM3(Linux는 /dev/ttyUSB0), Port 칸에 속도(baud). "COM3 9600 7E1 rtscts"처럼 패리티·흐름 제어도 지정. 연결된 포트 목록, Break 신호, USB를 다시 꽂으면 자동 재접속</span></li>
             <li><b>EUC-KR (CP949)</b><span>옛 BBS 한글과 ─│■▒ 특수문자 2칸 폭까지, 굴림체 등 인코딩별 글꼴 선택</span></li>
             <li><b>SFTP · SCP</b><span>SSH 접속 그대로 파일 전송, SFTP가 없으면 SCP로 자동 전환</span></li>
             <li><b>Zmodem</b><span>터미널에서 sz / rz만 입력하면 파일 송수신</span></li>
@@ -338,6 +339,7 @@ login: guest
             <li><b>Connect by ssh config name</b><span>Type busan or ssh busan in Host and the address, port, user and key come from ~/.ssh/config</span></li>
             <li><b>Tabs · split panes</b><span>Connections in tabs; split a tab left/right or top/bottom with a connection in each pane. Encoding and file transfer per tab</span></li>
             <li><b>Local shells</b><span>cmd · powershell · wsl (bash · zsh on Linux) in Host runs this PC's shell in a tab (sz / rz work in WSL too)</span></li>
+            <li><b>Serial ports</b><span>COM3 (/dev/ttyUSB0 on Linux) in Host, the speed (baud) in Port. Parity and flow control too: "COM3 9600 7E1 rtscts". Lists connected ports, sends a break, reconnects when a USB adapter is plugged back in</span></li>
             <li><b>EUC-KR (CP949)</b><span>Korean text of old BBSes, with ─│■▒ symbols two cells wide, and a font per encoding such as GulimChe</span></li>
             <li><b>SFTP · SCP</b><span>File transfer over the same SSH connection; falls back to SCP when the server has no SFTP</span></li>
             <li><b>Zmodem</b><span>Type sz / rz in the terminal to send and receive files</span></li>
@@ -362,8 +364,8 @@ login: guest
 
     <section>
         <h2><span class="ko">구조</span><span class="en">Architecture</span></h2>
-        <img class="shot ko" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 도커 컨테이너, 별도 프로세스의 Lua 실행기" loading="lazy"/>
-        <img class="shot en" src="architecture_en.svg" alt="choboterm architecture: frontend (WebView2 · WebKitGTK) ↔ Wails ↔ Go backend ↔ servers (through jump hosts too), Docker containers, Lua runner in its own process" loading="lazy"/>
+        <img class="shot ko" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 시리얼 포트, 도커 컨테이너, 별도 프로세스의 Lua 실행기" loading="lazy"/>
+        <img class="shot en" src="architecture_en.svg" alt="choboterm architecture: frontend (WebView2 · WebKitGTK) ↔ Wails ↔ Go backend ↔ servers (through jump hosts too), serial ports, Docker containers, Lua runner in its own process" loading="lazy"/>
     </section>
 
     <section class="ko">

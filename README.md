@@ -1,8 +1,8 @@
-# choboterm V0.2.12
+# choboterm V0.2.13
 
 **English** · [한국어](README.ko.md)
 
-An SSH / Telnet / FTP terminal for Windows and Linux that is as simple to use as the old ZTerm.
+An SSH / Telnet / FTP / serial terminal for Windows and Linux that is as simple to use as the old ZTerm.
 Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). The text viewer uses [CodeMirror 6](https://codemirror.net) (MIT).
 
 **[⬇ Windows (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · **[⬇ Linux x86_64 (tar.gz)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz)** · [Project page](https://chobocho.github.io/choboterm/) · [All releases](https://github.com/chobocho/choboterm/releases)
