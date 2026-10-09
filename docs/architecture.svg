@@ -16,7 +16,7 @@
 
   <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.13 · <tspan class="new">NEW</tspan> = 이번 버전에 추가</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.14 · <tspan class="new">NEW</tspan> = 이번 버전에 추가</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -32,7 +32,7 @@
     <rect x="35" y="501" width="240" height="48" rx="5"/>
     <rect x="35" y="559" width="240" height="48" rx="5"/>
   </g>
-  <text x="47" y="115" class="title">main.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="115" class="title">main.ts</text>
   <text x="47" y="132" class="sub">탭 · 터미널 · 접속 창 (Port ↔ Baud) · 단축키</text>
   <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">키워드 강조 (xterm 데코레이션)</text>
@@ -44,8 +44,8 @@
   <text x="47" y="364" class="sub">Ctrl+Shift+K 열기/닫기 · 입력 · 저장</text>
   <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">도커 컨테이너 창 (셸 · 로그 · 포트 열기)</text>
-  <text x="47" y="463" class="title">sessions · prefs · macros · forwards</text>
-  <text x="47" y="480" class="sub">세션 관리, 설정, 매크로, 포트 포워딩 창</text>
+  <text x="47" y="463" class="title">sessions · prefs · update.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="480" class="sub">세션, 설정 · 새 버전 확인, 매크로, 포워딩</text>
   <text x="47" y="521" class="title">i18n.ts</text>
   <text x="47" y="538" class="sub">영어 화면: 나타나는 문구를 사전으로 번역</text>
   <text x="47" y="579" class="title">help · search · dialog · platform</text>
@@ -100,7 +100,7 @@
   <text x="627" y="281" text-anchor="middle" class="title">zmodem.go</text>
   <text x="627" y="297" text-anchor="middle" class="sub">zmodem_app</text>
   <text x="627" y="313" text-anchor="middle" class="sub">rz / sz</text>
-  <text x="715" y="281" text-anchor="middle" class="title">serial.go <tspan class="new">NEW</tspan></text>
+  <text x="715" y="281" text-anchor="middle" class="title">serial.go</text>
   <text x="715" y="297" text-anchor="middle" class="sub">Win: COM</text>
   <text x="715" y="313" text-anchor="middle" class="sub">Linux: tty</text>
 
@@ -112,8 +112,8 @@
   <text x="427" y="418" class="title">저장소 — %AppData% · ~/.config · i18n.go</text>
   <text x="427" y="437" class="sub">settings.go · session_store.go · history_store.go</text>
   <text x="427" y="455" class="sub">settings.json · sessions.json · hosts.json (DPAPI · 키링)</text>
-  <text x="427" y="473" class="sub">i18n_en.json: 화면과 Go가 함께 쓰는 영어 사전</text>
-  <text x="427" y="487" class="sub" font-size="10">(Go는 파일 대화상자 · 터미널 안내 · 로그 표시를 번역)</text>
+  <text x="427" y="471" class="sub">i18n_en.json: 화면과 Go가 함께 쓰는 영어 사전</text>
+  <text x="427" y="488" class="sub">update.go: 새 버전 확인 (GitHub, 기본 꺼짐) <tspan class="new">NEW</tspan></text>
 
   <!-- Lua host -->
   <line x1="585" y1="507" x2="585" y2="543" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
@@ -147,13 +147,14 @@
   <text x="825" y="426" class="sub">cmd · PowerShell · WSL</text>
   <text x="825" y="443" class="sub">bash · zsh (Linux)</text>
   <text x="825" y="460" class="sub">Docker Desktop · docker</text>
-  <text x="825" y="478" class="sub">시리얼 COM · /dev/ttyUSB <tspan class="new">NEW</tspan></text>
+  <text x="825" y="478" class="sub">시리얼 COM · /dev/ttyUSB</text>
   <!-- Releases -->
-  <rect x="810" y="500" width="180" height="125" rx="8" fill="#f3e8fd" stroke="#8e44ad" stroke-width="1.5"/>
+  <rect x="810" y="500" width="180" height="143" rx="8" fill="#f3e8fd" stroke="#8e44ad" stroke-width="1.5"/>
   <text x="825" y="523" class="head" fill="#6a1b9a">배포</text>
   <text x="825" y="543" class="sub">Windows: choboterm.exe</text>
   <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
   <text x="825" y="579" class="sub">Ubuntu 22.04 컨테이너 빌드</text>
   <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
   <text x="825" y="615" class="sub">curl로 받기 · install.sh</text>
+  <text x="825" y="633" class="sub">새 버전 확인: releases API <tspan class="new">NEW</tspan></text>
 </svg>

@@ -318,6 +318,7 @@ login: guest
             <li><b>연결 유지 · 자동 재접속</b><span>쉬는 연결이 끊기지 않게 keepalive, 네트워크가 끊기면 화면을 그대로 두고 다시 연결</span></li>
             <li><b>Lua 스크립트</b><span>send · expect · sleep · screen으로 자동 로그인, 반복 명령 자동화. 매크로 F키나 .lua 파일로 실행, 별도 프로세스에서 돌아 스크립트가 멈춰도 터미널은 그대로</span></li>
             <li><b>Lua 콘솔</b><span>Ctrl+Shift+K로 한 줄씩 바로 실행하는 REPL. 변수 유지, 식의 값 표시, .lua 파일 불러오기(Ctrl+O), 입력·출력 저장(Ctrl+S), 끌어서 높이 조절</span></li>
+            <li><b>새 버전 확인</b><span>설정에서 켜면 시작할 때 하루 한 번 GitHub에 새 릴리스를 물어보고 다운로드 페이지를 열어 줌. 기본은 꺼짐(아무것도 보내지 않음), "지금 확인" 버튼으로 바로 확인</span></li>
             <li><b>매크로</b><span>자주 쓰는 명령을 저장해 두고 창이나 F키로 바로 보내기</span></li>
             <li><b>세션 로그</b><span>받은 출력을 파일에 계속 저장 (접속할 때 자동 시작, 일반 텍스트 또는 원본), 줄마다 받은 시각 [2026-10-09 21:30:15.123]</span></li>
             <li><b>키워드 강조</b><span>출력의 error · fail · 오류는 빨강, warning · 경고는 노랑, success · 성공은 초록 배경. 단어는 설정에서 바꾸고, 프로그램 색과 로그는 그대로</span></li>
@@ -349,6 +350,7 @@ login: guest
             <li><b>Keepalive · reconnect</b><span>Keepalive so idle connections stay up; when the network drops it reconnects, keeping the screen</span></li>
             <li><b>Lua scripts</b><span>send · expect · sleep · screen for auto login and repeated commands. Run from a macro F key or a .lua file, in a separate process so a stuck script never freezes the terminal</span></li>
             <li><b>Lua console</b><span>Ctrl+Shift+K: a REPL running one line at a time. Variables kept, expression values shown, load a .lua file (Ctrl+O), save input and output (Ctrl+S), drag to resize</span></li>
+            <li><b>Update check</b><span>When turned on in Settings, asks GitHub for a new release once a day at start and offers its download page. Off by default (nothing is sent); "Check now" checks right away</span></li>
             <li><b>Macros</b><span>Save frequent commands and send them from the window or an F key</span></li>
             <li><b>Session log</b><span>Keeps writing the output to a file (starts on connect, plain text or raw), each line with the time it came [2026-10-09 21:30:15.123]</span></li>
             <li><b>Keyword highlighting</b><span>error · fail in red, warning in yellow, success in green behind the text. Words are set in Settings; program colors and logs stay as they are</span></li>
@@ -364,8 +366,8 @@ login: guest
 
     <section>
         <h2><span class="ko">구조</span><span class="en">Architecture</span></h2>
-        <img class="shot ko" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 시리얼 포트, 도커 컨테이너, 별도 프로세스의 Lua 실행기" loading="lazy"/>
-        <img class="shot en" src="architecture_en.svg" alt="choboterm architecture: frontend (WebView2 · WebKitGTK) ↔ Wails ↔ Go backend ↔ servers (through jump hosts too), serial ports, Docker containers, Lua runner in its own process" loading="lazy"/>
+        <img class="shot ko" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 시리얼 포트, 도커 컨테이너, 별도 프로세스의 Lua 실행기, 새 버전 확인(GitHub)" loading="lazy"/>
+        <img class="shot en" src="architecture_en.svg" alt="choboterm architecture: frontend (WebView2 · WebKitGTK) ↔ Wails ↔ Go backend ↔ servers (through jump hosts too), serial ports, Docker containers, Lua runner in its own process, update check (GitHub)" loading="lazy"/>
     </section>
 
     <section class="ko">

@@ -1,4 +1,4 @@
-# choboterm V0.2.13
+# choboterm V0.2.14
 
 **English** · [한국어](README.ko.md)
 
