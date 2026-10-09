@@ -80,6 +80,8 @@ export function GetLocalShells():Promise<Array<main.LocalShell>>;
 
 export function GetSSHConfigHosts():Promise<Array<main.SSHConfigHost>>;
 
+export function GetSerialPorts():Promise<Array<main.SerialPort>>;
+
 export function GetSessions():Promise<Array<main.SavedSession>>;
 
 export function GetSettings():Promise<main.Settings>;
@@ -107,6 +109,8 @@ export function SaveSettings(arg1:main.Settings):Promise<void>;
 export function ScriptScreen(arg1:number,arg2:number,arg3:string):Promise<void>;
 
 export function Send(arg1:number,arg2:string):Promise<void>;
+
+export function SendBreak(arg1:number):Promise<void>;
 
 export function SetEncoding(arg1:number,arg2:string):Promise<string>;
 

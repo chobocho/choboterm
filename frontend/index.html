@@ -33,6 +33,7 @@
     <li data-act="theme" class="sub">색 테마 (이 서버)</li>
     <li data-act="files">파일 전송</li>
     <li data-act="forwards">포트 포워딩</li>
+    <li data-act="break" hidden>Break 신호 보내기</li>
     <li data-act="containers">도커 컨테이너 (Ctrl+Shift+J)</li>
     <li data-act="script">Lua 스크립트 실행...</li>
     <li data-act="console">Lua 콘솔 (Ctrl+Shift+K)</li>
@@ -64,7 +65,7 @@
                 <div id="hostTip" class="tip" hidden></div>
             </div>
 
-            <label for="port">Port</label>
+            <label for="port" id="portLabel">Port</label>
             <div class="port">
                 <input id="port" inputmode="numeric" value="23"/>
                 <span id="proto">Telnet</span>

@@ -26,7 +26,7 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, DockerOpen, GetLanguage, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    CloseTab, Connect, Disconnect, DockerOpen, GetLanguage, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send, SendBreak,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -50,6 +50,15 @@ function isLocal(host: string): boolean {
     return LOCAL_SHELL.test(host.trim());
 }
 
+// Host field texts that open a serial port; the Port field is then the speed (see serial.go).
+const SERIAL_PORT = /^(com[1-9]\d*|\/dev\/\S+)(\s|$)/i;
+const DEFAULT_BAUD = '115200';
+const BAUDS = [300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
+
+function isSerial(host: string): boolean {
+    return SERIAL_PORT.test(host.trim());
+}
+
 // A tab bar entry. It shows one or more panes (split with Ctrl+Shift+\ / -);
 // each pane is a Tab with its own connection and its own entry in the chip.
 interface Group {
@@ -70,7 +79,7 @@ interface Tab {
     el: HTMLDivElement;
     label: HTMLSpanElement;
     state: TabState;
-    proto: string; // "ssh" / "telnet" / "ftp" / "local" as reported by Connect
+    proto: string; // "ssh" / "telnet" / "ftp" / "local" / "serial" as reported by Connect
     encoding: string;
     // Last connection, kept in memory only, for reconnect / duplicate.
     req?: main.ConnectRequest;
@@ -790,6 +799,11 @@ function setState(t: Tab, state: TabState) {
         t.el.title = `로컬 셸: ${t.req.host}`;
         if (t.log) t.el.title += `
 로그 기록 중: ${t.log}`;
+    } else if (t.req && t.proto === 'serial') {
+        t.label.textContent = t.session?.name ?? t.req.host.split(/\s/)[0];
+        t.el.title = `시리얼: ${t.req.host} (${t.req.port} baud)`;
+        if (t.log) t.el.title += `
+로그 기록 중: ${t.log}`;
     } else if (t.req) {
         const scheme = t.proto || 'telnet';
         // Show the port only when it isn't the protocol's usual one.
@@ -809,6 +823,8 @@ function updateTitle() {
         title += ` - ${t.docker.name} @ ${t.docker.src.label} (docker)`;
     } else if (t?.req && t.state !== 'idle' && t.proto === 'local') {
         title += ` - ${t.req.host} (로컬)`;
+    } else if (t?.req && t.state !== 'idle' && t.proto === 'serial') {
+        title += ` - ${t.req.host} ${t.req.port} baud [${t.encoding}]`;
     } else if (t?.req && t.state !== 'idle') {
         const where = `${t.req.host}:${t.req.port}`;
         title += t.state === 'ftp' ? ` - ftp://${where}` : ` - ${where}`;
@@ -975,6 +991,7 @@ function shellDir(t: Tab): string {
 async function openFilesFor(t: Tab) {
     if (t.state === 'idle' || !t.req || t.dialog) return;
     if (t.proto === 'local') return toast('로컬 셸에서는 파일 전송 창을 쓰지 않습니다');
+    if (t.proto === 'serial') return toast('시리얼 포트에서는 파일 전송 창 대신 sz / rz(Zmodem)를 쓰세요');
     try {
         await openFiles(t.id, t.req.host, {startDir: shellDir(t), onClose: () => focusActive()});
     } catch (e) {
@@ -1055,7 +1072,8 @@ function showMenu(t: Tab, x: number, y: number) {
         menu.querySelector(`[data-act="${act}"]`)!.classList.toggle('disabled', !on);
     enable('reconnect', true);
     enable('duplicate', !!t.req || !!t.docker);
-    enable('files', t.state !== 'idle' && !!t.req && t.proto !== 'local');
+    enable('files', t.state !== 'idle' && !!t.req && t.proto !== 'local' && t.proto !== 'serial');
+    (menu.querySelector('[data-act="break"]') as HTMLElement).hidden = !(t.state === 'on' && t.proto === 'serial');
     enable('forwards', t.state === 'on' && t.proto === 'ssh');
     enable('disconnect', t.state !== 'idle');
     enable('saveSession', !!t.req);
@@ -1165,6 +1183,9 @@ menu.addEventListener('click', ev => {
         case 'forwards':
             showForwards(t);
             break;
+        case 'break':
+            SendBreak(t.id).then(() => notice(t, 'Break 신호를 보냈습니다')).catch(e => notice(t, String(e)));
+            break;
         case 'script':
             runScript(t, async () => void await RunScriptFile(t.id));
             break;
@@ -1214,6 +1235,7 @@ const encoding = $<HTMLSelectElement>('encoding');
 const jump = $<HTMLInputElement>('jump');
 const JUMP_HINT = jump.placeholder;
 const proto = $<HTMLSpanElement>('proto');
+const portLabel = $<HTMLLabelElement>('portLabel');
 const error = $<HTMLDivElement>('error');
 const ok = $<HTMLButtonElement>('ok');
 const cancel = $<HTMLButtonElement>('cancel');
@@ -1232,21 +1254,48 @@ let history: main.HostEntry[] = [];
 let sessions: main.SavedSession[] = [];
 let configHosts: main.SSHConfigHost[] = [];
 let localShells: main.LocalShell[] = [];
-let entries: ListEntry[] = []; // saved sessions, history, then ~/.ssh/config names and local shells not in it
+let serialPorts: main.SerialPort[] = [];
+let serverPort = ''; // the Port field from before a serial port was typed, put back after
+let entries: ListEntry[] = []; // saved sessions, history, then ~/.ssh/config names, local shells and serial ports not in it
 let visible: ListEntry[] = []; // entries matching what is typed in the Host field
 let filter = '';
 let activeIndex = -1;
 let chosen: main.SavedSession | undefined; // saved session the fields came from
 let resolved = '';
 
+/** Marks whether the Port field now holds a serial port's speed, without changing it. */
+function syncPortMode() {
+    if (isSerial(host.value) && !isLocal(host.value)) {
+        port.dataset.baud = '1';
+    } else {
+        delete port.dataset.baud;
+    }
+}
+
 function updateProto() {
     // A local shell needs no port, login or password, and is always UTF-8.
     const local = isLocal(host.value);
-    for (const el of [port, login, pass, encoding]) el.disabled = local;
+    // A serial port takes its speed in the Port field, and no login or password.
+    const serial = !local && isSerial(host.value);
+    port.disabled = encoding.disabled = local;
+    login.disabled = pass.disabled = local || serial;
+    portLabel.textContent = serial ? 'Baud' : 'Port';
+    if (serial && !port.dataset.baud) {
+        serverPort = port.value;
+        port.dataset.baud = '1';
+        if (!BAUDS.includes(Number(port.value))) port.value = DEFAULT_BAUD; // a server's port
+    } else if (!serial && port.dataset.baud) {
+        delete port.dataset.baud;
+        port.value = serverPort || '22';
+    }
     const p = Number(port.value);
-    jump.disabled = local || p === 21 || p === 23; // jump hosts are for SSH only
+    jump.disabled = local || serial || p === 21 || p === 23; // jump hosts are for SSH only
     if (local) {
         proto.textContent = '로컬 셸';
+        return;
+    }
+    if (serial) {
+        proto.textContent = '시리얼';
         return;
     }
     // Other ports are detected from the server greeting when connecting.
@@ -1255,9 +1304,9 @@ function updateProto() {
 
 /** Reads what the Host list offers: saved sessions, history, ~/.ssh/config names, local shells. */
 async function loadEntries() {
-    [history, sessions, configHosts, localShells] = await Promise.all([
-        GetHistory(), GetSessions(), GetSSHConfigHosts(), GetLocalShells(),
-    ]).then(r => r.map(x => x ?? []) as [main.HostEntry[], main.SavedSession[], main.SSHConfigHost[], main.LocalShell[]]);
+    [history, sessions, configHosts, localShells, serialPorts] = await Promise.all([
+        GetHistory(), GetSessions(), GetSSHConfigHosts(), GetLocalShells(), GetSerialPorts(),
+    ]).then(r => r.map(x => x ?? []) as [main.HostEntry[], main.SavedSession[], main.SSHConfigHost[], main.LocalShell[], main.SerialPort[]]);
     const seen = new Set(history.map(h => h.host));
     const saved = new Set(sessions.map(s => `${s.host}:${s.port}`));
     entries = [...sessions.map(s => ({
@@ -1266,6 +1315,8 @@ async function loadEntries() {
         host: c.host, port: c.port, login: c.login, encoding: 'UTF-8', pass: '', fromConfig: true,
     })), ...localShells.filter(s => !seen.has(s.name)).map(s => ({
         host: s.name, port: 0, login: '', encoding: 'UTF-8', pass: '', label: s.label,
+    })), ...serialPorts.filter(s => !seen.has(s.name)).map(s => ({
+        host: s.name, port: Number(DEFAULT_BAUD), login: '', encoding: 'UTF-8', pass: '', label: s.label,
     }))];
 }
 
@@ -1331,6 +1382,7 @@ function loadDialog(t: Tab) {
     pass.value = d.pass;
     encoding.value = d.encoding;
     jump.value = d.jump;
+    syncPortMode();
     resolved = d.resolved;
     chosen = d.session;
     error.textContent = d.error;
@@ -1366,7 +1418,11 @@ function cancelDialog() {
 function applyEntry(e: ListEntry) {
     chosen = e.session;
     host.value = e.host;
-    if (e.port > 0) port.value = String(e.port); // a local shell (port 0) keeps the port for later
+    // A local shell (port 0) keeps the port for later; a serial port's speed
+    // doesn't replace the server port that comes back after it.
+    if (isSerial(e.host) && !port.dataset.baud) serverPort = port.value;
+    if (e.port > 0) port.value = String(e.port);
+    syncPortMode();
     login.value = e.login;
     encoding.value = e.encoding || 'UTF-8';
     pass.value = e.pass ?? '';
@@ -1383,7 +1439,7 @@ function applyEntry(e: ListEntry) {
  */
 async function resolveHost() {
     const text = host.value.trim();
-    if (!text || text === resolved || isLocal(text)) return;
+    if (!text || text === resolved || isLocal(text) || isSerial(text)) return;
     const r = await LookupSSH(text);
     if (host.value.trim() !== text) return; // typed on meanwhile
     host.value = r.host;
@@ -1421,6 +1477,7 @@ function showTip(r?: main.SSHTarget) {
         tipLine('예) busan · ssh busan');
         tipLine('     ssh -p 2222 user@busan', 'pre');
         tipLine(isLinux ? '이 PC의 셸: bash · zsh · fish · sh' : '이 PC의 셸: cmd · powershell · wsl (wsl -d Ubuntu)');
+        tipLine(isLinux ? '시리얼 포트: /dev/ttyUSB0 · /dev/ttyUSB0 9600 7E1 (Port 칸 = 속도)' : '시리얼 포트: COM3 · COM3 9600 7E1 rtscts (Port 칸 = 속도)');
         if (configHosts.length > 0) {
             const names = configHosts.slice(0, 6).map(c => c.host).join(', ');
             tipLine(`등록된 이름: ${names}${configHosts.length > 6 ? ' …' : ''} (▼ 목록)`, 'names');
@@ -1461,7 +1518,7 @@ function matching(): ListEntry[] {
 /** The heading an entry goes under; only saved sessions get headings. */
 function section(e: ListEntry): string {
     if (e.session) return '★ ' + (e.session.group || '저장된 세션');
-    return sessions.length > 0 ? '최근 · ssh config · 로컬 셸' : '';
+    return sessions.length > 0 ? '최근 · ssh config · 로컬 셸 · 시리얼' : '';
 }
 
 function showList() {
@@ -1486,6 +1543,7 @@ function showList() {
         meta.className = 'meta';
         const where = e.session && e.session.name !== e.host ? `${e.host} · ` : '';
         meta.textContent = isLocal(e.host) ? `로컬 셸${e.label ? ' · ' + e.label : ''}` :
+            isSerial(e.host) ? `${where}시리얼 · ${e.port} baud${e.label ? ' · ' + e.label : ''}` :
             `${where}${e.port}${e.login ? ' · ' + e.login : ''}${e.fromConfig ? ' · ssh config' : ''}`;
         li.appendChild(meta);
         li.addEventListener('mousedown', ev => {
@@ -1585,14 +1643,15 @@ async function connectDialog(t: Tab) {
     error.textContent = '';
     paintConnecting(d);
     // The user may switch tabs while connecting; results go to tab t.
+    const serial = isSerial(d.host);
     try {
         const protocol = await connectTab(t, main.ConnectRequest.createFrom({
             host: d.host.trim(),
             port: Number(d.port),
-            login: d.login,
-            pass: d.pass,
+            login: serial ? '' : d.login,
+            pass: serial ? '' : d.pass,
             encoding: d.encoding,
-            jump: d.jump.trim(),
+            jump: serial ? '' : d.jump.trim(),
         }));
         d.connecting = false;
         t.session = d.session;
@@ -1628,13 +1687,14 @@ async function saveFromDialog() {
         return host.focus();
     }
     const local = isLocal(host.value);
+    const bare = local || isSerial(host.value); // no login, password or jump host
     const s = await openSaveSession({
         host: host.value.trim(),
         port: local ? 0 : Number(port.value),
-        login: local ? '' : login.value,
+        login: bare ? '' : login.value,
         encoding: local ? 'UTF-8' : encoding.value,
-        pass: local ? '' : pass.value,
-        jump: local ? '' : jump.value.trim(),
+        pass: bare ? '' : pass.value,
+        jump: bare ? '' : jump.value.trim(),
         session: chosen,
     });
     if (s) {

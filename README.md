@@ -60,6 +60,12 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
 - **Local shell (cmd / PowerShell / WSL)**: Enter `cmd`, `powershell`, `pwsh` or `wsl` (or with arguments, like `wsl -d Ubuntu`) as the Host in the connect window to open a shell on this PC in a tab. Installed shells also appear in the ▼ list as `Local shell`. The Port / Login / Pass / Code fields are not used then, so they are disabled.
   - Uses the Windows pseudo console (ConPTY), so Windows 10 1809 or later is required. Starts in the user folder and is always UTF-8.
   - Split panes, macros, session logs and scrollback search all work, and in WSL you can transfer files with `sz` / `rz` (Zmodem). When it ends with `exit`, press `Enter` to reopen it.
+- **Serial port**: Enter `COM3` (`/dev/ttyUSB0` on Linux) as the Host in the connect window to open a serial port in a tab — for router and switch consoles, embedded boards, Arduino and the like.
+  - The Port field becomes the speed (baud, 115200 by default). Data bits, parity, stop bits and flow control go after the name: `COM3 9600 7E1 rtscts`. Parity is N (none) · E (even) · O (odd), flow control is `rtscts` (hardware) · `xonxoff` (software); without them it is 8N1 with no flow control.
+  - Ports connected now appear in the ▼ list as `serial`, with the device name (e.g. `USB-SERIAL CH340`). The Login / Pass / Jump fields are not used.
+  - Tab right-click → "Send break" sends a break (e.g. to enter Cisco ROMMON). EUC-KR, macros, Lua scripts, session logs and Zmodem (`sz` / `rz`) all work.
+  - Unplugging a USB adapter counts as a lost connection and automatic reconnect kicks in, so plugging it back in carries on. A port can be open in one tab at a time.
+  - On Linux, if you get a permission error, run `sudo usermod -aG dialout $USER` and log in again.
 - **Telnet**: NAWS / TTYPE / ECHO / SGA / BINARY negotiation, automatic login at `login:` / `password:` prompts
   - The password is remembered and filled in automatically when you pick the Host. It is stored encrypted with Windows DPAPI, so only the current Windows user can decrypt it. Connecting with Pass empty deletes the saved password.
 - **FTP**: The file transfer window opens as soon as you connect. Closing the window keeps the connection until the tab is closed; reopen it with `Ctrl+Shift+F`. If Login is left empty, you log in as anonymous.
@@ -303,6 +309,7 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/highlight.ts` | Keyword highlighting (xterm decorations) |
 | `frontend/src/imageview.ts` | Image viewer window |
 | `sshjump.go` | Jump host (ProxyJump) |
+| `serial*.go` | Serial port (Windows: COM ports · Linux: termios) |
 | `frontend/src/cjkwidth.ts` | Double-width character handling in EUC-KR mode |
 | `tools/make_icon.py` | App icon generation (`build/appicon.png`, `build/windows/icon.ico`) |
 

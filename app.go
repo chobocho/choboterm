@@ -194,7 +194,7 @@ func Protocol(port int) string {
 }
 
 // Connect opens a session in the given tab and returns the protocol used
-// ("ssh", "telnet" or "ftp"). Ports 22/21/23 decide the protocol directly;
+// ("ssh", "telnet", "ftp", "local" or "serial"). Ports 22/21/23 decide the protocol directly;
 // for other ports it is detected from the server greeting (e.g. SSH on 8022).
 // An existing connection in that tab is closed first.
 func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
@@ -207,6 +207,9 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	}
 	if cmdline, ok := localCommand(req.Host); ok {
 		return a.connectLocal(tabID, req, cmdline)
+	}
+	if isSerial(req.Host) {
+		return a.connectSerial(tabID, req)
 	}
 	if req.Port <= 0 || req.Port > 65535 {
 		return "", errors.New("Port가 올바르지 않습니다")

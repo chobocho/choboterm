@@ -60,6 +60,12 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 - **로컬 셸 (cmd / PowerShell / WSL)**: 접속 창의 Host에 `cmd`, `powershell`, `pwsh`, `wsl`(또는 `wsl -d Ubuntu`처럼 인자 포함)을 쓰면 이 PC의 셸을 탭에서 엽니다. ▼ 목록에도 설치된 셸이 `로컬 셸`로 나옵니다. 이때 Port / Login / Pass / Code 칸은 쓰지 않으므로 비활성화됩니다.
   - Windows의 의사 콘솔(ConPTY)을 쓰므로 Windows 10 1809 이상이 필요합니다. 사용자 폴더에서 시작하며 항상 UTF-8입니다.
   - 분할 창, 매크로, 세션 로그, 스크롤백 검색이 그대로 되고, WSL에서는 `sz` / `rz`(Zmodem)로 파일을 주고받을 수 있습니다. `exit`로 끝나면 `Enter`로 다시 엽니다.
+- **시리얼 포트**: 접속 창의 Host에 `COM3`(Linux는 `/dev/ttyUSB0`)을 쓰면 시리얼 포트를 탭에서 엽니다. 라우터·스위치 콘솔, 임베디드 보드, 아두이노 같은 장비에 접속할 때 씁니다.
+  - Port 칸이 속도(baud)가 됩니다(기본 115200). 데이터 비트·패리티·정지 비트와 흐름 제어는 이름 뒤에 씁니다: `COM3 9600 7E1 rtscts`. 패리티는 N(없음) · E(짝수) · O(홀수), 흐름 제어는 `rtscts`(하드웨어) · `xonxoff`(소프트웨어)이고, 쓰지 않으면 8N1, 흐름 제어 없음입니다.
+  - ▼ 목록에 지금 연결된 포트가 장치 이름(예: `USB-SERIAL CH340`)과 함께 `시리얼`로 나옵니다. Login / Pass / Jump 칸은 쓰지 않습니다.
+  - 탭 우클릭 → "Break 신호 보내기"로 Break를 보냅니다(시스코 ROMMON 진입 등). EUC-KR, 매크로, Lua 스크립트, 세션 로그, Zmodem(`sz` / `rz`)이 그대로 됩니다.
+  - USB 어댑터를 빼면 연결이 끊긴 것으로 보고 자동 재접속을 시도하므로, 다시 꽂으면 이어서 씁니다. 한 포트는 한 탭에서만 열 수 있습니다.
+  - Linux에서 권한 오류가 나면 `sudo usermod -aG dialout $USER` 후 다시 로그인하세요.
 - **Telnet**: NAWS / TTYPE / ECHO / SGA / BINARY 협상, `login:` / `password:` 프롬프트 자동 로그인
   - 비밀번호를 기억해 두었다가 Host를 고르면 자동으로 채웁니다. Windows DPAPI로 암호화해 저장하므로 현재 Windows 사용자만 풀 수 있습니다. Pass를 비우고 접속하면 저장된 비밀번호를 지웁니다.
 - **FTP**: 접속하면 파일 전송 창이 바로 열립니다. 창을 닫아도 탭을 닫기 전까지 연결이 유지되며 `Ctrl+Shift+F`로 다시 엽니다. Login을 비워 두면 anonymous로 로그인합니다.
@@ -303,6 +309,7 @@ go test ./...
 | `frontend/src/highlight.ts` | 키워드 강조 (xterm 데코레이션) |
 | `frontend/src/imageview.ts` | 이미지 보기 창 |
 | `sshjump.go` | 점프 호스트 (ProxyJump) |
+| `serial*.go` | 시리얼 포트 (Windows: COM 포트 · Linux: termios) |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
 | `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
 

@@ -365,6 +365,20 @@ export namespace main {
 	        this.jump = source["jump"];
 	    }
 	}
+	export class SerialPort {
+	    name: string;
+	    label: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SerialPort(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.label = source["label"];
+	    }
+	}
 	export class WindowState {
 	    left: number;
 	    top: number;

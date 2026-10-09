@@ -158,6 +158,10 @@ export function GetSSHConfigHosts() {
   return window['go']['main']['App']['GetSSHConfigHosts']();
 }
 
+export function GetSerialPorts() {
+  return window['go']['main']['App']['GetSerialPorts']();
+}
+
 export function GetSessions() {
   return window['go']['main']['App']['GetSessions']();
 }
@@ -212,6 +216,10 @@ export function ScriptScreen(arg1, arg2, arg3) {
 
 export function Send(arg1, arg2) {
   return window['go']['main']['App']['Send'](arg1, arg2);
+}
+
+export function SendBreak(arg1) {
+  return window['go']['main']['App']['SendBreak'](arg1);
 }
 
 export function SetEncoding(arg1, arg2) {
