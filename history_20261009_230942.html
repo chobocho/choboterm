@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>choboterm 작업 기록</title></head>
+<body>
+<h1>choboterm 작업 기록</h1>
+<p>이전 기록: <a href="history_20261008_124635.html">history_20261008_124635.html</a></p>
+
+<h2>2026-10-09 — 도커 컨테이너 창 (Ctrl+Shift+J)</h2>
+<ul>
+  <li>포트 포워딩 창: 복사 버튼 글자가 두 줄로 꺾이던 문제 수정(nowrap, 높이 맞춤)</li>
+  <li>docker.go: 지금 탭의 SSH 서버 또는 이 PC(Docker Desktop)의 컨테이너 목록(docker ps 템플릿, .State 없이 Status로 실행 여부 판단 → 옛 docker·podman 호환), 시작/중지/재시작, docker 없으면 podman. 권한 없음·데몬 꺼짐·미설치 오류를 알기 쉬운 메시지로</li>
+  <li>셸(docker exec -it, bash 없으면 sh)·로그(docker logs -f --tail 200)를 새 탭으로: 서버는 같은 SSH 접속에 세션 추가(재로그인 없음, 탭을 닫아도 원래 접속 유지, 원래 접속이 끊기면 함께 닫힘), PC는 로컬 PTY. Enter로 다시 열기, 복제 지원</li>
+  <li>포트 열기: 게시된 서버 포트를 이 PC의 같은 포트로 -L 포워딩 후 브라우저(포트가 사용 중이면 규칙을 남기지 않고 안내)</li>
+  <li>dialSSH에서 openPty 분리. 테스트: 목록 파싱·인자·Windows 인용, WSL 가짜 docker + 테스트 SSH 서버로 목록/동작/exec 탭/접속 유지 확인. 실제 Docker 서버·Docker Desktop에서는 아직 확인 못 함</li>
+  <li>도움말·영어 사전 35개·README 갱신</li>
+</ul>
+
+<h2>2026-10-09 — V0.2.7 릴리스</h2>
+<ul>
+  <li>버전 0.2.7(main.go, wails.json, README), build.bat으로 테스트·빌드 후 main 푸시. GitHub 릴리스 v0.2.7 생성(포트 포워딩 연결 수 툴팁 · ssh 명령어 복사)</li>
+  <li>이전 릴리스 V0.2.6 삭제 → 남은 릴리스는 V0.2.7 하나, git 태그는 유지. 최신 다운로드 링크 정상(200)</li>
+  <li>README·소개 페이지 포트 포워딩 설명 보강, 아키텍처 그림은 버전 표기만 V0.2.7로 바꾸고 지난 버전의 NEW 표시 제거</li>
+</ul>
+
+<h2>2026-10-09 — 포트 포워딩: 연결 수 툴팁 · ssh 명령어 표시</h2>
+<ul>
+  <li>Termux Jupyter(8888) 접속 안내: -L 대상은 서버(폰)에서 본 주소라 127.0.0.1:8888이어야 함(폰 IP로 하면 Jupyter가 localhost만 받아 ERR_CONNECTION_RESET)</li>
+  <li>상태 칸 툴팁: "이 규칙을 통해 열려 있는 연결 N개" / "열린 연결 없음 (새 연결을 기다리는 중)"</li>
+  <li>행 툴팁에 규칙별 ssh 옵션(-L/-R/-D, IPv6는 [ ]), 목록 아래에 모든 규칙을 담은 ssh 명령어(-J, -p, user@host 포함)와 복사 버튼. 영어 사전 4개 추가</li>
+</ul>
+
+<h2>2026-10-09 — V0.2.6 릴리스</h2>
+<ul>
+  <li>버전 0.2.6(main.go, wails.json, README), build.bat으로 테스트·빌드 후 main 푸시. GitHub 릴리스 v0.2.6 생성(이미지 보기, 점프 호스트, 키워드 강조, 로그 시각, 이어받기, 영어 화면). 최신 다운로드 링크 정상(200)</li>
+  <li>이전 릴리스 V0.2.5 삭제(확인 후) → 남은 릴리스는 V0.2.6 하나, git 태그는 유지</li>
+  <li>docs/architecture.svg 새로 그림: highlight.ts · imageview.ts · i18n.ts · sshjump · 이어받기 · i18n.go/i18n_en.json, 점프 호스트 경유를 NEW로 표시. README 아키텍처 설명 3줄 추가</li>
+  <li>소개 페이지: 기능에 점프 호스트·키워드 강조·영어 화면 추가, 세션 로그(줄마다 시각)·파일 창(이어받기)·원격 파일 보기(이미지) 설명 보강, 설정 단축키 설명 갱신. Pages 배포 완료 확인</li>
+</ul>
+
+<h2>2026-10-09 — 상용 대비 보강 5종</h2>
+<ul>
+  <li><b>점프 호스트(ProxyJump)</b>: 접속 창·세션 관리에 Jump 칸, ~/.ssh/config의 ProxyJump, Host 칸의 ssh -J. 여러 단계(a,b), none, 단계마다 config 별칭·키·known_hosts 확인, 점프 호스트 질문엔 단계 이름 표시. 기록·세션·내보내기에 저장. 실제 점프 서버 2단을 거치는 Go 테스트</li>
+  <li><b>키워드 강조</b>: error·fail·오류 빨강, warning·경고 노랑, success·성공 초록 배경(설정에서 단어 편집·끄기). xterm 데코레이션이라 출력·로그·프로그램 색은 그대로, 전체 화면 프로그램 제외. 화면 지우기(ED) 때 xterm이 마커를 폐기하며 데코레이션 목록 정렬이 깨지는 xterm 버그를 찾아 우회. Edge headless(DOM·WebGL)로 확인</li>
+  <li><b>로그 줄마다 시각</b>: [2026-10-09 21:30:15.123] 형식, 줄이 들어오기 시작한 시각. 일반 텍스트·원본 모두, 기본 켬</li>
+  <li><b>이어받기 · 이어 올리기</b>(SFTP·FTP): 받는 파일은 .part로 받았다가 완료 시 이름 변경, 남은 .part는 "이어받기 / 처음부터" 질문. 업로드는 이번 실행 중 끊긴 같은 파일만(옛 버전 오인 방지). 질문 창 버튼 이름 지정 기능 추가</li>
+  <li><b>영어 화면</b>: 설정 → 언어(자동 / 한국어 / English, 다시 시작 시 적용). 사전 i18n_en.json(약 470개) 하나를 화면과 Go가 공유. 화면은 MutationObserver로 나타나는 문구를 번역({} 자리·순서 지정·줄 단위), Go는 파일 대화상자·호스트 키 질문·터미널 안내·로그 표시. 정적 HTML 자동 점검으로 남은 한국어 없음 확인</li>
+  <li>참고: 이 환경의 Bash 도구는 heredoc 안의 겹 백슬래시를 하나로 줄여서, 백슬래시가 든 스크립트는 Write 도구로 작성함</li>
+</ul>
+
+<h2>2026-10-09 — Lua 테트리스 검토 (하지 않음)</h2>
+<ul>
+  <li>Lua 콘솔에서 실시간 게임을 돌리려면 키 입력을 받는 key()와 화면에 직접 그리는 draw()가 필요. 화면 섞임·키 가로채기·복잡도에 비해 실익이 적어 하지 않기로 함. 테트리스는 Termux의 bastet 등으로 대체</li>
+</ul>
+
+<h2>2026-10-09 — 파일 전송 창: 이미지 보기 (F3)</h2>
+<ul>
+  <li>파일 창에서 이미지(JPG·PNG·GIF·BMP·WebP·SVG·ICO)를 F3으로 열면 새 이미지 보기 창(imageview.ts)에 표시. 디코딩은 WebView2가 하므로 라이브러리 추가 없음. F4는 예전처럼 텍스트 편집</li>
+  <li>기능: 처음엔 창에 맞춤, 0 맞춤 / 1 원본(더블클릭 전환), +/−·Ctrl+휠 확대·축소(커서 위치 기준), 끌어서 이동, ←→·PgUp/PgDn·Space로 같은 폴더의 이전/다음 이미지, 크기·배율·순번 표시, 투명 부분 바둑판 무늬, 깨진 파일은 오류 표시</li>
+  <li>App.FileImage: 30MB까지 전체를 받음(일부만 보여 주지 않고 거절). FileView와 읽기 코드를 readRemote로 합침. Go 테스트 추가</li>
+  <li>Edge headless로 작은 이미지·큰 이미지(맞춤 28%)·깨진 파일 화면 확인. F1 도움말, README 갱신</li>
+</ul>
+
+<h2>2026-10-09 — V0.2.5 릴리스</h2>
+<ul>
+  <li>버전 0.2.5로 올림(main.go, wails.json, README), build.bat으로 테스트·빌드 후 main 푸시</li>
+  <li>GitHub 릴리스 v0.2.5 생성(파일 창 .. 행, Alt+↑ / Alt+← 상위 폴더). 이전 릴리스 V0.2.4 삭제 → 남은 릴리스는 V0.2.5 하나, git 태그는 유지. 최신 다운로드 링크 정상(200)</li>
+  <li>소개 페이지: "편한 파일 창" 설명에 새 파일·..·Alt+↑ 추가, 단축키 표에 파일 창 상위 폴더 행 추가. Pages 배포 완료 확인</li>
+</ul>
+
+<h2>2026-10-09 — 파일 전송 창: .. 와 상위 폴더 단축키</h2>
+<ul>
+  <li>Ctrl+Shift+F 파일 창 목록 맨 위에 "⬆ .. (상위 폴더)" 행 추가("/"에서는 없음). Enter / 더블클릭으로 상위 폴더로 이동</li>
+  <li>상위 폴더 단축키: 기존 Backspace에 Alt+↑(탐색기와 같음), Alt+← 추가. 올라가면 방금 있던 폴더가 선택됨(↑ 버튼도 같음)</li>
+  <li>".."는 다운로드·삭제·이름 바꾸기·Ctrl+A 대상에서 빠짐. 폴더를 열면 커서는 예전처럼 첫 번째 실제 항목에. F1 도움말, README, 버튼 툴팁 갱신</li>
+</ul>
+
+<h2>2026-10-09 — V0.2.4 릴리스</h2>
+<ul>
+  <li>버전 0.2.4로 올림(main.go, wails.json, README), build.bat으로 테스트·빌드 후 main 푸시</li>
+  <li>GitHub 릴리스 v0.2.4 생성(choboterm.exe 첨부, Lua 콘솔 열기·저장·높이 조절, Ctrl+V 수정 등). 이전 릴리스 V0.2.3 삭제 → 남은 릴리스는 V0.2.4 하나, git 태그는 유지. 최신 다운로드 링크 정상(200)</li>
+  <li>소개 페이지(docs/index.html): 기능에 Lua 스크립트·Lua 콘솔 추가, 단축키에 Ctrl+Shift+K·Ctrl+Shift+H 추가, "구조" 섹션에 아키텍처 그림. Pages 배포 완료 확인</li>
+</ul>
+
+<h2>2026-10-09 — Lua 콘솔: 클라우드 리뷰 지적 수정</h2>
+<ul>
+  <li>콘솔이 비정상 종료(메모리 제한 등)된 뒤 "열기"를 누르면 오류가 나던 문제: 콘솔이 끝나면 "열기" 버튼도 입력창과 함께 없앰("저장"은 남김). 열기 창이 떠 있는 사이 콘솔이 끝나도 안전하게</li>
+  <li>App.ConsoleOpen이 {name, text}를 돌려주게 바꿔 빈 파일과 취소를 구분. 빈 파일이면 알림</li>
+  <li>저장용 기록이 2만 줄을 넘은 뒤 줄마다 배열 전체를 당기던 비용: 22000줄이 되면 한 번에 2만 줄로 줄임</li>
+  <li>높이 조절 중 콘솔이 닫히면 높이 0이 저장될 수 있던 문제: 화면에 붙어 있을 때만 저장</li>
+</ul>
+
+<h2>2026-10-09 — README에 아키텍처 그림 추가</h2>
+<ul>
+  <li>docs/architecture.svg 작성: 프론트엔드(WebView2·TypeScript) ↔ Wails 바인딩·이벤트 ↔ Go 백엔드(app.go tab, SSH·Telnet·ConPTY, 파일 전송·Zmodem, 저장소) ↔ 원격 서버·로컬 프로그램, 별도 프로세스인 Lua 실행기</li>
+  <li>README에 "아키텍처" 섹션(그림 + 3줄 설명)을 "소스 구성" 앞에 추가. Edge headless로 렌더링해 글자 넘침 없음 확인</li>
+</ul>
+
+<h2>2026-10-09 — Lua 콘솔: 파일 불러오기</h2>
+<ul>
+  <li>Lua 콘솔 상단에 "열기" 버튼, 입력창에서 Ctrl+O. 고른 .lua 파일 내용을 바로 실행하지 않고 입력창에 넣어 보여 줌(고친 뒤 Enter로 실행)</li>
+  <li>App.ConsoleOpen: 기본 폴더는 scripts 폴더, 512KB까지, BOM 제거·CRLF→LF. 입력창은 120px까지 늘고 그 이상은 스크롤</li>
+  <li>F1 도움말, README 갱신</li>
+</ul>
+
+<h2>2026-10-09 — Lua 콘솔: 최소 높이</h2>
+<ul>
+  <li>콘솔을 작게 끌면 입력창이 찌그러지던 문제: 제목줄·입력줄은 줄어들지 않고 출력 영역만 줄어들게(flex-shrink 0)</li>
+  <li>최소 높이 = 제목줄 + 입력줄 + 출력 3줄. 입력이 여러 줄로 늘어나면 최소 높이도 같이 늘어남. 기존 100px 고정 하한은 제거. README 갱신</li>
+</ul>
+
+<h2>2026-10-09 — Lua 콘솔: 높이 기억</h2>
+<ul>
+  <li>끌어서 바꾼 콘솔 높이를 settings.json(consoleHeight)에 저장하고, 다음에 콘솔을 열 때(앱을 다시 켜도) 그 높이로 시작. 저장값이 없으면 300px</li>
+  <li>창이 작아져서 저장한 높이가 너무 크면 pane 높이의 80%까지만 표시. README 갱신</li>
+</ul>
+
+<h2>2026-10-09 — Lua 콘솔: 높이 조절</h2>
+<ul>
+  <li>처음 열 때 높이를 400px → 300px(이전의 75%)로</li>
+  <li>위쪽 테두리를 마우스로 끌어 높이 조절(최소 100px, 최대 pane 높이의 80%). 닫았다 다시 열면 300px로 시작</li>
+  <li>F1 도움말, README 갱신</li>
+</ul>
+
+<h2>2026-10-09 — Lua 콘솔: 파일로 저장</h2>
+<ul>
+  <li>Lua 콘솔 상단에 "저장" 버튼, 입력창에서 Ctrl+S. 지금까지의 입력·출력을 텍스트 파일로 저장(기본 이름 lua_console_날짜_시각.txt, 기본 폴더 다운로드)</li>
+  <li>화면에는 최근 200줄만 남지만, 저장용 기록은 최대 20000줄까지 따로 보관</li>
+  <li>App.ConsoleSave 추가(wails 바인딩 재생성). F1 도움말, README 갱신</li>
+</ul>
+
+<h2>2026-10-09 — Lua 콘솔 버그 수정</h2>
+<ul>
+  <li>Lua 콘솔 창 높이를 고정 400px(창이 작으면 pane 높이에 맞춤)로 키움. 기존보다 약 2배 이상</li>
+  <li>Ctrl+V가 안 되던 문제: 콘솔이 터미널 pane 안에 있어서 pane의 paste 가로채기(capture)가 붙여넣기를 터미널로 보내고 있었음. 콘솔 안에서 일어난 paste는 건드리지 않도록 수정</li>
+</ul>
+
+<h2>2026-10-09 — V0.2.3 릴리스</h2>
+<ul>
+  <li>버전 0.2.3으로 올림(main.go, wails.json, README), build.bat으로 테스트·빌드 후 main 푸시</li>
+  <li>GitHub 릴리스 v0.2.3 생성(choboterm.exe 첨부, 새 기능: 파일 전송 창 새 파일). 이전 릴리스 V0.2.2 삭제 → 남은 릴리스는 V0.2.3 하나, git 태그는 유지. 최신 다운로드 링크 정상(200)</li>
+  <li>한/영 입력 상태 표시는 검토만 하고 하지 않기로 함</li>
+</ul>
+
+<h2>2026-10-09 — 파일 전송 창: 새 파일</h2>
+<ul>
+  <li>Ctrl+Shift+F 파일 전송 창에 "새 파일" 버튼, 우클릭 메뉴 "새 파일 (Shift+F4)", 단축키 Shift+F4 추가(Total Commander와 같은 키). 이름을 물은 뒤 지금 폴더에 빈 파일을 만들고 목록에서 선택</li>
+  <li>App.FileCreate: 이름 검사(경로 구분자·..), 같은 이름의 파일·폴더가 있으면 덮어쓰지 않고 오류. SFTP·SCP·FTP 공통으로 0바이트 업로드로 만듦</li>
+  <li>SFTP 파일 작업 테스트에 새 파일 생성·중복 거부·잘못된 이름 거부 추가. README, F1 도움말 갱신</li>
+</ul>
+
+<h2>2026-10-09 — 이전 릴리스 정리</h2>
+<ul>
+  <li>GitHub 릴리스 V0.2.1 삭제(첨부 exe 포함). 남은 릴리스는 최신 V0.2.2 하나</li>
+  <li>git 태그(v0.1.8, v0.2.0, v0.2.1, v0.2.2)는 그대로 둠. 최신 다운로드 링크 정상(200) 확인</li>
+</ul>
+
+<h2>2026-10-09 — V0.2.2 릴리스</h2>
+<ul>
+  <li>버전 0.2.2로 올림(main.go AppVersion, wails.json, README), build.bat으로 테스트·빌드 후 main 푸시</li>
+  <li>GitHub 릴리스 v0.2.2 생성, choboterm.exe 첨부. 내용: 세션 관리, Lua 스크립트, Lua 콘솔, 서버별 설정이 사라지던 문제 수정</li>
+</ul>
+
+<h2>2026-10-09 — Lua 콘솔 (REPL)</h2>
+<ul>
+  <li>Ctrl+Shift+K / 탭 메뉴 "Lua 콘솔": 창 오른쪽 아래 스크립트 상자에 입력 줄을 붙인 REPL. 같은 격리 프로세스(--lua-host, 256MB)를 띄워 두고 한 Lua 상태에서 입력마다 실행 → 변수·함수 유지</li>
+  <li>출력: print는 그 자리에(결과보다 먼저), 식("1 + 2", "x", "=x")은 값을 자동 표시(lua 명령줄처럼 "return "을 붙여 먼저 시도), 오류는 빨간 줄. Enter 실행 · Shift+Enter 줄바꿈 · ↑↓ 이전 입력 · Esc 터미널로</li>
+  <li>Ctrl+C·"중지": 실행 중인 입력만 멈추고(입력마다 별도 context) 콘솔과 변수는 유지. 탭 배지는 쉴 때 "Lua", 실행 중 "▶ 걸린 시간"</li>
+  <li>콘솔의 expect는 입력을 실행한 뒤의 출력만 봄(이미 화면에 있는 프롬프트에 바로 맞지 않도록)</li>
+  <li>테스트: 변수 유지, 값 표시, print 순서, 오류·문법 오류, 무한 루프 중지 후 상태 유지, send+expect, 닫힌 뒤 입력 거부. 격리 AppData 테스트 인스턴스에서 화면 확인</li>
+</ul>
+
+<h2>2026-10-09 — Lua 스크립트 (gopher-lua)</h2>
+<ul>
+  <li>핵심 요구 "스크립트 때문에 choboterm이 죽으면 안 됨": 같은 프로세스에서는 메모리 부족·Go 스택 넘침 같은 fatal error를 recover로 막을 수 없어, 같은 exe를 <code>--lua-host</code> 자식 프로세스로 띄워 스크립트 하나씩 실행(luahost.go / luarun.go)</li>
+  <li>자식은 Windows Job Object로 메모리 256MB 제한, choboterm이 꺼지면 함께 종료. 앱 쪽은 출력 전달을 절대 기다리지 않음(밀리면 스크립트 쪽만 버림), 한 줄 1MB·초당 메시지 수·초당 입력 256KB 제한, 깨진 메시지·정지 무시 시 2초 뒤 강제 종료, 처리 goroutine recover</li>
+  <li>Lua 5.1(gopher-lua): base(dofile·loadfile 제외)·string·table·math·coroutine·os.time/clock/date만 엶. API: send · expect(패턴, 초) · sleep · screen · print</li>
+  <li>고장 주입 테스트: 오류, 문법 오류, 무한 루프, 깊은 재귀, 메모리 폭주(Job 한도), 자식 강제 종료, 깨진 JSON, 너무 긴 줄, 정지 무시, 출력 32MB를 읽지 않는 자식, print 폭주, 연결 끊김 — 모두 앱은 계속 동작</li>
+  <li>화면: 매크로 종류 "텍스트 / Lua 스크립트", 탭 메뉴 "Lua 스크립트 실행..."(문서\choboterm\scripts, 처음에 예제 3개)·"스크립트 중지"·"스크립트 폴더 열기"</li>
+  <li>요청 반영: 실행 시간을 부모 창에 표시 — 탭에 <code>▶ 0:42</code> 배지(1초마다 갱신), 창 오른쪽 아래 상자에 print 출력과 결과(끝·멈춤·오류와 줄 번호, 오류는 닫을 때까지 유지). 처음에는 메시지를 터미널에 직접 썼으나 cmd(ConPTY) 화면을 덮어써서 상자로 바꿈</li>
+  <li>버그 수정: 세션 작업 때 입력하면 목록이 뜨게 바뀌면서 Host 입력 후 Enter를 두 번 눌러야 접속되던 회귀</li>
+  <li>README, F1 도움말, THIRD_PARTY_NOTICES(gopher-lua MIT) 갱신</li>
+</ul>
+
+<h2>2026-10-09 — 세션 관리자</h2>
+<ul>
+  <li>세션 저장소 <code>sessions.json</code> 추가(session_store.go): 이름·그룹(한 단계)·접속 정보, 비밀번호는 선택 저장(DPAPI, SSH 포함). 저장 방식은 SQLite 대신 기존과 같은 JSON(임시 파일에 쓰고 이름 바꾸기)</li>
+  <li>버그 수정: 서버별 색 테마·포트 포워딩이 최근 기록 20개에서 밀려나면 사라지던 문제. 서버별 설정을 sessions.json의 servers로 옮기고, 예전 hosts.json 값은 처음 읽을 때 이어받음</li>
+  <li>접속 창: ▼ 목록 맨 위에 세션을 그룹별로 표시, Host 칸에 입력하면 이름·주소·그룹으로 거름. <code>☆ Save</code>(Alt+S) 버튼 하나만 추가해 기존의 단순한 접속 창 유지</li>
+  <li>탭 우클릭 "세션으로 저장", 세션으로 연 탭에는 세션 이름 표시</li>
+  <li>세션 관리 창(Ctrl+Shift+H, 탭 바 ★): 찾기·추가·복제·삭제·편집(입력하면 바로 저장), Enter 접속, 그룹 전체 열기</li>
+  <li>가져오기·내보내기: PuTTY 레지스트리 세션(SSH/Telnet, CP949는 EUC-KR로), JSON 파일(비밀번호 제외), 중복은 건너뜀</li>
+  <li>Go 테스트 추가(저장/수정/삭제, 서버 설정 보존, 예전 설정 이어받기, 내보내기/가져오기, PuTTY 변환). 격리된 AppData로 띄운 테스트 인스턴스에서 화면 확인</li>
+  <li>README, F1 도움말(한/영) 갱신</li>
+</ul>
+
+<h2>2026-10-09 — 내장 스크립트 언어 검토</h2>
+<ul>
+  <li>현재 매크로 기능을 확장하는 방향으로 Lua(gopher-lua)를 우선 추천. 순수 Go 구현이라 단일 실행 파일 배포에 맞고, 스크립트에 명시적인 터미널 API만 노출해 안전 범위를 통제할 수 있음</li>
+  <li>gopher-lua는 Lua 5.1 호환이므로 Lua 5.5 호환을 뜻하지 않음. 5.5 문법·기능이 필요하면 별도 VM 검토가 필요. 더 강한 제한과 결정성이 중요하면 Starlark도 대안. Python은 런타임·배포 부담 때문에 우선순위가 낮음</li>
+  <li>Racket·Scheme·Common Lisp를 비교: Scheme은 s7 같은 임베딩 지향 구현이 후보지만 Cgo와 Windows 빌드가 필요. Racket은 런타임·배포 부담, Common Lisp는 ECL 등 네이티브 런타임 통합 부담이 있어 Go 단일 실행 파일 배포에는 덜 적합</li>
+  <li>gopher-lua와 Starlark 모두 Go에 내장되는 라이브러리라 별도 런타임 배포는 없음. 실행 파일 증가량은 실제 링크 결과로, 메모리는 동일한 스크립트·API 작업 부하로 측정해야 하며 일반적인 고정 수치나 유의미한 우열을 단정하지 않음</li>
+  <li>QBASIC 포팅은 레트로 터미널과 잘 어울리지만, 전체 호환 인터프리터 구현은 문법·런타임 범위가 커 유지보수 부담이 큼. 실제 호환이 목적이 아니라면 SEND·WAITFOR 등 터미널 자동화에 필요한 제한된 BASIC 문법만 만드는 선택지로 평가</li>
+  <li>GW-BASIC도 같은 맥락으로 검토: DOS 시대 동작·환경까지 호환하려면 범위가 커 Go 앱에 바로 내장하기 어렵고, 터미널 자동화용 제한 문법을 새로 정의하는 편이 현실적</li>
+  <li>Lua와 Starlark를 모두 내장하는 것은 Go 구현끼리라 기술적으로 가능하지만, 공통 터미널 API·취소·시간 제한을 공유하고 엔진별 테스트·문서·예제를 관리해야 함. 초기에는 하나로 시작한 뒤 수요가 확인되면 두 번째 엔진 추가를 권장</li>
+  <li>초기 스크립트 엔진은 gopher-lua 하나로 시작하고 필요한 표준 라이브러리와 터미널 API만 노출하는 방안을 권장. 이는 샌드박스·제품 범위 축소에 유리하지만 Lua 5.5 호환을 제공하는 것은 아님</li>
+</ul>
+
+<h2>2026-10-08 — 이전 릴리스 정리</h2>
+<ul>
+  <li>GitHub 릴리스 V0.2.0, V0.1.8 삭제(첨부 exe 포함). 남은 릴리스는 최신 V0.2.1 하나</li>
+  <li>git 태그(v0.1.8, v0.2.0, v0.2.1)는 그대로 둠. 최신 다운로드 링크(releases/latest/download/choboterm.exe) 정상(200) 확인</li>
+</ul>
+
+<h2>2026-10-08 — V0.2.1 릴리스</h2>
+<ul>
+  <li>버전 0.2.0 → 0.2.1 (main.go, wails.json, README.md). 포함: 서버별 색 테마, 허큘리스 테마 2종, 반투명(창 전체 / 배경만, 배경만에서 GPU 선택)</li>
+  <li>go test 통과, wails build -clean. 사용자가 release\choboterm.exe를 실행 중이라 release 폴더 복사는 건너뛰고(build.bat 3단계) build\bin\choboterm.exe를 릴리스에 올림</li>
+  <li>main 푸시 후 GitHub 릴리스 v0.2.1 생성(choboterm.exe, THIRD_PARTY_NOTICES.txt). 새 외부 모듈 없음</li>
+</ul>
+
+<h2>2026-10-08 — 배경만 반투명에서 GPU 선택</h2>
+<ul>
+  <li>질문: 앱을 두 개 띄우면 두 번째는 CPU만 쓰나 → 아님. debug.log상 GPU는 정상 감지, 배경만 반투명(settings.json 공유) 때문에 의도적으로 DOM 렌더러를 쓴 것. 먼저 떠 있던 옛 빌드는 반투명을 몰라 GPU 사용</li>
+  <li>설정에 "배경만에서도 GPU로 그리기" 체크박스(glassGpu, 기본 꺼짐) 추가. 배경만일 때만 선택 가능, 바꾸면 바로 미리 보기·취소 시 원복. chooseRenderer가 glassOn() && !gpu일 때만 DOM 렌더러</li>
+  <li>배경만 선택지의 "뒤가 흐리게" 문구 정정(흐림 없음), 안내 문구에 GPU 여부 표시. README 갱신</li>
+  <li>실제 exe: 배경만 50% + GPU → 창 제목 GPU, 배경 비침(83,0,0) 동일, 탭 바·접속 창 불투명. 글자 확대 비교 시 GPU·브라우저 모두 읽기 좋음. settings.json 백업·원복, 띄운 PID만 종료</li>
+</ul>
+
+<h2>2026-10-08 — 반투명 버그 2건 수정</h2>
+<ul>
+  <li>버그 1: 창 전체 반투명이면 설정·질문 팝업까지 비침 → 레이어드 창(SetLayeredWindowAttributes) 대신 화면 안에서 #tabbar · #terms에만 CSS opacity 적용. 팝업·메뉴·검색 막대는 밖에 있어 불투명. 제목 표시줄은 Windows가 그려 불투명</li>
+  <li>버그 2: 배경만 반투명이 적용 안 됨 → 사용자 debug.log 확인 결과 앱을 다시 시작하지 않아 꺼진 상태(glass=false)였음. 창을 항상 투명 가능하게 만들고(WebviewIsTransparent + WindowIsTranslucent, BackdropType None, 배경 alpha 0) 끄기일 때는 화면이 불투명 배경을 칠하도록 바꿔, 두 방식 모두 다시 시작 없이 바로 적용</li>
+  <li>배경만일 때만 WebGL을 내리고 DOM 렌더러로 전환(chooseRenderer), allowTransparency도 테마보다 먼저 바꿔 즉시 반영. 배경만에서 보이던 xterm 기본 스크롤바 숨김. Go의 레이어드 창 코드(translucency.go, setWindowAlpha)와 BackgroundTranslucent 제거</li>
+  <li>실제 exe 시험(settings.json 백업·원복, 띄운 PID만 종료, 빨간 창을 뒤에 둠): 창 전체 50% → 탭 바가 빨강과 정확히 반반, 접속 창은 (240,240,240) 불투명. 배경만 50% → 탭 바·접속 창 불투명, 터미널 배경으로 빨강이 비침. 끄기 → 검정. 설정에서 모드를 바꾸면 바로 바뀌고 취소하면 원래대로(모의 화면)</li>
+</ul>
+
+<h2>2026-10-08 — 반투명 (창 전체 / 배경만)</h2>
+<ul>
+  <li>설정 "색 · 커서"에 반투명(끄기 / 창 전체 / 배경만)과 불투명도 막대(20~100%) 추가. 막대·선택을 바꾸는 동안 바로 미리 보기, 취소하면 저장된 값으로 되돌림</li>
+  <li>창 전체: WS_EX_LAYERED + SetLayeredWindowAttributes(window_windows.go setWindowAlpha), 100%면 레이어드 해제. 시작 시(domReady)에도 적용</li>
+  <li>배경만: 시작할 때 WebviewIsTransparent + WindowIsTranslucent(BackdropType None)로 창을 만들고, 창마다 테마 배경을 rgba로 한 번만 칠함(xterm 배경·뷰포트는 투명, 여백은 창 안 padding). 다시 시작해야 켜짐. Acrylic은 비활성 창에서 회색으로 바뀌어 쓰지 않음. WebGL은 투명 배경에서 글자가 거칠어 이 방식에서만 DOM 렌더러 사용</li>
+  <li>실제 exe로 시험: settings.json 백업 후 모드별로 실행·화면 캡처·픽셀 측정, 끝나면 원복(바이트 단위 일치 확인). 창 전체 50% → 뒤 색이 절반, 배경만 20/50/80% → 뒤가 80/50/20% 비침(133/83/33). 시험 창은 키보드를 뺏지 않게 SWP_NOACTIVATE로 위에 두고, 띄운 PID만 종료</li>
+  <li>찾아 고친 것: 새 탭에 반투명 배경이 안 칠해짐(createTab에서 applyLook), xterm.css의 검은 뷰포트 배경</li>
+  <li>기본값 off / 85% — 설정 테스트에 추가. README·도움말·소개 페이지 갱신</li>
+</ul>
+
+<h2>2026-10-08 — 허큘리스 테마 2종</h2>
+<ul>
+  <li>허큘리스(검은 배경 #000 · 녹색 글자 #33ff33), 허큘리스 반전(녹색 배경 #33cc33 · 검은 글자) 추가. 16색을 모두 녹색 계열 밝기 차이로 만들어, htop·mc처럼 배경색을 쓰는 화면도 읽히게 함. 테마는 12가지</li>
+  <li>Edge(Playwright)로 ANSI 16색과 색 배경 줄을 두 테마에서 확인. README·소개 페이지 갱신</li>
+</ul>
+
+<h2>2026-10-08 — 서버별 색 테마</h2>
+<ul>
+  <li>탭 우클릭 메뉴에 "색 테마 (이 서버)" 하위 메뉴 추가(마우스를 올리거나 클릭하면 열림): 기본값(설정 따름) + 10가지 테마, 색 견본과 현재 선택 ✓ 표시</li>
+  <li>고른 테마는 접속 기록(hosts.json)의 그 호스트+포트 항목에 theme으로 저장. Go에서 탭의 실제 접속 대상(t.host/t.port)으로 찾으므로 ssh 명령형 입력·로컬 셸(포트 0)도 같은 키. 재접속·복제·분할·새 탭 접속 때 TabTheme으로 불러와 적용, 같은 서버의 다른 탭에도 즉시 반영. 접속한 적 없는 탭은 그 탭에만 적용</li>
+  <li>창마다 배경색을 따로 칠하고, 터미널 주변 여백은 지금 탭의 테마 배경을 따름(paintMargin). history_store에 historyEntry / updateHistoryEntry 공통 함수로 정리, addHistory가 theme 유지</li>
+  <li>테스트: TestTabThemeSavedPerHost. Edge(Playwright)로 busan 두 창 + seoul 탭에서 busan에만 Dracula 적용, 새 busan 탭도 Dracula 확인. README·도움말·소개 페이지 갱신</li>
+</ul>
+
+<h2>2026-10-08 — V0.2.0 릴리스</h2>
+<ul>
+  <li>버전 0.1.8 → 0.2.0 (main.go, wails.json, README.md). 포함: 분할 창, 색 테마·커서·스크롤백, SSH 에이전트(OpenSSH·Pageant)·암호 걸린 키, OTP 등 keyboard-interactive 질문, 로컬 셸(cmd·PowerShell·WSL)</li>
+  <li>build.bat(go test → wails build -clean → release 복사) 통과, release\choboterm.exe 갱신</li>
+  <li>main 푸시 후 GitHub 릴리스 v0.2.0 생성(choboterm.exe, THIRD_PARTY_NOTICES.txt). 새 외부 모듈 없음(ssh/agent는 x/crypto에 포함)이라 서드파티 고지는 그대로</li>
+</ul>
+
+<h2>2026-10-08 — 예시 호스트 이름 pusan → busan</h2>
+<ul>
+  <li>README, 소개 페이지, 도움말, 접속 창 툴팁, 설정 미리 보기, 코드 주석, 테스트(sshconfig_test.go 등)의 예시 이름을 busan으로 변경 (29곳). 이전 작업 기록은 그대로 둠</li>
+  <li>go test, tsc 통과</li>
+</ul>
+
+<h2>2026-10-08 — 로컬 셸일 때 접속 창 입력칸 비활성화</h2>
+<ul>
+  <li>Host가 cmd · powershell · pwsh · wsl이면 Port / Login / Pass / Code를 비활성화(회색). 서버 이름으로 바꾸면 다시 활성화. 입력 중, ▼ 목록 선택, 탭 전환 모두 updateProto에서 처리</li>
+  <li>목록에서 로컬 셸을 고르면 Pass 대신 Connect 버튼으로 포커스 이동(focusAfterHost)</li>
+  <li>Edge(Playwright)로 cmd → 비활성, pusan → 활성, 목록에서 powershell 선택 후 Enter로 접속 확인. README 갱신</li>
+</ul>
+
+<h2>2026-10-08 — 소개 페이지(docs/index.html)에 새 기능 반영</h2>
+<ul>
+  <li>기능 카드 추가·수정: 탭 · 분할 창, 로컬 셸(cmd · powershell · wsl), SSH 키 · 에이전트 · OTP, 색 테마</li>
+  <li>단축키 표: Ctrl+Shift+&#92; / Ctrl+Shift+- 분할, Alt+방향키 창 이동, Ctrl+Shift+W 설명, 설정에 색 테마·커서 추가</li>
+  <li>주의: 이 기능들은 아직 릴리스 전(최신 다운로드는 V0.1.8). 푸시하면 GitHub Pages에 바로 반영되므로 릴리스와 맞춰 푸시할 것</li>
+  <li>Edge로 페이지 렌더링 확인</li>
+</ul>
+
+</body>
+</html>
