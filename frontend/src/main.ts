@@ -1787,10 +1787,7 @@ function scriptBox(t: Tab) {
     x.type = 'button';
     x.textContent = '✕';
     x.title = '닫기';
-    x.addEventListener('click', () => {
-        if (t.script?.console) StopScript(t.id); // closing the console ends it
-        closeScriptBox(t);
-    });
+    x.addEventListener('click', () => closeConsole(t));
     top.append(head, x);
     const body = document.createElement('div');
     body.className = 'lines';
@@ -1805,10 +1802,17 @@ function scriptBox(t: Tab) {
 
 let evalSeq = 0;
 
-/** Ctrl+Shift+K / tab menu: opens the tab's Lua console, or goes to it if it is open. */
+/** Ctrl+Shift+K / tab menu: opens the tab's Lua console, or closes it if it is open. */
 function showConsole(t: Tab) {
-    if (t.script?.console) return t.scriptBox?.input?.focus();
+    if (t.script?.console) return closeConsole(t);
     runScript(t, () => StartConsole(t.id));
+}
+
+/** Closes the script box; a console ends with it, stopping any code it runs. */
+function closeConsole(t: Tab) {
+    if (t.script?.console) StopScript(t.id);
+    closeScriptBox(t);
+    focusActive();
 }
 
 /** Turns the script box into a console: an input line under the output. */
