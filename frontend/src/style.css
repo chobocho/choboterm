@@ -1150,6 +1150,37 @@ body.resizing-col #terms .term {
     outline: 1px solid #0078d7;
 }
 
+/* ---- Image viewer ---- */
+
+#imgStage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: auto;
+    border: 1px solid #adadad;
+    /* A checkerboard shows transparent parts. */
+    background: #fff repeating-conic-gradient(#e6e6e6 0 25%, #fff 0 50%) 0 0 / 16px 16px;
+}
+
+#imgStage.pannable {
+    cursor: grab;
+}
+
+#imgEl {
+    margin: auto; /* centred, and still scrollable to the edges when bigger */
+    flex: none;
+    image-rendering: auto;
+}
+
+#imgEl:not([src]) {
+    display: none;
+}
+
+#imgInfo {
+    color: #555;
+    font-size: 12px;
+}
+
 .viewer .toolbar button {
     height: 22px;
     padding: 0 12px;

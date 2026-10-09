@@ -58,6 +58,20 @@ func TestFileViewOverSFTP(t *testing.T) {
 	if _, err := a.FileView(1, wd+"/missing.txt", 0); err == nil {
 		t.Fatal("viewing a missing file succeeded")
 	}
+
+	// Images come whole or not at all.
+	defer func(old int) { imageLimit = old }(imageLimit)
+	imageLimit = 4096
+	r, err = a.FileImage(1, wd+"/small.txt", 6)
+	if err != nil || r.Truncated || decode(r) != "안녕" {
+		t.Fatalf("small image: %+v, %v", r, err)
+	}
+	if _, err := a.FileImage(1, wd+"/big.txt", int64(len(big))); err == nil {
+		t.Fatal("an image over the limit was opened")
+	}
+	if _, err := a.FileImage(1, wd+"/big.txt", 10); err == nil {
+		t.Fatal("an image that grew over the limit was opened")
+	}
 }
 
 func TestEncodeText(t *testing.T) {

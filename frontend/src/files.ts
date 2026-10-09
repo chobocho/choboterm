@@ -11,12 +11,14 @@ import {
     FileStartDir,
     FileUpload,
     FileUploadPaths,
+    FileImage,
     FileView,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {EventsOn, OnFileDrop} from '../wailsjs/runtime/runtime';
 import {ask, askText} from './dialog';
 import {openViewer, viewerOpen} from './viewer';
+import {imageOpen, isImage, openImages} from './imageview';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -262,7 +264,7 @@ async function run(v: View, op: () => Promise<void>) {
         setStatus(v, String(err));
     } finally {
         setBusy(v, false);
-        if (v === current && !viewerOpen()) panel.focus();
+        if (v === current && !viewerOpen() && !imageOpen()) panel.focus();
     }
 }
 
@@ -288,10 +290,11 @@ function viewable(v: View): main.FileEntry | undefined {
     return list.length === 1 && !list[0].isDir ? list[0] : undefined;
 }
 
-/** Opens the selected file in the text viewer (edit: in edit mode). */
+/** Opens the selected file in the text viewer (edit: in edit mode), or an image in the image viewer. */
 function viewFile(v: View, edit = false) {
     const e = viewable(v);
     if (!e) return;
+    if (!edit && isImage(e.name)) return viewImages(v, e);
     const dir = v.cwd;
     const path = joinPath(dir, e.name);
     return run(v, async () => {
@@ -309,6 +312,23 @@ function viewFile(v: View, edit = false) {
             onSaved: () => views.get(v.tabId) === v && !v.busy && v.cwd === dir && load(v, dir, [e.name]),
             onClose: () => v === current && panel.focus(),
         }, edit);
+    });
+}
+
+/** Shows e in the image viewer; ← → go through the other images of the folder. */
+function viewImages(v: View, e: main.FileEntry) {
+    const dir = v.cwd;
+    const images = v.entries.filter(x => x !== UP && !x.isDir && isImage(x.name));
+    openImages({
+        host: v.heading.replace(/^.* - /, ''),
+        names: images.map(x => x.name),
+        sizes: images.map(x => x.size),
+        index: images.indexOf(e),
+        load: async (name, size) => {
+            const res = await FileImage(v.tabId, joinPath(dir, name), size);
+            return Uint8Array.from(atob(res.data), c => c.charCodeAt(0));
+        },
+        onClose: () => v === current && panel.focus(),
     });
 }
 

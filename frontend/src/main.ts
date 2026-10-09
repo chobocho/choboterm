@@ -16,6 +16,7 @@ import {askOpen} from './dialog';
 import {openSaveSession, openSessionManager, sessionManagerOpen, sessionSaveOpen} from './sessions';
 import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
+import {imageOpen} from './imageview';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
 import {themeByName, THEMES} from './themes';
@@ -2048,7 +2049,7 @@ async function toggleLog(t: Tab) {
 
 /** A window that takes all keys until it is closed. */
 function modalOpen() {
-    return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen() || askOpen() || viewerOpen() ||
+    return pasteConfirmOpen() || prefsOpen() || macrosOpen() || forwardsOpen() || askOpen() || viewerOpen() || imageOpen() ||
         authPromptOpen() || sessionSaveOpen() || sessionManagerOpen();
 }
 

@@ -40,6 +40,8 @@ export function FileDownload(arg1:number,arg2:string,arg3:number):Promise<string
 
 export function FileDownloadMany(arg1:number,arg2:string,arg3:Array<main.FileEntry>):Promise<main.DownloadResult>;
 
+export function FileImage(arg1:number,arg2:string,arg3:number):Promise<main.ViewResult>;
+
 export function FileList(arg1:number,arg2:string):Promise<Array<main.FileEntry>>;
 
 export function FileMkdir(arg1:number,arg2:string,arg3:string):Promise<void>;

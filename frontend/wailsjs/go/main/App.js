@@ -78,6 +78,10 @@ export function FileDownloadMany(arg1, arg2, arg3) {
   return window['go']['main']['App']['FileDownloadMany'](arg1, arg2, arg3);
 }
 
+export function FileImage(arg1, arg2, arg3) {
+  return window['go']['main']['App']['FileImage'](arg1, arg2, arg3);
+}
+
 export function FileList(arg1, arg2) {
   return window['go']['main']['App']['FileList'](arg1, arg2);
 }

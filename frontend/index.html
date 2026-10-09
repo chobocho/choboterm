@@ -372,6 +372,30 @@
     <li data-act="refresh">새로 고침 (F5)</li>
 </ul>
 
+<div id="imageOverlay" class="overlay modal" hidden>
+    <div class="dialog viewer imageview" id="imageView" tabindex="-1">
+        <div class="titlebar">
+            <img class="icon" src="./src/assets/icon.png" alt=""/>
+            <span class="title" id="imgTitle">이미지</span>
+            <button type="button" class="close" id="imgX" title="닫기 (Esc)">✕</button>
+        </div>
+        <div class="body">
+            <div class="toolbar">
+                <button type="button" id="imgPrev" title="이전 이미지 (← · PgUp)">◀ 이전</button>
+                <button type="button" id="imgNext" title="다음 이미지 (→ · PgDn · Space)">다음 ▶</button>
+                <button type="button" id="imgFit" title="창에 맞추기 (0 · 더블클릭)">맞춤</button>
+                <button type="button" id="imgOrig" title="원본 크기 (1 · 더블클릭)">100%</button>
+                <button type="button" id="imgZoomOut" title="축소 (- · Ctrl+휠)">−</button>
+                <button type="button" id="imgZoomIn" title="확대 (+ · Ctrl+휠)">+</button>
+                <span class="gap"></span>
+                <span id="imgInfo"></span>
+            </div>
+            <div id="imgStage"><img id="imgEl" alt="" draggable="false"/></div>
+            <div class="error" id="imgError"></div>
+        </div>
+    </div>
+</div>
+
 <div id="viewerOverlay" class="overlay modal" hidden>
     <div class="dialog viewer" id="viewer" tabindex="-1">
         <div class="titlebar">

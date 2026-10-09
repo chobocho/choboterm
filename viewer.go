@@ -15,6 +15,9 @@ import (
 // viewLimit is how much of a remote file the text viewer loads.
 var viewLimit = 10 << 20
 
+// imageLimit is the largest remote file the image viewer opens (whole files only).
+var imageLimit = 30 << 20
+
 var errViewLimit = errors.New("view limit reached")
 
 // limitWriter keeps up to max bytes and then stops the download.
@@ -64,13 +67,32 @@ func statRemote(fs RemoteFS, p string) (FileEntry, error) {
 
 // FileView downloads up to viewLimit bytes of remotePath for the text viewer.
 func (a *App) FileView(tabID int, remotePath string, size int64) (ViewResult, error) {
+	return a.readRemote(tabID, remotePath, size, viewLimit)
+}
+
+// FileImage downloads remotePath for the image viewer. Unlike text, a part
+// of an image is no use, so a file over imageLimit is refused.
+func (a *App) FileImage(tabID int, remotePath string, size int64) (ViewResult, error) {
+	tooBig := fmt.Errorf("이미지가 너무 큽니다 (%dMB까지)", imageLimit>>20)
+	if size > int64(imageLimit) {
+		return ViewResult{}, tooBig
+	}
+	r, err := a.readRemote(tabID, remotePath, size, imageLimit)
+	if err == nil && r.Truncated {
+		return ViewResult{}, tooBig // it grew since it was listed
+	}
+	return r, err
+}
+
+// readRemote downloads up to limit bytes of remotePath.
+func (a *App) readRemote(tabID int, remotePath string, size int64, limit int) (ViewResult, error) {
 	t := a.findTab(tabID)
 	if t == nil {
 		return ViewResult{}, errors.New("연결되어 있지 않습니다")
 	}
 	total := size
-	if total > int64(viewLimit) {
-		total = int64(viewLimit)
+	if total > int64(limit) {
+		total = int64(limit)
 	}
 	var st FileEntry
 	if err := t.withFS(func(fs RemoteFS) (err error) {
@@ -82,7 +104,7 @@ func (a *App) FileView(tabID int, remotePath string, size int64) (ViewResult, er
 	if st.IsDir {
 		return ViewResult{}, errors.New("폴더는 열 수 없습니다")
 	}
-	w := &limitWriter{max: viewLimit}
+	w := &limitWriter{max: limit}
 	err := t.transfer(path.Base(remotePath), total, false, func(fs RemoteFS, p *progress) error {
 		err := fs.Download(remotePath, progressWriter{w, p})
 		if w.full {
