@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-10 — V0.2.13 릴리스</h2>
+<ul>
+  <li>버전 0.2.13(시리얼 포트 접속). build.bat(테스트 통과) + build_linux.sh(WSL에 docker.io 잠시 설치, Ubuntu 22.04 컨테이너에서 시리얼 의사 터미널 테스트 포함 통과)로 exe · tar.gz 빌드</li>
+  <li>main 푸시(0503004), GitHub 릴리스 v0.2.13(두 파일, 최신 링크 200), V0.2.12 릴리스 삭제(태그 유지) → 릴리스는 V0.2.13 하나</li>
+  <li>아키텍처 그림 한국어·영어 V0.2.13: serial.go(Win: COM · Linux: tty)와 "이 PC" 상자의 시리얼 NEW, main.ts(접속 창 Port ↔ Baud) NEW, 지난 NEW(Lua 콘솔) 제거. filexfer · zmodem · serial을 한 줄에 배치, 화살표에 COM 표시. Edge 헤드리스로 그려 확인</li>
+  <li>README · README.ko 버전과 소개 문구(시리얼 터미널), 소개 페이지에 시리얼 포트 기능(한·영)과 그림 설명 추가. Pages 반영 확인</li>
+  <li>정리: WSL의 docker.io·데이터 삭제, buildin의 리눅스 바이너리 삭제</li>
+</ul>
+
 <h2>2026-10-10 — 시리얼 포트 지원</h2>
 <ul>
   <li>Host에 COM3(Linux는 /dev/ttyUSB0)를 쓰면 시리얼 포트를 탭에서 엶. Port 칸이 속도(baud, 기본 115200)가 되고 라벨도 Baud로 바뀜. 이름 뒤에 "9600 7E1 rtscts"처럼 속도·데이터 비트·패리티(N/E/O)·정지 비트·흐름 제어(rtscts/xonxoff)를 쓸 수 있음. Login/Pass/Jump는 비활성화</li>
