@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-10 — 드래그 선택이 복사되지 않던 문제</h2>
+<ul>
+  <li>증상: cmd 탭에서 마우스로 드래그해도 클립보드에 복사 안 됨. ConPTY 시작 출력 확인(?9001h ?1004h만, 마우스 추적 모드 아님) → 추측 대신 디버그 로그 추가(mouseup 시 탭·선택 길이·마우스 모드, 클립보드 결과, 선택 변경)</li>
+  <li>사용자 재현 로그: 선택은 됨(597자, 471자)인데 mouseup이 없음. 아래에서 위로 길게 끌어 터미널 밖(탭 줄 등)에서 놓으면 pane의 mouseup이 안 옴 → 어떤 탭에서나 생길 수 있는 문제</li>
+  <li>수정: pane에서 드래그를 시작하면 버튼을 놓는 곳과 상관없이 window에서 mouseup을 받아 복사. 디버그 로그는 유지</li>
+  <li>새 exe는 build\bin(debug.on 함께)에 둠. release\choboterm.exe는 사용자가 실행 중이라 덮어쓰지 않음</li>
+</ul>
+
 <h2>2026-10-10 — 영문 README · 소개 페이지 영어 지원</h2>
 <ul>
   <li>README.md를 영어로(그림은 docs/architecture_en.svg), 기존 한국어는 README.ko.md로 옮기고 서로 링크. 앱 화면 문구는 i18n_en.json의 영어 표현과 맞춤</li>
