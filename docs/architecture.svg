@@ -16,7 +16,7 @@
 
   <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.8 · <tspan class="new">NEW</tspan> = 이번 버전에 추가</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.9</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -42,7 +42,7 @@
   <text x="47" y="306" class="sub">텍스트 뷰어·편집기 (CodeMirror), 이미지</text>
   <text x="47" y="347" class="title">Lua 콘솔 · 스크립트 상자</text>
   <text x="47" y="364" class="sub">main.ts — 입력 · 출력 · 열기 · 저장</text>
-  <text x="47" y="405" class="title">containers.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">도커 컨테이너 창 (셸 · 로그 · 포트 열기)</text>
   <text x="47" y="463" class="title">sessions · prefs · macros · forwards</text>
   <text x="47" y="480" class="sub">세션 관리, 설정, 매크로, 포트 포워딩 창</text>
@@ -100,8 +100,8 @@
   <text x="702" y="297" text-anchor="middle" class="sub">zmodem_app.go</text>
   <text x="702" y="313" text-anchor="middle" class="sub">rz / sz</text>
 
-  <rect x="415" y="339" width="340" height="50" rx="5" class="item" stroke="#c5221f" stroke-width="1.5"/>
-  <text x="427" y="358" class="title">docker.go <tspan class="new">NEW</tspan> — 컨테이너 목록 · 시작/중지 · exec · logs</text>
+  <rect x="415" y="339" width="340" height="50" rx="5" class="item" stroke="#2f8f5b"/>
+  <text x="427" y="358" class="title">docker.go — 컨테이너 목록 · 시작/중지 · exec · logs</text>
   <text x="427" y="377" class="sub">서버: 같은 SSH 접속에 세션 추가 · PC: ConPTY · podman 대체</text>
 
   <rect x="415" y="399" width="340" height="94" rx="5" class="item" stroke="#2f8f5b"/>
@@ -132,7 +132,7 @@
   <text x="825" y="238" class="sub">포트 포워딩 -L · -R · -D</text>
   <text x="825" y="258" class="sub">Zmodem (rz / sz)</text>
   <text x="825" y="278" class="sub">CP949 · UTF-8 서버</text>
-  <text x="825" y="298" class="sub">Docker · podman <tspan class="new">NEW</tspan></text>
+  <text x="825" y="298" class="sub">Docker · podman</text>
   <rect x="822" y="312" width="156" height="46" rx="5" fill="#ffffff" stroke="#80868b" stroke-dasharray="4 3"/>
   <text x="900" y="331" text-anchor="middle" class="sub">점프 호스트(배스천) 경유</text>
   <text x="900" y="348" text-anchor="middle" class="sub">ProxyJump · ssh -J</text>
@@ -141,5 +141,5 @@
   <text x="825" y="412" class="head" fill="#3c4043">로컬 프로그램</text>
   <text x="825" y="432" class="sub">cmd · PowerShell</text>
   <text x="825" y="450" class="sub">pwsh · WSL</text>
-  <text x="825" y="468" class="sub">Docker Desktop <tspan class="new">NEW</tspan></text>
+  <text x="825" y="468" class="sub">Docker Desktop</text>
 </svg>
