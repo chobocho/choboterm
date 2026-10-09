@@ -339,6 +339,7 @@ export namespace main {
 	    logAuto: boolean;
 	    logDir: string;
 	    logRaw: boolean;
+	    logTime: boolean;
 	    highlight: Highlight;
 	    consoleHeight: number;
 	    macros: Macro[];
@@ -366,6 +367,7 @@ export namespace main {
 	        this.logAuto = source["logAuto"];
 	        this.logDir = source["logDir"];
 	        this.logRaw = source["logRaw"];
+	        this.logTime = source["logTime"];
 	        this.highlight = this.convertValues(source["highlight"], Highlight);
 	        this.consoleHeight = source["consoleHeight"];
 	        this.macros = this.convertValues(source["macros"], Macro);

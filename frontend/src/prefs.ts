@@ -32,6 +32,7 @@ const autoReconnect = $<HTMLInputElement>('pReconnect');
 const pasteConfirm = $<HTMLInputElement>('pPaste');
 const logAuto = $<HTMLInputElement>('pLogAuto');
 const logPlain = $<HTMLInputElement>('pLogPlain');
+const logTime = $<HTMLInputElement>('pLogTime');
 const hlOn = $<HTMLInputElement>('pHl');
 const hlRed = $<HTMLInputElement>('pHlRed');
 const hlYellow = $<HTMLInputElement>('pHlYellow');
@@ -89,6 +90,7 @@ export function openPrefs(apply: () => void, close: () => void) {
     pasteConfirm.checked = !settings.pasteNoConfirm;
     logAuto.checked = settings.logAuto;
     logPlain.checked = !settings.logRaw;
+    logTime.checked = settings.logTime;
     logDir.value = settings.logDir;
     hlOn.checked = settings.highlight.on;
     hlRed.value = settings.highlight.red;
@@ -183,6 +185,7 @@ function apply() {
         s.pasteNoConfirm = !pasteConfirm.checked;
         s.logAuto = logAuto.checked;
         s.logRaw = !logPlain.checked;
+        s.logTime = logTime.checked;
         s.logDir = logDir.value.trim();
         s.highlight = main.Highlight.createFrom({
             on: hlOn.checked,

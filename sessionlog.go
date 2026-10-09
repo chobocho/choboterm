@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -21,6 +22,16 @@ type sessionLog struct {
 	f     *os.File
 	path  string
 	plain *plainText // nil: the output is written as received (with escape codes)
+	stamp bool       // each line starts with the time it began to arrive
+	bol   bool       // raw output: the next byte starts a line
+}
+
+// logNow is the clock for log timestamps (tests replace it).
+var logNow = time.Now
+
+// logStamp is the prefix of a log line: "[2026-10-09 21:30:15.123] ".
+func logStamp(t time.Time) string {
+	return "[" + t.Format("2006-01-02 15:04:05.000") + "] "
 }
 
 // logsDir is the default folder for session logs.
@@ -49,9 +60,9 @@ func logFileName(host string, port int, at time.Time) string {
 	return fmt.Sprintf("%s_%s.log", host, at.Format("20060102_150405"))
 }
 
-// start opens a new log file in dir. It returns the path, or "" with no
-// error when logging is already on.
-func (l *sessionLog) start(dir, host string, port int, plain bool) (string, error) {
+// start opens a new log file in dir; stamp puts the time before each line.
+// It returns the path, or "" with no error when logging is already on.
+func (l *sessionLog) start(dir, host string, port int, plain, stamp bool) (string, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.f != nil {
@@ -71,8 +82,9 @@ func (l *sessionLog) start(dir, host string, port int, plain bool) (string, erro
 	l.f, l.path = f, p
 	l.plain = nil
 	if plain {
-		l.plain = &plainText{}
+		l.plain = &plainText{stamp: stamp}
 	}
+	l.stamp, l.bol = stamp, true
 	return p, nil
 }
 
@@ -107,10 +119,35 @@ func (l *sessionLog) write(data []byte) {
 	}
 	if l.plain != nil {
 		data = l.plain.feed(data)
+	} else if l.stamp {
+		data = l.stampRaw(data)
 	}
 	if len(data) > 0 {
 		_, _ = l.f.Write(data)
 	}
+}
+
+// stampRaw puts the time at the start of each line of raw output.
+func (l *sessionLog) stampRaw(data []byte) []byte {
+	out := make([]byte, 0, len(data)+32)
+	stamp := ""
+	for len(data) > 0 {
+		if l.bol {
+			if stamp == "" {
+				stamp = logStamp(logNow())
+			}
+			out = append(out, stamp...)
+			l.bol = false
+		}
+		i := bytes.IndexByte(data, '\n')
+		if i < 0 {
+			return append(out, data...)
+		}
+		out = append(out, data[:i+1]...)
+		data = data[i+1:]
+		l.bol = true
+	}
+	return out
 }
 
 // mark writes a line such as "===== 2026-10-03 19:00:00 접속: ... =====",
@@ -124,11 +161,12 @@ func (l *sessionLog) mark(msg string) {
 	var b []byte
 	if l.plain != nil {
 		b = l.plain.rest() // ends the current line, if any
-	} else if st, err := l.f.Stat(); err == nil && st.Size() > 0 {
+	} else if st, err := l.f.Stat(); err == nil && st.Size() > 0 && !(l.stamp && l.bol) {
 		b = []byte("\r\n") // raw output may stop in the middle of a line
 	}
 	line := fmt.Sprintf("===== %s %s =====\r\n", time.Now().Format("2006-01-02 15:04:05"), msg)
 	_, _ = l.f.Write(append(b, line...))
+	l.bol = true
 }
 
 // plainText turns terminal output into readable text: escape sequences and
@@ -136,6 +174,8 @@ func (l *sessionLog) mark(msg string) {
 // applied to the current line (so progress bars keep only their last state).
 // A line is written once it ends with a line feed.
 type plainText struct {
+	stamp   bool      // lines start with the time their first character came
+	started time.Time // when the current line got its first character
 	state   int
 	line    []rune
 	col     int
@@ -236,6 +276,9 @@ func (p *plainText) rune(r rune, out []byte) []byte {
 
 // put writes r at the cursor, overwriting what is there.
 func (p *plainText) put(r rune) {
+	if p.stamp && p.started.IsZero() {
+		p.started = logNow()
+	}
 	if p.col < len(p.line) {
 		p.line[p.col] = r
 	} else {
@@ -275,6 +318,14 @@ func (p *plainText) csi(final rune) {
 func (p *plainText) flush() []byte {
 	s := strings.TrimRight(string(p.line), " ")
 	p.line, p.col = p.line[:0], 0
+	if p.stamp {
+		at := p.started
+		if at.IsZero() {
+			at = logNow() // an empty line
+		}
+		p.started = time.Time{}
+		s = logStamp(at) + s
+	}
 	return []byte(s + "\r\n")
 }
 
@@ -296,7 +347,7 @@ func (t *tab) startLog() (string, error) {
 	host, port := t.host, t.port
 	t.mu.Unlock()
 	s := loadSettings()
-	p, err := t.log.start(s.LogDir, host, port, !s.LogRaw)
+	p, err := t.log.start(s.LogDir, host, port, !s.LogRaw, s.LogTime)
 	if err != nil || p == "" {
 		return t.log.active(), err
 	}

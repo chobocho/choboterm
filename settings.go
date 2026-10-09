@@ -41,6 +41,8 @@ type Settings struct {
 	LogDir string `json:"logDir"`
 	// LogRaw keeps escape codes in session logs instead of plain text.
 	LogRaw bool `json:"logRaw"`
+	// LogTime starts each line of a session log with the time it arrived.
+	LogTime bool `json:"logTime"`
 	// Highlight colours keywords in the output.
 	Highlight Highlight `json:"highlight"`
 	// ConsoleHeight is the Lua console's height in pixels, set by dragging
@@ -98,7 +100,7 @@ func defaultSettings() Settings {
 		Theme: "choboterm", CursorStyle: "block", CursorBlink: true, Scrollback: 5000,
 		Translucency: "off", Opacity: 85,
 		KeepAlive: 60, AutoReconnect: true, Macros: []Macro{},
-		Highlight: defaultHighlight,
+		Highlight: defaultHighlight, LogTime: true,
 	}
 }
 

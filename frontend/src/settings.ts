@@ -20,6 +20,7 @@ export let settings: main.Settings = main.Settings.createFrom({
     logAuto: false,
     logDir: '',
     logRaw: false,
+    logTime: true,
     consoleHeight: 0,
     highlight: {
         on: true,

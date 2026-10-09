@@ -71,7 +71,7 @@ func readLog(t *testing.T, path, want string) string {
 func TestSessionLogFollowsOutput(t *testing.T) {
 	useTempSettings(t)
 	dir := filepath.Join(t.TempDir(), "logs")
-	if err := updateSettings(func(s *Settings) { s.LogDir = dir }); err != nil {
+	if err := updateSettings(func(s *Settings) { s.LogDir, s.LogTime = dir, false }); err != nil {
 		t.Fatal(err)
 	}
 	var changed []string
@@ -117,7 +117,7 @@ func TestSessionLogFollowsOutput(t *testing.T) {
 func TestSessionLogRawKeepsEscapes(t *testing.T) {
 	useTempSettings(t)
 	dir := t.TempDir()
-	if err := updateSettings(func(s *Settings) { s.LogDir, s.LogRaw = dir, true }); err != nil {
+	if err := updateSettings(func(s *Settings) { s.LogDir, s.LogRaw, s.LogTime = dir, true, false }); err != nil {
 		t.Fatal(err)
 	}
 	var changed []string
@@ -146,5 +146,44 @@ func TestSessionLogRawKeepsEscapes(t *testing.T) {
 	}
 	if len(changed) != 2 || changed[1] != "" {
 		t.Fatalf("log:changed events %q", changed)
+	}
+}
+
+// fakeClock makes logNow return the times given, one per call, then the last.
+func fakeClock(t *testing.T, times ...time.Time) {
+	old := logNow
+	t.Cleanup(func() { logNow = old })
+	logNow = func() time.Time {
+		at := times[0]
+		if len(times) > 1 {
+			times = times[1:]
+		}
+		return at
+	}
+}
+
+func TestLogTimestamps(t *testing.T) {
+	t1 := time.Date(2026, 10, 9, 21, 30, 15, 123e6, time.Local)
+	t2 := t1.Add(5 * time.Second)
+	t3 := t2.Add(time.Minute)
+	s1, s2, s3 := "[2026-10-09 21:30:15.123] ", "[2026-10-09 21:30:20.123] ", "[2026-10-09 21:31:20.123] "
+
+	// Plain text: a line gets the time its first character came, not when it ended.
+	fakeClock(t, t1, t2, t3)
+	p := &plainText{stamp: true}
+	got := string(p.feed([]byte("$ make"))) // t1: the prompt line starts
+	got += string(p.feed([]byte("\r\n\r\nok\r\n")))
+	if want := s1 + "$ make\r\n" + s2 + "\r\n" + s3 + "ok\r\n"; got != want {
+		t.Errorf("plain:\n got %q\nwant %q", got, want)
+	}
+
+	// Raw output: the time goes in front of each line, also across chunks.
+	fakeClock(t, t1, t2)
+	l := &sessionLog{stamp: true, bol: true}
+	raw := string(l.stampRaw([]byte("\x1b[31mred\x1b[0m\r\nmo")))
+	raw += string(l.stampRaw([]byte("re\r\n")))
+	raw += string(l.stampRaw([]byte("last")))
+	if want := s1 + "\x1b[31mred\x1b[0m\r\n" + s1 + "more\r\n" + s2 + "last"; raw != want {
+		t.Errorf("raw:\n got %q\nwant %q", raw, want)
 	}
 }
