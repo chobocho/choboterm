@@ -324,8 +324,11 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
 
     // Like PuTTY: selecting with the mouse copies, right-click pastes.
     pane.addEventListener('mouseup', ev => {
-        if (ev.button === 0) copySelection(t);
+        if (ev.button !== 0) return;
+        dbg(`tab ${t.id} (${t.proto}) mouseup: selection ${t.term.getSelection().length} chars, mouse mode ${term.modes.mouseTrackingMode}`);
+        copySelection(t);
     });
+    term.onSelectionChange(() => dbg(`tab ${t.id} selection ${term.getSelection().length} chars`));
     pane.addEventListener('contextmenu', ev => {
         ev.preventDefault();
         // Programs using the mouse (mc, htop...) get the click; Shift+right-click still pastes.
@@ -654,7 +657,11 @@ termsEl.addEventListener('wheel', ev => {
 
 function copySelection(t: Tab) {
     const text = t.term.getSelection();
-    if (text) ClipboardSetText(text);
+    if (text) {
+        ClipboardSetText(text)
+            .then(ok => dbg(`clipboard set ${text.length} chars: ${ok}`))
+            .catch(e => dbg(`clipboard set failed: ${e}`));
+    }
 }
 
 async function pasteText(t: Tab, text: string) {
