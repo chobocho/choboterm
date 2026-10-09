@@ -185,9 +185,15 @@ html, body {
     cursor: ns-resize;
 }
 
+/* Only the output shrinks when the console gets smaller: the heading and the input line keep their size. */
 .script-box.console .lines {
     flex: 1 1 auto;
-    min-height: 60px;
+    min-height: 3em;
+}
+
+.script-box.console .top,
+.script-box.console .input {
+    flex-shrink: 0;
 }
 
 .script-box .in {

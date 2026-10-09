@@ -1779,6 +1779,7 @@ function consoleBox(t: Tab) {
     input.addEventListener('keydown', ev => consoleKey(t, box, ev));
     box.el.appendChild(input);
     box.input = input;
+    requestAnimationFrame(() => consoleMinHeight(box.el));
     box.stop = stop;
     return box;
 }
@@ -1791,7 +1792,7 @@ function resizeConsole(el: HTMLElement, ev: MouseEvent) {
     const startH = el.offsetHeight;
     const maxH = el.parentElement!.clientHeight * 0.8;
     const move = (e: MouseEvent) => {
-        el.style.height = `${Math.max(100, Math.min(maxH, startH + startY - e.clientY))}px`;
+        el.style.height = `${Math.min(maxH, startH + startY - e.clientY)}px`; // the CSS min-height keeps the input whole
     };
     const up = () => {
         window.removeEventListener('mousemove', move);
@@ -1806,6 +1807,15 @@ function fitInput(input: HTMLTextAreaElement) {
     input.style.height = 'auto';
     input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
     input.style.overflowY = input.scrollHeight > 120 ? 'auto' : 'hidden';
+    consoleMinHeight(input.parentElement as HTMLElement);
+}
+
+/** The console can't get smaller than its heading, the input line and three lines of output. */
+function consoleMinHeight(el: HTMLElement) {
+    const part = (sel: string) => (el.querySelector(sel) as HTMLElement | null)?.offsetHeight ?? 0;
+    const lines = el.querySelector('.lines') as HTMLElement;
+    const linesMin = parseFloat(getComputedStyle(lines).minHeight) + 8; // + its padding
+    el.style.minHeight = `${part('.top') + part('.input') + linesMin + 2}px`; // + the border
 }
 
 function consoleKey(t: Tab, box: ScriptBox, ev: KeyboardEvent) {
