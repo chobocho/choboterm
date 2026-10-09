@@ -398,6 +398,21 @@ func (a *App) StartConsole(tabID int) error {
 	return t.startConsole()
 }
 
+// ConsoleSave asks for a local file and writes the console's text to it.
+// It returns "" if the user cancelled the dialog.
+func (a *App) ConsoleSave(text string) (string, error) {
+	local, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:            "Lua 콘솔 저장",
+		DefaultDirectory: downloadsDir(),
+		DefaultFilename:  "lua_console_" + time.Now().Format("20060102_150405") + ".txt",
+		Filters:          []runtime.FileFilter{{DisplayName: "텍스트 (*.txt)", Pattern: "*.txt"}},
+	})
+	if err != nil || local == "" {
+		return "", err
+	}
+	return local, os.WriteFile(local, []byte(text), 0o644)
+}
+
 // ConsoleEval runs code in the tab's console; the result comes back as a
 // "script:result" event with the same id.
 func (a *App) ConsoleEval(tabID, id int, code string) error {

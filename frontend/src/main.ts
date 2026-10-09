@@ -22,7 +22,7 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, ConsoleEval, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    CloseTab, Connect, Disconnect, ConsoleEval, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -1679,6 +1679,7 @@ interface ScriptBox {
     stop?: HTMLButtonElement;
     history: string[];
     hpos: number;
+    log: string[]; // every line shown, for saving: the box itself keeps only the last 200
     busy?: {id: number; started: number};
 }
 
@@ -1730,7 +1731,7 @@ function scriptBox(t: Tab) {
     el.append(top, body);
     el.addEventListener('mousedown', ev => ev.stopPropagation()); // keep the terminal's selection
     t.pane.appendChild(el);
-    t.scriptBox = {el, head, body, timer: 0, history: [], hpos: 0};
+    t.scriptBox = {el, head, body, timer: 0, history: [], hpos: 0, log: []};
     return t.scriptBox;
 }
 
@@ -1756,12 +1757,18 @@ function consoleBox(t: Tab) {
     stop.title = 'Ctrl+C';
     stop.hidden = true;
     stop.addEventListener('click', () => ConsoleInterrupt(t.id));
-    box.head.after(stop);
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'stop';
+    save.textContent = '저장';
+    save.title = '입력·출력을 파일로 저장 (Ctrl+S)';
+    save.addEventListener('click', () => consoleSave(box));
+    box.head.after(stop, save);
     const input = document.createElement('textarea');
     input.className = 'input';
     input.rows = 1;
     input.spellcheck = false;
-    input.placeholder = 'Lua · Enter 실행 · Shift+Enter 줄바꿈 · ↑↓ 이전 입력 · Esc 터미널로';
+    input.placeholder = 'Lua · Enter 실행 · Shift+Enter 줄바꿈 · ↑↓ 이전 입력 · Ctrl+S 저장 · Esc 터미널로';
     input.addEventListener('input', () => fitInput(input));
     input.addEventListener('keydown', ev => consoleKey(t, box, ev));
     box.el.appendChild(input);
@@ -1786,6 +1793,9 @@ function consoleKey(t: Tab, box: ScriptBox, ev: KeyboardEvent) {
     } else if (ev.key === 'Escape') {
         ev.preventDefault();
         focusActive();
+    } else if (ev.key.toLowerCase() === 's' && ev.ctrlKey && !ev.shiftKey && !ev.altKey) {
+        ev.preventDefault();
+        consoleSave(box);
     } else if (ev.key === 'c' && ev.ctrlKey && !ev.shiftKey && box.busy && input.selectionStart === input.selectionEnd) {
         ev.preventDefault();
         ConsoleInterrupt(t.id);
@@ -1800,6 +1810,17 @@ function consoleKey(t: Tab, box: ScriptBox, ev: KeyboardEvent) {
         input.value = box.history[box.hpos] ?? '';
         fitInput(input);
     }
+}
+
+async function consoleSave(box: ScriptBox) {
+    if (!box.log.length) return toast('저장할 내용이 없습니다');
+    try {
+        const path = await ConsoleSave(box.log.join('\n') + '\n');
+        if (path) toast(`저장했습니다: ${path}`);
+    } catch (e) {
+        toast(`저장하지 못했습니다: ${e}`);
+    }
+    box.input?.focus();
 }
 
 async function consoleRun(t: Tab, box: ScriptBox) {
@@ -1850,7 +1871,9 @@ function scriptLine(t: Tab, text: string, cls = '') {
         if (cls) div.className = cls;
         div.textContent = line;
         box.body.appendChild(div);
+        box.log.push(line);
     }
+    if (box.log.length > 20000) box.log.splice(0, box.log.length - 20000);
     while (box.body.childElementCount > 200) box.body.firstElementChild!.remove();
     box.body.scrollTop = box.body.scrollHeight;
 }
