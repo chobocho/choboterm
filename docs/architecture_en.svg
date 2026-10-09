@@ -16,7 +16,7 @@
 
   <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm Architecture</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.11 · <tspan class="new">NEW</tspan> = added in this version</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.12 · <tspan class="new">NEW</tspan> = added in this version</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -32,23 +32,23 @@
     <rect x="35" y="501" width="240" height="48" rx="5"/>
     <rect x="35" y="559" width="240" height="48" rx="5"/>
   </g>
-  <text x="47" y="115" class="title">main.ts</text>
-  <text x="47" y="132" class="sub">Tabs · xterm.js terminal · connect · keys</text>
+  <text x="47" y="115" class="title">main.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="132" class="sub">Tabs · terminal · drag to copy · keys</text>
   <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">Keyword highlight (xterm decorations)</text>
   <text x="47" y="231" class="title">files.ts</text>
   <text x="47" y="248" class="sub">File transfer window (SFTP · SCP · FTP)</text>
   <text x="47" y="289" class="title">viewer.ts · imageview.ts</text>
   <text x="47" y="306" class="sub">Text viewer/editor (CodeMirror), images</text>
-  <text x="47" y="347" class="title">Lua console · script box</text>
-  <text x="47" y="364" class="sub">main.ts — input · output · open · save</text>
+  <text x="47" y="347" class="title">Lua console · script box <tspan class="new">NEW</tspan></text>
+  <text x="47" y="364" class="sub">Ctrl+Shift+K open/close · input · save</text>
   <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">Docker window (shell · logs · open port)</text>
   <text x="47" y="463" class="title">sessions · prefs · macros · forwards</text>
   <text x="47" y="480" class="sub">Sessions, settings, macros, port forwards</text>
   <text x="47" y="521" class="title">i18n.ts</text>
   <text x="47" y="538" class="sub">English UI: translates text via dictionary</text>
-  <text x="47" y="579" class="title">help · search · dialog · platform <tspan class="new">NEW</tspan></text>
+  <text x="47" y="579" class="title">help · search · dialog · platform</text>
   <text x="47" y="596" class="sub">Help, search, confirm dialog, Linux UI fixes</text>
 
   <!-- Wails bridge -->
@@ -149,5 +149,5 @@
   <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
   <text x="825" y="579" class="sub">Built in Ubuntu 22.04 container</text>
   <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
-  <text x="825" y="615" class="sub">Get via curl · install.sh <tspan class="new">NEW</tspan></text>
+  <text x="825" y="615" class="sub">Get via curl · install.sh</text>
 </svg>

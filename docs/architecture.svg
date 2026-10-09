@@ -16,7 +16,7 @@
 
   <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.11 · <tspan class="new">NEW</tspan> = 이번 버전에 추가</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.12 · <tspan class="new">NEW</tspan> = 이번 버전에 추가</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -32,23 +32,23 @@
     <rect x="35" y="501" width="240" height="48" rx="5"/>
     <rect x="35" y="559" width="240" height="48" rx="5"/>
   </g>
-  <text x="47" y="115" class="title">main.ts</text>
-  <text x="47" y="132" class="sub">탭 · xterm.js 터미널 · 접속 창 · 단축키</text>
+  <text x="47" y="115" class="title">main.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="132" class="sub">탭 · 터미널 · 드래그 복사 · 단축키</text>
   <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">키워드 강조 (xterm 데코레이션)</text>
   <text x="47" y="231" class="title">files.ts</text>
   <text x="47" y="248" class="sub">파일 전송 창 (SFTP · SCP · FTP)</text>
   <text x="47" y="289" class="title">viewer.ts · imageview.ts</text>
   <text x="47" y="306" class="sub">텍스트 뷰어·편집기 (CodeMirror), 이미지</text>
-  <text x="47" y="347" class="title">Lua 콘솔 · 스크립트 상자</text>
-  <text x="47" y="364" class="sub">main.ts — 입력 · 출력 · 열기 · 저장</text>
+  <text x="47" y="347" class="title">Lua 콘솔 · 스크립트 상자 <tspan class="new">NEW</tspan></text>
+  <text x="47" y="364" class="sub">Ctrl+Shift+K 열기/닫기 · 입력 · 저장</text>
   <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">도커 컨테이너 창 (셸 · 로그 · 포트 열기)</text>
   <text x="47" y="463" class="title">sessions · prefs · macros · forwards</text>
   <text x="47" y="480" class="sub">세션 관리, 설정, 매크로, 포트 포워딩 창</text>
   <text x="47" y="521" class="title">i18n.ts</text>
   <text x="47" y="538" class="sub">영어 화면: 나타나는 문구를 사전으로 번역</text>
-  <text x="47" y="579" class="title">help · search · dialog · platform <tspan class="new">NEW</tspan></text>
+  <text x="47" y="579" class="title">help · search · dialog · platform</text>
   <text x="47" y="596" class="sub">도움말, 검색, 확인 창, Linux 화면 보정</text>
 
   <!-- Wails bridge -->
@@ -149,5 +149,5 @@
   <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
   <text x="825" y="579" class="sub">Ubuntu 22.04 컨테이너 빌드</text>
   <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
-  <text x="825" y="615" class="sub">curl로 받기 · install.sh <tspan class="new">NEW</tspan></text>
+  <text x="825" y="615" class="sub">curl로 받기 · install.sh</text>
 </svg>
