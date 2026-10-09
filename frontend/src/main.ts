@@ -2060,7 +2060,7 @@ function showForwards(t: Tab) {
     if (modalOpen()) return;
     if (t.state !== 'on' || t.proto !== 'ssh' || !t.req) return toast('포트 포워딩은 SSH 접속에서만 사용할 수 있습니다');
     if (t !== active) activate(t);
-    openForwards(t.id, t.req.host, focusActive);
+    openForwards(t.id, t.req, focusActive);
 }
 
 // ---- Session log ----

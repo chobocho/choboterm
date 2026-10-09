@@ -1776,6 +1776,29 @@ body.resizing-col #terms .term {
     cursor: pointer;
 }
 
+.pf .pfcmd {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pf #pfCmd {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: Consolas, monospace;
+    color: #333;
+    background: #f5f5f5;
+}
+
+.pf #pfCopy {
+    height: 22px;
+    padding: 0 12px;
+    border: 1px solid #adadad;
+    background: #e1e1e1;
+    font: inherit;
+    cursor: pointer;
+}
+
 .pf .hint {
     color: #555;
     font-size: 12px;
