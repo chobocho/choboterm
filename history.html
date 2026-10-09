@@ -5,6 +5,12 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261008_124635.html">history_20261008_124635.html</a></p>
 
+<h2>2026-10-09 — Lua 콘솔 버그 수정</h2>
+<ul>
+  <li>Lua 콘솔 창 높이를 고정 400px(창이 작으면 pane 높이에 맞춤)로 키움. 기존보다 약 2배 이상</li>
+  <li>Ctrl+V가 안 되던 문제: 콘솔이 터미널 pane 안에 있어서 pane의 paste 가로채기(capture)가 붙여넣기를 터미널로 보내고 있었음. 콘솔 안에서 일어난 paste는 건드리지 않도록 수정</li>
+</ul>
+
 <h2>2026-10-09 — V0.2.3 릴리스</h2>
 <ul>
   <li>버전 0.2.3으로 올림(main.go, wails.json, README), build.bat으로 테스트·빌드 후 main 푸시</li>
