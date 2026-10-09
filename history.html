@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-10 — 시리얼 포트 지원</h2>
+<ul>
+  <li>Host에 COM3(Linux는 /dev/ttyUSB0)를 쓰면 시리얼 포트를 탭에서 엶. Port 칸이 속도(baud, 기본 115200)가 되고 라벨도 Baud로 바뀜. 이름 뒤에 "9600 7E1 rtscts"처럼 속도·데이터 비트·패리티(N/E/O)·정지 비트·흐름 제어(rtscts/xonxoff)를 쓸 수 있음. Login/Pass/Jump는 비활성화</li>
+  <li>Windows: 오버랩 I/O 핸들을 os.File로 감싸 읽기 대기 중에도 입력이 막히지 않고 Close가 읽기를 끝냄. DCB·COMMTIMEOUTS 설정, ▼ 목록에 장치 관리자 이름(예: USB-SERIAL CH340) 표시. Linux: termios 원시 모드, TIOCEXCL로 한 탭만 열기, dialout 권한 안내</li>
+  <li>탭 우클릭 → "Break 신호 보내기"(시리얼 탭에서만 보임). USB 어댑터를 빼면 "시리얼 장치가 분리되었습니다"로 끊김 처리 → 자동 재접속. EUC-KR·매크로·Lua·로그·Zmodem 그대로 사용, 파일 전송 창은 안내만</li>
+  <li>테스트: 설정 해석, 없는 포트 오류, Windows는 명명된 파이프로 읽기/쓰기 동시·Close·장치 분리 확인, Linux는 WSL에서 의사 터미널로 확인. 개발 서버 + Edge 헤드리스로 접속 창 전환(Port↔Baud, 서버 포트 복원)과 오류 표시 확인. 실제 시리얼 장치로는 시험하지 못함</li>
+  <li>도움말(한·영), README · README.ko, 영어 사전 반영. 커밋 f73a87a</li>
+</ul>
+
 <h2>2026-10-10 — V0.2.12 릴리스</h2>
 <ul>
   <li>버전 0.2.12(드래그 복사 수정, Ctrl+Shift+K 토글, 디버그 로그 보강). build.bat + build_linux.sh(WSL에 docker.io 잠시 설치, Ubuntu 22.04 컨테이너 테스트 통과)로 exe · tar.gz 빌드</li>
