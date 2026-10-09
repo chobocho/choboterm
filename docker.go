@@ -114,6 +114,7 @@ func dockerError(stderr string, err error) error {
 	case strings.Contains(low, "permission denied") && strings.Contains(low, "docker"):
 		return errors.New("docker를 쓸 권한이 없습니다. 서버에서 sudo usermod -aG docker $USER 후 다시 로그인하세요")
 	case strings.Contains(low, "cannot connect to the docker daemon"),
+		strings.Contains(low, "failed to connect to the docker api"),
 		strings.Contains(low, "error during connect"),
 		strings.Contains(low, "docker daemon is not running"):
 		return errors.New("Docker가 실행 중이 아닙니다 (PC에서는 Docker Desktop을 켜세요)")

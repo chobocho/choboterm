@@ -75,6 +75,19 @@ func TestDockerError(t *testing.T) {
 	if err := dockerError("permission denied while trying to connect to the Docker daemon socket", nil); !strings.Contains(err.Error(), "usermod") {
 		t.Errorf("permission: %v", err)
 	}
+	for _, msg := range []string{
+		// Docker Desktop not running (docker CLI 29 on Windows)
+		"failed to connect to the docker API at npipe:////./pipe/docker_engine; check if the path is correct and if the daemon is running: open //./pipe/docker_engine: The system cannot find the file specified.",
+		"Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
+		`error during connect: Get "http://127.0.0.1:1/v1.52/containers/json": dial tcp 127.0.0.1:1: connectex: refused`,
+	} {
+		if err := dockerError(msg, nil); !strings.Contains(err.Error(), "실행 중이 아닙니다") {
+			t.Errorf("%q: %v", msg, err)
+		}
+	}
+	if err := dockerError("permission denied while trying to connect to the docker API at unix:///var/run/docker.sock", nil); !strings.Contains(err.Error(), "usermod") {
+		t.Errorf("permission (docker 29): %v", err)
+	}
 	if err := dockerError("Error: No such container: x\nmore", nil); err.Error() != "Error: No such container: x" {
 		t.Errorf("first line: %v", err)
 	}

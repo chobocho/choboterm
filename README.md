@@ -222,6 +222,13 @@ go test ./...
   CHOBOTERM_WSL=1 go test -run DockerRemote -v
   ```
 
+- 실제 Docker: 컨테이너를 만들어 두고(명령은 `docker_live_test.go` 주석 참고) 서버 쪽은 SSH로, "이 PC" 쪽은 PATH의 `docker`로 확인합니다. WSL에 `docker.io`와 `openssh-server`를 설치하면 이 PC 하나로 둘 다 확인할 수 있습니다("이 PC" 쪽은 Windows용 docker CLI에 `DOCKER_HOST`로 WSL의 Docker를 지정).
+
+  ```sh
+  CHOBOTERM_DOCKER_SSH=localhost:22 CHOBOTERM_DOCKER_USER=me CHOBOTERM_DOCKER_KEY=~/.ssh/id_ed25519 go test -run DockerLive -v
+  CHOBOTERM_DOCKER_LOCAL=1 go test -run DockerLocalLive -v
+  ```
+
 ## 아키텍처
 
 ![choboterm 아키텍처](./docs/architecture.svg)
