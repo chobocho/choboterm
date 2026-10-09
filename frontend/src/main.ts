@@ -1755,6 +1755,7 @@ function consoleBox(t: Tab) {
     grip.title = '끌어서 높이 조절';
     grip.addEventListener('mousedown', ev => resizeConsole(box.el, ev));
     box.el.prepend(grip);
+    if (settings.consoleHeight) box.el.style.height = `${settings.consoleHeight}px`;
     const stop = document.createElement('button');
     stop.type = 'button';
     stop.className = 'stop';
@@ -1782,7 +1783,7 @@ function consoleBox(t: Tab) {
     return box;
 }
 
-/** Drags the console's top edge: up makes it taller, up to 80% of the pane (the CSS max-height). */
+/** Drags the console's top edge: up makes it taller, up to 80% of the pane (the CSS max-height). The height is kept for next time. */
 function resizeConsole(el: HTMLElement, ev: MouseEvent) {
     if (ev.button !== 0) return;
     ev.preventDefault();
@@ -1795,6 +1796,7 @@ function resizeConsole(el: HTMLElement, ev: MouseEvent) {
     const up = () => {
         window.removeEventListener('mousemove', move);
         window.removeEventListener('mouseup', up);
+        saveSettings(s => s.consoleHeight = el.offsetHeight);
     };
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);

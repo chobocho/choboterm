@@ -297,6 +297,7 @@ export namespace main {
 	    logAuto: boolean;
 	    logDir: string;
 	    logRaw: boolean;
+	    consoleHeight: number;
 	    macros: Macro[];
 	    window?: WindowState;
 	
@@ -322,6 +323,7 @@ export namespace main {
 	        this.logAuto = source["logAuto"];
 	        this.logDir = source["logDir"];
 	        this.logRaw = source["logRaw"];
+	        this.consoleHeight = source["consoleHeight"];
 	        this.macros = this.convertValues(source["macros"], Macro);
 	        this.window = this.convertValues(source["window"], WindowState);
 	    }

@@ -41,6 +41,9 @@ type Settings struct {
 	LogDir string `json:"logDir"`
 	// LogRaw keeps escape codes in session logs instead of plain text.
 	LogRaw bool `json:"logRaw"`
+	// ConsoleHeight is the Lua console's height in pixels, set by dragging
+	// its top edge (0 = the default).
+	ConsoleHeight int `json:"consoleHeight"`
 	// Macros are texts sent to the terminal, optionally bound to a key.
 	Macros []Macro `json:"macros"`
 	// Window is the main window's last position, kept by the Go side only.

@@ -20,6 +20,7 @@ export let settings: main.Settings = main.Settings.createFrom({
     logAuto: false,
     logDir: '',
     logRaw: false,
+    consoleHeight: 0,
     macros: [],
 });
 
