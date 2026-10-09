@@ -22,7 +22,7 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, ConsoleEval, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    CloseTab, Connect, Disconnect, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -1769,12 +1769,18 @@ function consoleBox(t: Tab) {
     save.textContent = '저장';
     save.title = '입력·출력을 파일로 저장 (Ctrl+S)';
     save.addEventListener('click', () => consoleSave(box));
-    box.head.after(stop, save);
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'stop';
+    open.textContent = '열기';
+    open.title = 'Lua 파일을 입력창으로 불러오기 (Ctrl+O)';
+    open.addEventListener('click', () => consoleOpen(box));
+    box.head.after(stop, open, save);
     const input = document.createElement('textarea');
     input.className = 'input';
     input.rows = 1;
     input.spellcheck = false;
-    input.placeholder = 'Lua · Enter 실행 · Shift+Enter 줄바꿈 · ↑↓ 이전 입력 · Ctrl+S 저장 · Esc 터미널로';
+    input.placeholder = 'Lua · Enter 실행 · Shift+Enter 줄바꿈 · ↑↓ 이전 입력 · Ctrl+O 열기 · Ctrl+S 저장 · Esc 터미널로';
     input.addEventListener('input', () => fitInput(input));
     input.addEventListener('keydown', ev => consoleKey(t, box, ev));
     box.el.appendChild(input);
@@ -1831,6 +1837,9 @@ function consoleKey(t: Tab, box: ScriptBox, ev: KeyboardEvent) {
     } else if (ev.key.toLowerCase() === 's' && ev.ctrlKey && !ev.shiftKey && !ev.altKey) {
         ev.preventDefault();
         consoleSave(box);
+    } else if (ev.key.toLowerCase() === 'o' && ev.ctrlKey && !ev.shiftKey && !ev.altKey) {
+        ev.preventDefault();
+        consoleOpen(box);
     } else if (ev.key === 'c' && ev.ctrlKey && !ev.shiftKey && box.busy && input.selectionStart === input.selectionEnd) {
         ev.preventDefault();
         ConsoleInterrupt(t.id);
@@ -1845,6 +1854,24 @@ function consoleKey(t: Tab, box: ScriptBox, ev: KeyboardEvent) {
         input.value = box.history[box.hpos] ?? '';
         fitInput(input);
     }
+}
+
+/** Puts a Lua file's text in the input line, to look at or edit before Enter runs it. */
+async function consoleOpen(box: ScriptBox) {
+    const input = box.input!;
+    try {
+        const code = await ConsoleOpen();
+        if (code) {
+            input.value = code.replace(/\n+$/, '');
+            box.hpos = box.history.length;
+            fitInput(input);
+            input.setSelectionRange(0, 0);
+            input.scrollTop = 0;
+        }
+    } catch (e) {
+        toast(`불러오지 못했습니다: ${e}`);
+    }
+    input.focus();
 }
 
 async function consoleSave(box: ScriptBox) {

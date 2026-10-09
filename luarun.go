@@ -398,6 +398,33 @@ func (a *App) StartConsole(tabID int) error {
 	return t.startConsole()
 }
 
+// ConsoleOpen asks for a Lua file and returns its text for the console's
+// input line. It returns "" if the user cancelled the dialog.
+func (a *App) ConsoleOpen() (string, error) {
+	dir, _ := ensureScriptsDir()
+	p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:            "Lua 파일 불러오기",
+		DefaultDirectory: dir,
+		Filters:          []runtime.FileFilter{{DisplayName: "Lua 스크립트 (*.lua)", Pattern: "*.lua"}},
+	})
+	if err != nil || p == "" {
+		return "", err
+	}
+	st, err := os.Stat(p)
+	if err != nil {
+		return "", err
+	}
+	if st.Size() > luaScriptMaxSrc {
+		return "", fmt.Errorf("파일이 너무 큽니다 (%dKB까지)", luaScriptMaxSrc>>10)
+	}
+	src, err := os.ReadFile(p)
+	if err != nil {
+		return "", err
+	}
+	src = bytes.TrimPrefix(src, []byte{0xEF, 0xBB, 0xBF}) // the BOM Notepad may add
+	return strings.ReplaceAll(string(src), "\r\n", "\n"), nil
+}
+
 // ConsoleSave asks for a local file and writes the console's text to it.
 // It returns "" if the user cancelled the dialog.
 func (a *App) ConsoleSave(text string) (string, error) {

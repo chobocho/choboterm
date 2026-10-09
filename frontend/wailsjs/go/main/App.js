@@ -26,6 +26,10 @@ export function ConsoleInterrupt(arg1) {
   return window['go']['main']['App']['ConsoleInterrupt'](arg1);
 }
 
+export function ConsoleOpen() {
+  return window['go']['main']['App']['ConsoleOpen']();
+}
+
 export function ConsoleSave(arg1) {
   return window['go']['main']['App']['ConsoleSave'](arg1);
 }
