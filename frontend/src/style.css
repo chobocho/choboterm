@@ -971,6 +971,10 @@ body.resizing-col #terms .term {
     content: "📁 ";
 }
 
+.files tr.up td:first-child::before {
+    content: "⬆ ";
+}
+
 .files tbody tr:hover {
     background: #e5f1fb;
 }

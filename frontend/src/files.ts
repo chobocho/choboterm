@@ -94,10 +94,20 @@ function parentPath(dir: string) {
     return i <= 0 ? '/' : trimmed.slice(0, i);
 }
 
-/** The selected entries, in list order (the focused row if nothing is picked). */
+// The ".." row at the top of every folder but "/": opening it goes to the parent folder.
+const UP = main.FileEntry.createFrom({name: '..', isDir: true, size: 0, modTime: ''});
+
+/** Goes to the parent folder and selects the folder we came from. */
+function goUp(v: View) {
+    if (v.busy || v.cwd === '/') return;
+    const from = v.cwd.replace(/\/+$/, '').split('/').pop();
+    load(v, parentPath(v.cwd), from ? [from] : undefined);
+}
+
+/** The selected entries, in list order (the focused row if nothing is picked). Never the ".." row. */
 function pickedEntries(v: View): main.FileEntry[] {
     const idx = v.picked.size > 0 ? [...v.picked].sort((a, b) => a - b) : [v.selected];
-    return idx.map(i => v.entries[i]).filter((e): e is main.FileEntry => !!e);
+    return idx.map(i => v.entries[i]).filter((e): e is main.FileEntry => !!e && e !== UP);
 }
 
 // ---- rendering (only for the visible view) ----
@@ -134,7 +144,8 @@ function paintList(v: View) {
     v.entries.forEach((e, i) => {
         const tr = body.insertRow();
         if (e.isDir) tr.className = 'dir';
-        tr.insertCell().textContent = e.name;
+        if (e === UP) tr.classList.add('up');
+        tr.insertCell().textContent = e === UP ? '.. (상위 폴더)' : e.name;
         const size = tr.insertCell();
         size.className = 'num';
         size.textContent = e.isDir ? '' : formatSize(e.size);
@@ -201,7 +212,7 @@ function select(v: View, i: number, mode: 'one' | 'toggle' | 'range' = 'one') {
 }
 
 function selectAll(v: View) {
-    v.picked = new Set(v.entries.map((_, i) => i));
+    v.picked = new Set(v.entries.flatMap((e, i) => e === UP ? [] : [i]));
     paintSelection(v);
 }
 
@@ -210,12 +221,14 @@ async function load(v: View, dir: string, names?: string[]) {
     setStatus(v, '');
     setBusy(v, true);
     try {
-        v.entries = (await FileList(v.tabId, dir)) ?? [];
+        const list = (await FileList(v.tabId, dir)) ?? [];
+        v.entries = dir === '/' ? list : [UP, ...list];
         v.cwd = dir;
         v.picked = new Set();
-        v.selected = v.anchor = v.entries.length > 0 ? 0 : -1;
+        // The first real entry, as before ".." was added; ".." only in an empty folder.
+        v.selected = v.anchor = v.entries.length > 1 && v.entries[0] === UP ? 1 : v.entries.length > 0 ? 0 : -1;
         if (names?.length) {
-            v.entries.forEach((e, i) => names.includes(e.name) && v.picked.add(i));
+            v.entries.forEach((e, i) => e !== UP && names.includes(e.name) && v.picked.add(i));
             const first = Math.min(...v.picked);
             if (Number.isFinite(first)) v.selected = v.anchor = first;
         } else if (v.selected >= 0) {
@@ -233,7 +246,8 @@ async function load(v: View, dir: string, names?: string[]) {
 async function enter(v: View, i: number) {
     const e = v.entries[i];
     if (!e || v.busy) return;
-    if (e.isDir) await load(v, joinPath(v.cwd, e.name));
+    if (e === UP) goUp(v);
+    else if (e.isDir) await load(v, joinPath(v.cwd, e.name));
     else await download(v);
 }
 
@@ -327,7 +341,7 @@ async function remove(v: View) {
     const gone = new Set(list);
     const last = v.entries.indexOf(list[list.length - 1]);
     const keep = v.entries.slice(last + 1).find(e => !gone.has(e)) ??
-        v.entries.slice(0, last).reverse().find(e => !gone.has(e));
+        v.entries.slice(0, last).reverse().find(e => !gone.has(e) && e !== UP);
     await run(v, async () => {
         let n = 0;
         try {
@@ -440,7 +454,7 @@ export function forgetFiles(tabId: number) {
     if (v === current) hide();
 }
 
-upBtn.addEventListener('click', () => current && load(current, parentPath(current.cwd)));
+upBtn.addEventListener('click', () => current && goUp(current));
 refreshBtn.addEventListener('click', () => current && load(current, current.cwd));
 uploadBtn.addEventListener('click', () => current && upload(current));
 downloadBtn.addEventListener('click', () => current && download(current));
@@ -474,7 +488,8 @@ panel.addEventListener('keydown', ev => {
             select(v, v.selected + 1, mode);
             break;
         case 'ArrowUp':
-            select(v, Math.max(0, v.selected - 1), mode);
+            if (ev.altKey) goUp(v); // like Explorer
+            else select(v, Math.max(0, v.selected - 1), mode);
             break;
         case 'Home':
             select(v, 0, mode);
@@ -487,7 +502,11 @@ panel.addEventListener('keydown', ev => {
             else enter(v, v.selected);
             break;
         case 'Backspace':
-            if (!v.busy) load(v, parentPath(v.cwd));
+            goUp(v);
+            break;
+        case 'ArrowLeft': // Alt+← like a browser's Back; Alt+↑ is handled with ArrowUp
+            if (!ev.altKey) return;
+            goUp(v);
             break;
         case 'F5':
             if (!v.busy) load(v, v.cwd);
