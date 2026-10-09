@@ -176,6 +176,7 @@ export namespace main {
 	    id: number;
 	    error: string;
 	    conns: number;
+	    standby: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ForwardStatus(source);
@@ -191,6 +192,7 @@ export namespace main {
 	        this.id = source["id"];
 	        this.error = source["error"];
 	        this.conns = source["conns"];
+	        this.standby = source["standby"];
 	    }
 	}
 	export class Highlight {

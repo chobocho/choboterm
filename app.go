@@ -67,6 +67,9 @@ type App struct {
 	mu    sync.Mutex
 	tabs  map[int]*tab
 	hooks testHooks
+	// fwdMu serializes deciding which tab to a server runs its forwarding
+	// rules (see forwardRule).
+	fwdMu sync.Mutex
 	shown sync.Once
 }
 

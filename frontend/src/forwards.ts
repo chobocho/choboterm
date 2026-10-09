@@ -77,6 +77,10 @@ function paint() {
             st.className = 'bad';
             st.textContent = `오류: ${f.error}`;
             st.title = f.error;
+        } else if (f.standby) {
+            st.className = 'wait';
+            st.textContent = '대기 (다른 탭에서 수신 중)';
+            st.title = '같은 서버에 접속한 다른 탭이 이 포워딩을 맡고 있습니다. 그 탭의 접속이 끊기면 이 탭이 이어받습니다.';
         } else {
             st.className = 'ok';
             st.textContent = f.conns > 0 ? `수신 중 · 연결 ${f.conns}` : '수신 중';

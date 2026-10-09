@@ -1717,6 +1717,7 @@ body.resizing-col #terms .term {
 
 .pf td.ok { color: #107c10; }
 .pf td.bad { color: #c00000; }
+.pf td.wait { color: #888; }
 .pf td.empty { color: #888; }
 
 .pf tbody tr.sel {

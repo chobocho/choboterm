@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 	"path/filepath"
@@ -335,4 +336,84 @@ func TestForwardOnlyOverSSH(t *testing.T) {
 	if _, err := a.ForwardAdd(1, Forward{Type: "D", BindPort: 1080}); err == nil {
 		t.Fatal("forwarding allowed without SSH")
 	}
+}
+
+// TestForwardOneTabPerHost opens two tabs to the same server: only the first
+// listens, the second waits, takes over when the first ends, and rules added
+// or removed in one tab reach the other.
+func TestForwardOneTabPerHost(t *testing.T) {
+	addr, key := startForwardingServer(t)
+	useKnownHosts(t, addr, key)
+	hist := filepath.Join(t.TempDir(), "hosts.json")
+	origHist := historyFile
+	historyFile = func() (string, error) { return hist, nil }
+	defer func() { historyFile = origHist }()
+	useTempSettings(t)
+
+	echo := startEcho(t)
+	echoHost, echoPortStr, _ := net.SplitHostPort(echo)
+	echoPort, _ := strconv.Atoi(echoPortStr)
+
+	a := NewApp()
+	a.hooks.emit = func(string, ...interface{}) {}
+	host, portStr, _ := net.SplitHostPort(addr)
+	port, _ := strconv.Atoi(portStr)
+	req := ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24}
+	for _, id := range []int{1, 2} {
+		if _, err := a.Connect(id, req); err != nil {
+			t.Fatal(err)
+		}
+	}
+	defer a.CloseTab(2)
+
+	lPort := freePort(t)
+	if st, err := a.ForwardAdd(1, Forward{Type: "L", BindPort: lPort, Host: echoHost, Port: echoPort}); err != nil || st.Error != "" || st.Standby {
+		t.Fatalf("add: %+v, %v", st, err)
+	}
+	state := func(id int) string {
+		list, _ := a.ForwardList(id)
+		if len(list) != 1 {
+			return fmt.Sprintf("%d rules", len(list))
+		}
+		if list[0].Error != "" {
+			return "error " + list[0].Error
+		}
+		if list[0].Standby {
+			return "standby"
+		}
+		return "listening"
+	}
+	if s1, s2 := state(1), state(2); s1 != "listening" || s2 != "standby" {
+		t.Fatalf("after add: tab1 %s, tab2 %s", s1, s2)
+	}
+	dialThrough(t, lPort, "tab 1")
+
+	// A third tab connecting later waits too, instead of failing on the port.
+	if _, err := a.Connect(3, req); err != nil {
+		t.Fatal(err)
+	}
+	if s := state(3); s != "standby" {
+		t.Fatalf("tab 3 restored: %s", s)
+	}
+
+	// The listening tab ends: another one takes the rule over.
+	a.CloseTab(1)
+	if s2, s3 := state(2), state(3); !(s2 == "listening" && s3 == "standby" || s2 == "standby" && s3 == "listening") {
+		t.Fatalf("after close: tab2 %s, tab3 %s", s2, s3)
+	}
+	dialThrough(t, lPort, "taken over")
+
+	// Removing it in one tab removes it everywhere.
+	list, _ := a.ForwardList(3)
+	if err := a.ForwardRemove(3, list[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if s2, s3 := state(2), state(3); s2 != "0 rules" || s3 != "0 rules" {
+		t.Fatalf("after remove: tab2 %s, tab3 %s", s2, s3)
+	}
+	if c, err := net.DialTimeout("tcp", "127.0.0.1:"+strconv.Itoa(lPort), time.Second); err == nil {
+		c.Close()
+		t.Fatal("still listening after remove")
+	}
+	a.CloseTab(3)
 }

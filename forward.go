@@ -28,9 +28,10 @@ type Forward struct {
 // ForwardStatus is a rule of a connected tab and how it is doing.
 type ForwardStatus struct {
 	Forward
-	ID    int    `json:"id"`
-	Error string `json:"error"` // why it isn't listening, or ""
-	Conns int    `json:"conns"` // open connections through it
+	ID      int    `json:"id"`
+	Error   string `json:"error"`   // why it isn't listening, or ""
+	Conns   int    `json:"conns"`   // open connections through it
+	Standby bool   `json:"standby"` // another tab to the same server listens for it
 }
 
 // normalize checks f and fills in default bind addresses.
@@ -70,12 +71,16 @@ func (f Forward) same(o Forward) bool {
 	return f.Type == o.Type && f.BindAddr == o.BindAddr && f.BindPort == o.BindPort
 }
 
-// forwardRule is a running (or failed) rule.
+// forwardRule is a running (or failed) rule. Of the tabs connected to the
+// same server only one runs a rule; the others keep it on standby and one of
+// them takes it over when that tab's connection ends.
 type forwardRule struct {
 	id  int
 	f   Forward
-	ln  net.Listener // nil if it failed to start
+	ln  net.Listener // nil if it failed to start or is on standby
 	err string
+
+	standby bool
 
 	mu    sync.Mutex
 	conns map[net.Conn]struct{}
@@ -94,12 +99,22 @@ func (r *forwardRule) track(c net.Conn, on bool) {
 func (r *forwardRule) status() ForwardStatus {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return ForwardStatus{Forward: r.f, ID: r.id, Error: r.err, Conns: len(r.conns)}
+	return ForwardStatus{Forward: r.f, ID: r.id, Error: r.err, Conns: len(r.conns), Standby: r.standby}
+}
+
+func (r *forwardRule) running() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.ln != nil
 }
 
 func (r *forwardRule) stop() {
-	if r.ln != nil {
-		_ = r.ln.Close()
+	r.mu.Lock()
+	ln := r.ln
+	r.ln = nil
+	r.mu.Unlock()
+	if ln != nil {
+		_ = ln.Close()
 	}
 	r.mu.Lock()
 	conns := r.conns
@@ -117,38 +132,48 @@ type forwards struct {
 	rules  []*forwardRule
 }
 
-// start runs f over client. A rule that can't listen (e.g. the port is in
-// use) is still kept, with its error, so the user sees why.
-func (t *tab) startForward(client *ssh.Client, f Forward) *forwardRule {
+// startForward adds f to the tab's rules and runs it over client, or keeps
+// it on standby. A rule that can't listen (e.g. the port is in use) is still
+// kept, with its error, so the user sees why.
+func (t *tab) startForward(client *ssh.Client, f Forward, standby bool) *forwardRule {
 	t.fwd.mu.Lock()
 	t.fwd.nextID++
-	r := &forwardRule{id: t.fwd.nextID, f: f, conns: map[net.Conn]struct{}{}}
+	r := &forwardRule{id: t.fwd.nextID, f: f, conns: map[net.Conn]struct{}{}, standby: standby}
 	t.fwd.rules = append(t.fwd.rules, r)
 	t.fwd.mu.Unlock()
+	if !standby {
+		t.listenForward(client, r)
+	}
+	return r
+}
 
+// listenForward starts listening for r.
+func (t *tab) listenForward(client *ssh.Client, r *forwardRule) {
 	var (
 		ln  net.Listener
 		err error
 	)
-	if f.Type == "R" {
-		ln, err = client.Listen("tcp", f.bind())
+	if r.f.Type == "R" {
+		ln, err = client.Listen("tcp", r.f.bind())
 	} else {
-		ln, err = net.Listen("tcp", f.bind())
+		ln, err = net.Listen("tcp", r.f.bind())
 	}
+	r.mu.Lock()
+	r.standby = false
 	if err != nil {
-		r.mu.Lock()
 		r.err = err.Error()
 		r.mu.Unlock()
-		return r
+		return
 	}
+	r.err = ""
 	r.ln = ln
-	go t.acceptForward(client, r)
-	return r
+	r.mu.Unlock()
+	go t.acceptForward(client, r, ln)
 }
 
-func (t *tab) acceptForward(client *ssh.Client, r *forwardRule) {
+func (t *tab) acceptForward(client *ssh.Client, r *forwardRule, ln net.Listener) {
 	for {
-		c, err := r.ln.Accept()
+		c, err := ln.Accept()
 		if err != nil {
 			return
 		}
@@ -199,15 +224,89 @@ func pipe(a, b net.Conn) {
 	<-done
 }
 
-// stopForwards closes all rules (the SSH connection is going away).
+// stopForwards closes all rules (the SSH connection is going away). Another
+// tab connected to the same server takes over the ones that were running.
 func (t *tab) stopForwards() {
+	t.app.fwdMu.Lock()
+	defer t.app.fwdMu.Unlock()
 	t.fwd.mu.Lock()
 	rules := t.fwd.rules
 	t.fwd.rules = nil
 	t.fwd.mu.Unlock()
+	var handOver []Forward
 	for _, r := range rules {
+		if r.running() {
+			handOver = append(handOver, r.f)
+		}
 		r.stop()
 	}
+	if len(handOver) == 0 {
+		return
+	}
+	for _, f := range handOver {
+	next:
+		for _, o := range t.app.sameServerTabs(t) {
+			for _, r := range o.tabRules() {
+				if c := o.sshClient(); c != nil && r.f.same(f) && r.status().Standby {
+					o.listenForward(c, r)
+					o.emit("fwd:changed")
+					break next
+				}
+			}
+		}
+	}
+}
+
+func (t *tab) tabRules() []*forwardRule {
+	t.fwd.mu.Lock()
+	defer t.fwd.mu.Unlock()
+	return append([]*forwardRule(nil), t.fwd.rules...)
+}
+
+// sshClient is the tab's SSH connection, or nil.
+func (t *tab) sshClient() *ssh.Client {
+	if s, _ := t.session().(*sshSession); s != nil {
+		return s.client
+	}
+	return nil
+}
+
+// sameServerTabs are the other tabs with an SSH connection to t's server.
+func (a *App) sameServerTabs(t *tab) []*tab {
+	t.mu.Lock()
+	host, port := t.host, t.port
+	t.mu.Unlock()
+	a.mu.Lock()
+	all := make([]*tab, 0, len(a.tabs))
+	for _, o := range a.tabs {
+		all = append(all, o)
+	}
+	a.mu.Unlock()
+	var out []*tab
+	for _, o := range all {
+		if o == t || o.sshClient() == nil {
+			continue
+		}
+		o.mu.Lock()
+		same := o.host == host && o.port == port
+		o.mu.Unlock()
+		if same {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+// runningElsewhere tells whether another tab to t's server runs a rule like f.
+func (a *App) runningElsewhere(t *tab, f Forward) bool {
+	for _, o := range a.sameServerTabs(t) {
+		for _, r := range o.tabRules() {
+			if r.f.same(f) && r.running() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (t *tab) forwardList() []ForwardStatus {
@@ -334,13 +433,26 @@ func (a *App) ForwardAdd(tabID int, f Forward) (ForwardStatus, error) {
 	if f, err = f.normalize(); err != nil {
 		return ForwardStatus{}, err
 	}
+	a.fwdMu.Lock()
+	defer a.fwdMu.Unlock()
 	for _, o := range t.forwardConfigs() {
 		if o.same(f) {
 			return ForwardStatus{}, fmt.Errorf("이미 같은 수신 주소(%s)의 규칙이 있습니다", f.bind())
 		}
 	}
-	r := t.startForward(client, f)
+	r := t.startForward(client, f, false)
 	t.saveForwards()
+	// The other tabs to this server keep it on standby.
+	for _, o := range a.sameServerTabs(t) {
+		dup := false
+		for _, c := range o.forwardConfigs() {
+			dup = dup || c.same(f)
+		}
+		if !dup {
+			o.startForward(nil, f, true)
+			o.emit("fwd:changed")
+		}
+	}
 	return r.status(), nil
 }
 
@@ -350,10 +462,27 @@ func (a *App) ForwardRemove(tabID, id int) error {
 	if err != nil {
 		return err
 	}
+	a.fwdMu.Lock()
+	defer a.fwdMu.Unlock()
+	removed := t.removeForward(func(r *forwardRule) bool { return r.id == id })
+	if removed != nil {
+		t.saveForwards()
+		// It is gone for the server: also from the other tabs to it.
+		for _, o := range a.sameServerTabs(t) {
+			if o.removeForward(func(r *forwardRule) bool { return r.f.same(removed.f) }) != nil {
+				o.emit("fwd:changed")
+			}
+		}
+	}
+	return nil
+}
+
+// removeForward stops and drops the first rule match accepts.
+func (t *tab) removeForward(match func(*forwardRule) bool) *forwardRule {
 	t.fwd.mu.Lock()
 	var removed *forwardRule
 	for i, r := range t.fwd.rules {
-		if r.id == id {
+		if match(r) {
 			removed = r
 			t.fwd.rules = append(t.fwd.rules[:i], t.fwd.rules[i+1:]...)
 			break
@@ -362,9 +491,8 @@ func (a *App) ForwardRemove(tabID, id int) error {
 	t.fwd.mu.Unlock()
 	if removed != nil {
 		removed.stop()
-		t.saveForwards()
 	}
-	return nil
+	return removed
 }
 
 func (t *tab) saveForwards() {
@@ -374,11 +502,14 @@ func (t *tab) saveForwards() {
 	_ = setHistoryForwards(host, port, t.forwardConfigs())
 }
 
-// restoreForwards starts the rules saved for the host of a new SSH connection.
+// restoreForwards starts the rules saved for the host of a new SSH
+// connection; those another tab to the server already runs wait on standby.
 func (t *tab) restoreForwards(sess *sshSession, host string, port int) {
+	t.app.fwdMu.Lock()
+	defer t.app.fwdMu.Unlock()
 	for _, f := range historyForwards(host, port) {
 		if f, err := f.normalize(); err == nil {
-			t.startForward(sess.client, f)
+			t.startForward(sess.client, f, t.app.runningElsewhere(t, f))
 		}
 	}
 	t.emit("fwd:changed")
