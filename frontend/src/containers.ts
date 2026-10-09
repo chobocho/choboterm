@@ -29,6 +29,9 @@ const portBtn = btn('dkOpenPort');
 export interface DockerSource {
     tab: number;
     label: string;
+    // The server (as in the tab's connection), to find another tab to it.
+    host?: string;
+    port?: number;
 }
 
 export type DockerMode = 'shell' | 'logs';

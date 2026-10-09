@@ -2087,7 +2087,7 @@ function showContainers() {
     const t = active;
     const srcs: DockerSource[] = [];
     if (t && t.state === 'on' && t.proto === 'ssh' && t.req) {
-        srcs.push({tab: t.id, label: `${t.req.login ? t.req.login + '@' : ''}${t.req.host}`});
+        srcs.push({tab: t.id, label: `${t.req.login ? t.req.login + '@' : ''}${t.req.host}`, host: t.req.host, port: Number(t.req.port)});
     }
     openContainers(srcs, (src, c, mode) => openDockerTab(src, c.id, c.name, mode), focusActive);
 }
@@ -2106,6 +2106,12 @@ async function openDockerTab(src: DockerSource, id: string, name: string, mode: 
 /** Opens (again) tab t's docker exec / logs session. Throws on failure. */
 async function startDocker(t: Tab) {
     const d = t.docker!;
+    // The tab it was opened from is gone: another tab to the same server will do.
+    const sshOn = (o?: Tab) => !!o && o.state === 'on' && o.proto === 'ssh' && !!o.req;
+    if (d.src.tab && !sshOn(tabs.get(d.src.tab))) {
+        const o = [...tabs.values()].find(o => sshOn(o) && o.req!.host === d.src.host && Number(o.req!.port) === d.src.port);
+        if (o) d.src = {...d.src, tab: o.id};
+    }
     cancelRetry(t);
     forgetFiles(t.id);
     await DockerOpen(t.id, d.src.tab, d.id, d.mode, `${d.name}@${d.src.label}`, t.term.cols, t.term.rows);
