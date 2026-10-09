@@ -2070,7 +2070,9 @@ EventsOn('script:screen', (id: number, req: number) => {
     for (let y = b.viewportY; y < b.viewportY + t.term.rows; y++) {
         lines.push(b.getLine(y)?.translateToString(true) ?? '');
     }
-    ScriptScreen(id, req, lines.join('\n').replace(/\s+$/, ''));
+    const text = lines.join('\n').replace(/\s+$/, '');
+    dbg(`tab ${id} screen() #${req}: ${b.type} buffer, viewport ${b.viewportY} of ${b.baseY} (scrolled up ${b.baseY - b.viewportY}), ${text.length} chars`);
+    ScriptScreen(id, req, text);
 });
 
 // ---- Macros ----

@@ -314,6 +314,7 @@ func (s *scriptRun) screen(id int) {
 	case text := <-ch:
 		s.reply(id, text, nil)
 	case <-time.After(luaScreenWait):
+		debugf("tab %d screen() #%d: no answer from the page in %v", s.t.id, id, luaScreenWait)
 		s.reply(id, "", errors.New("화면 내용을 읽지 못했습니다"))
 	case <-s.ended:
 	}
