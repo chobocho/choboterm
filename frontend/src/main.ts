@@ -323,10 +323,17 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     });
 
     // Like PuTTY: selecting with the mouse copies, right-click pastes.
-    pane.addEventListener('mouseup', ev => {
+    // The button may be let go outside the pane (dragging up past the top
+    // selects from the scrollback), so the release is watched on the window.
+    pane.addEventListener('mousedown', ev => {
         if (ev.button !== 0) return;
-        dbg(`tab ${t.id} (${t.proto}) mouseup: selection ${t.term.getSelection().length} chars, mouse mode ${term.modes.mouseTrackingMode}`);
-        copySelection(t);
+        const up = (e: MouseEvent) => {
+            if (e.button !== 0) return;
+            window.removeEventListener('mouseup', up, true);
+            dbg(`tab ${t.id} (${t.proto}) mouseup: selection ${t.term.getSelection().length} chars, mouse mode ${term.modes.mouseTrackingMode}`);
+            copySelection(t);
+        };
+        window.addEventListener('mouseup', up, true);
     });
     term.onSelectionChange(() => dbg(`tab ${t.id} selection ${term.getSelection().length} chars`));
     pane.addEventListener('contextmenu', ev => {
