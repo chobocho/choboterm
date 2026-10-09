@@ -16,7 +16,7 @@
 
   <rect x="0" y="0" width="1010" height="600" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.6 · <tspan class="new">NEW</tspan> = 이번 버전에 추가</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.7</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="505" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -33,17 +33,17 @@
   </g>
   <text x="47" y="115" class="title">main.ts</text>
   <text x="47" y="132" class="sub">탭 · xterm.js 터미널 · 접속 창 · 단축키</text>
-  <text x="47" y="173" class="title">highlight.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">키워드 강조 (xterm 데코레이션)</text>
   <text x="47" y="231" class="title">files.ts</text>
   <text x="47" y="248" class="sub">파일 전송 창 (SFTP · SCP · FTP)</text>
-  <text x="47" y="289" class="title">viewer.ts · imageview.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="289" class="title">viewer.ts · imageview.ts</text>
   <text x="47" y="306" class="sub">텍스트 뷰어·편집기 (CodeMirror), 이미지</text>
   <text x="47" y="347" class="title">Lua 콘솔 · 스크립트 상자</text>
   <text x="47" y="364" class="sub">main.ts — 입력 · 출력 · 열기 · 저장</text>
   <text x="47" y="405" class="title">sessions · prefs · macros · forwards</text>
   <text x="47" y="422" class="sub">세션 관리, 설정, 매크로, 포트 포워딩 창</text>
-  <text x="47" y="463" class="title">i18n.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="463" class="title">i18n.ts</text>
   <text x="47" y="480" class="sub">영어 화면: 나타나는 문구를 사전으로 번역</text>
   <text x="47" y="521" class="title">help · search · paste · dialog</text>
   <text x="47" y="538" class="sub">도움말, 검색, 붙여넣기 확인, 확인 창</text>
@@ -77,7 +77,7 @@
   </g>
   <text x="468" y="204" text-anchor="middle" class="title">ssh.go</text>
   <text x="468" y="220" text-anchor="middle" class="sub">sshauth · forward</text>
-  <text x="468" y="236" text-anchor="middle" class="sub">sshjump <tspan class="new">NEW</tspan></text>
+  <text x="468" y="236" text-anchor="middle" class="sub">sshjump</text>
   <text x="585" y="204" text-anchor="middle" class="title">telnet.go</text>
   <text x="585" y="220" text-anchor="middle" class="sub">detect.go</text>
   <text x="585" y="236" text-anchor="middle" class="sub">(프로토콜 판별)</text>
@@ -91,13 +91,13 @@
   </g>
   <text x="427" y="281" class="title">filexfer.go — RemoteFS</text>
   <text x="427" y="297" class="sub">sftp.go · scp.go · ftp.go · viewer.go</text>
-  <text x="427" y="313" class="sub">진행률 · 취소 · 이어받기 (.part) <tspan class="new">NEW</tspan></text>
+  <text x="427" y="313" class="sub">진행률 · 취소 · 이어받기 (.part)</text>
   <text x="702" y="281" text-anchor="middle" class="title">zmodem.go</text>
   <text x="702" y="297" text-anchor="middle" class="sub">zmodem_app.go</text>
   <text x="702" y="313" text-anchor="middle" class="sub">rz / sz</text>
 
   <rect x="415" y="339" width="340" height="94" rx="5" class="item" stroke="#2f8f5b"/>
-  <text x="427" y="358" class="title">저장소 — %AppData%\choboterm · i18n.go <tspan class="new">NEW</tspan></text>
+  <text x="427" y="358" class="title">저장소 — %AppData%\choboterm · i18n.go</text>
   <text x="427" y="377" class="sub">settings.go · session_store.go · history_store.go</text>
   <text x="427" y="395" class="sub">settings.json · sessions.json · hosts.json (DPAPI 암호화)</text>
   <text x="427" y="413" class="sub">i18n_en.json: 화면과 Go가 함께 쓰는 영어 사전</text>
@@ -126,7 +126,7 @@
   <text x="825" y="278" class="sub">CP949 · UTF-8 서버</text>
   <rect x="822" y="292" width="156" height="46" rx="5" fill="#ffffff" stroke="#80868b" stroke-dasharray="4 3"/>
   <text x="900" y="311" text-anchor="middle" class="sub">점프 호스트(배스천) 경유</text>
-  <text x="900" y="328" text-anchor="middle" class="sub">ProxyJump · ssh -J <tspan class="new">NEW</tspan></text>
+  <text x="900" y="328" text-anchor="middle" class="sub">ProxyJump · ssh -J</text>
 
   <rect x="810" y="362" width="180" height="75" rx="8" fill="#f1f3f4" stroke="#80868b" stroke-width="1.5"/>
   <text x="825" y="386" class="head" fill="#3c4043">로컬 프로그램</text>

@@ -1,4 +1,4 @@
-# choboterm V0.2.6
+# choboterm V0.2.7
 
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows용 SSH / Telnet / FTP 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다. 텍스트 뷰어는 [CodeMirror 6](https://codemirror.net)(MIT)을 씁니다.
@@ -83,6 +83,8 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 원격(`-R`): 서버의 포트 → 이 PC를 거쳐 대상으로
   - 동적(`-D`): 이 PC의 포트가 SOCKS5 프록시가 되어 서버를 거쳐 접속
   - 규칙은 호스트별로 접속 기록에 저장되어 다음 접속(자동 재접속 포함) 때 자동으로 다시 열립니다. 포트가 이미 사용 중이면 규칙은 남기고 오류를 보여 줍니다.
+  - 대상은 서버에서 본 주소입니다. 예) 서버에서 `localhost`로만 열린 Jupyter(8888)는 `127.0.0.1:8888 → 127.0.0.1:8888`
+  - 상태 칸에 지금 열려 있는 연결 수가 나오고, 창 아래에는 같은 포워딩을 여는 `ssh` 명령어(`-L`/`-R`/`-D`, `-J`, `-p` 포함)가 나와 복사할 수 있습니다.
 - **매크로**: `Ctrl+Shift+M`으로 매크로 창을 열어 자주 쓰는 명령을 저장해 두고 보냅니다(목록에서 `Enter` / 더블클릭).
   - 매크로마다 `F2`~`F12`, `Shift+F1`~`F12`, `Ctrl+F1`~`F12` 중 하나를 지정하면 그 키로 바로 보냅니다. 지정하지 않은 키는 mc, htop 같은 프로그램에 그대로 전달됩니다.
   - 내용의 줄바꿈은 `Enter`로 보내고, `\t`(Tab), `\e`(Esc), `\xHH`(예: `\x03` = Ctrl+C), `\\`(역슬래시)를 쓸 수 있습니다.
