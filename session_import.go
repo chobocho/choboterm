@@ -26,6 +26,7 @@ type exportSession struct {
 	Port     int    `json:"port"`
 	Login    string `json:"login,omitempty"`
 	Encoding string `json:"encoding,omitempty"`
+	Jump     string `json:"jump,omitempty"`
 }
 
 const exportFormat = "choboterm-sessions"
@@ -41,7 +42,7 @@ func encodeExport(list []SavedSession) ([]byte, error) {
 	out := sessionsExport{Format: exportFormat, Version: 1, Sessions: []exportSession{}}
 	for _, s := range list {
 		out.Sessions = append(out.Sessions, exportSession{
-			Name: s.Name, Group: s.Group, Host: s.Host, Port: s.Port, Login: s.Login, Encoding: s.Encoding,
+			Name: s.Name, Group: s.Group, Host: s.Host, Port: s.Port, Login: s.Login, Encoding: s.Encoding, Jump: s.Jump,
 		})
 	}
 	return json.MarshalIndent(out, "", "  ")
@@ -55,7 +56,7 @@ func decodeExport(data []byte) ([]SavedSession, error) {
 	list := make([]SavedSession, 0, len(in.Sessions))
 	for _, s := range in.Sessions {
 		list = append(list, SavedSession{
-			Name: s.Name, Group: s.Group, Host: s.Host, Port: s.Port, Login: s.Login, Encoding: s.Encoding,
+			Name: s.Name, Group: s.Group, Host: s.Host, Port: s.Port, Login: s.Login, Encoding: s.Encoding, Jump: s.Jump,
 		})
 	}
 	return list, nil

@@ -72,6 +72,10 @@
             <label for="login">Login</label>
             <input id="login" spellcheck="false"/>
 
+            <label for="jump">Jump</label>
+            <input id="jump" spellcheck="false" placeholder="점프 호스트 (선택) 예: user@bastion"
+                   title="SSH 점프 호스트(ProxyJump). 여러 개는 쉼표로: a,b:2222&#10;비우면 ~/.ssh/config의 ProxyJump, none이면 쓰지 않음"/>
+
             <label for="pass">Pass</label>
             <input id="pass" type="password"/>
 
@@ -274,6 +278,8 @@
                     <input id="smPort" inputmode="numeric" class="portno"/>
                     <label for="smLogin">Login</label>
                     <input id="smLogin" spellcheck="false" autocomplete="off"/>
+                    <label for="smJump">Jump</label>
+                    <input id="smJump" spellcheck="false" autocomplete="off" placeholder="SSH 점프 호스트 (선택) 예: user@bastion"/>
                     <label for="smPass">Pass</label>
                     <input id="smPass" type="password" autocomplete="off"/>
                     <label class="check wide"><input type="checkbox" id="smSavePass"/> 비밀번호 저장 (Windows 사용자 계정으로 암호화)</label>

@@ -24,6 +24,7 @@ type SavedSession struct {
 	Login    string `json:"login"`
 	Encoding string `json:"encoding"`
 	Pass     string `json:"pass"`
+	Jump     string `json:"jump"` // SSH jump hosts, as in ConnectRequest
 }
 
 // storedSession is the on-disk form: the password is DPAPI-encrypted, never plain.
@@ -36,6 +37,7 @@ type storedSession struct {
 	Login    string `json:"login,omitempty"`
 	Encoding string `json:"encoding,omitempty"`
 	PassEnc  string `json:"passEnc,omitempty"`
+	Jump     string `json:"jump,omitempty"`
 }
 
 // serverPrefs are the settings of one server (host:port), shared by every
@@ -154,7 +156,7 @@ func loadSessions() []SavedSession {
 	for _, s := range doc.Sessions {
 		list = append(list, SavedSession{
 			ID: s.ID, Name: s.Name, Group: s.Group, Host: s.Host, Port: s.Port,
-			Login: s.Login, Encoding: s.Encoding, Pass: decryptPass(s.PassEnc),
+			Login: s.Login, Encoding: s.Encoding, Pass: decryptPass(s.PassEnc), Jump: s.Jump,
 		})
 	}
 	sortSessions(list)
@@ -182,7 +184,7 @@ func saveSession(s SavedSession, savePass bool) (SavedSession, error) {
 		}
 		st := storedSession{
 			ID: s.ID, Name: s.Name, Group: s.Group, Host: s.Host, Port: s.Port,
-			Login: s.Login, Encoding: s.Encoding, PassEnc: encryptPass(s.Pass),
+			Login: s.Login, Encoding: s.Encoding, PassEnc: encryptPass(s.Pass), Jump: strings.TrimSpace(s.Jump),
 		}
 		for i := range doc.Sessions {
 			if doc.Sessions[i].ID == s.ID {

@@ -104,6 +104,7 @@ interface DialogState {
     login: string;
     pass: string;
     encoding: string;
+    jump: string;
     error: string;
     connecting: boolean;
     resolved: string; // Host text whose ~/.ssh/config values were already filled in
@@ -882,7 +883,7 @@ async function saveTabSession(t: Tab) {
     if (!t.req) return;
     const r = t.req;
     const s = await openSaveSession({
-        host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass, session: t.session,
+        host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass, jump: r.jump, session: t.session,
     });
     if (s) {
         for (const o of tabs.values()) {
@@ -1159,6 +1160,8 @@ const port = $<HTMLInputElement>('port');
 const login = $<HTMLInputElement>('login');
 const pass = $<HTMLInputElement>('pass');
 const encoding = $<HTMLSelectElement>('encoding');
+const jump = $<HTMLInputElement>('jump');
+const JUMP_HINT = jump.placeholder;
 const proto = $<HTMLSpanElement>('proto');
 const error = $<HTMLDivElement>('error');
 const ok = $<HTMLButtonElement>('ok');
@@ -1168,6 +1171,7 @@ const hostList = $<HTMLUListElement>('hostList');
 const hostTip = $<HTMLDivElement>('hostTip');
 
 type ListEntry = Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'> & {
+    jump?: string;
     fromConfig?: boolean;
     label?: string;
     session?: main.SavedSession;
@@ -1188,11 +1192,12 @@ function updateProto() {
     // A local shell needs no port, login or password, and is always UTF-8.
     const local = isLocal(host.value);
     for (const el of [port, login, pass, encoding]) el.disabled = local;
+    const p = Number(port.value);
+    jump.disabled = local || p === 21 || p === 23; // jump hosts are for SSH only
     if (local) {
         proto.textContent = '로컬 셸';
         return;
     }
-    const p = Number(port.value);
     // Other ports are detected from the server greeting when connecting.
     proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : p === 23 ? 'Telnet' : '자동 감지';
 }
@@ -1205,7 +1210,7 @@ async function loadEntries() {
     const seen = new Set(history.map(h => h.host));
     const saved = new Set(sessions.map(s => `${s.host}:${s.port}`));
     entries = [...sessions.map(s => ({
-        host: s.host, port: s.port, login: s.login, encoding: s.encoding, pass: s.pass, session: s,
+        host: s.host, port: s.port, login: s.login, encoding: s.encoding, pass: s.pass, jump: s.jump, session: s,
     })), ...history.filter(h => !saved.has(`${h.host}:${h.port}`)), ...configHosts.filter(c => !seen.has(c.host)).map(c => ({
         host: c.host, port: c.port, login: c.login, encoding: 'UTF-8', pass: '', fromConfig: true,
     })), ...localShells.filter(s => !seen.has(s.name)).map(s => ({
@@ -1233,7 +1238,7 @@ async function openDialog(t?: Tab | null, from?: Tab) {
     const src = tab.req ? tab : from; // a new split pane starts with its neighbour's server
     const r = src?.req;
     if (r) {
-        applyEntry({host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass, session: src.session});
+        applyEntry({host: r.host, port: r.port, login: r.login, encoding: r.encoding, pass: r.pass, jump: r.jump, session: src.session});
     } else if (!host.value && history.length > 0) {
         applyEntry(history[0]);
     } else {
@@ -1241,7 +1246,7 @@ async function openDialog(t?: Tab | null, from?: Tab) {
     }
     tab.dialog = {
         host: host.value, port: port.value, login: login.value, pass: pass.value,
-        encoding: encoding.value, error: '', connecting: false, resolved, session: chosen,
+        encoding: encoding.value, jump: jump.value, error: '', connecting: false, resolved, session: chosen,
     };
     if (active === tab) {
         loadDialog(tab);
@@ -1260,6 +1265,7 @@ function saveDialog(t: Tab) {
     d.login = login.value;
     d.pass = pass.value;
     d.encoding = encoding.value;
+    d.jump = jump.value;
     d.error = error.textContent ?? '';
     d.resolved = resolved;
     d.session = chosen;
@@ -1273,6 +1279,7 @@ function loadDialog(t: Tab) {
     login.value = d.login;
     pass.value = d.pass;
     encoding.value = d.encoding;
+    jump.value = d.jump;
     resolved = d.resolved;
     chosen = d.session;
     error.textContent = d.error;
@@ -1312,6 +1319,8 @@ function applyEntry(e: ListEntry) {
     login.value = e.login;
     encoding.value = e.encoding || 'UTF-8';
     pass.value = e.pass ?? '';
+    jump.value = e.jump ?? '';
+    jump.placeholder = JUMP_HINT;
     resolved = host.value.trim();
     updateProto();
 }
@@ -1329,6 +1338,8 @@ async function resolveHost() {
     host.value = r.host;
     if (r.port > 0) port.value = String(r.port);
     if (r.login) login.value = r.login;
+    if (r.jump) jump.value = r.jump; // ssh -J
+    jump.placeholder = r.configJump ? `ssh config: ${r.configJump}` : JUMP_HINT;
     resolved = host.value.trim();
     updateProto();
     fillSavedPass();
@@ -1530,6 +1541,7 @@ async function connectDialog(t: Tab) {
             login: d.login,
             pass: d.pass,
             encoding: d.encoding,
+            jump: d.jump.trim(),
         }));
         d.connecting = false;
         t.session = d.session;
@@ -1571,6 +1583,7 @@ async function saveFromDialog() {
         login: local ? '' : login.value,
         encoding: local ? 'UTF-8' : encoding.value,
         pass: local ? '' : pass.value,
+        jump: local ? '' : jump.value.trim(),
         session: chosen,
     });
     if (s) {
@@ -1624,7 +1637,7 @@ async function openSessions(list: main.SavedSession[]) {
         await openDialog(list.length > 1 && s !== list[0] ? null : undefined);
         const t = active;
         if (!t?.dialog || t.dialog.connecting) continue;
-        applyEntry({host: s.host, port: s.port, login: s.login, encoding: s.encoding, pass: s.pass, session: s});
+        applyEntry({host: s.host, port: s.port, login: s.login, encoding: s.encoding, pass: s.pass, jump: s.jump, session: s});
         saveDialog(t);
         void connectDialog(t);
     }

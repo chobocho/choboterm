@@ -6,6 +6,7 @@ export namespace main {
 	    login: string;
 	    pass: string;
 	    encoding: string;
+	    jump: string;
 	    cols: number;
 	    rows: number;
 	
@@ -20,6 +21,7 @@ export namespace main {
 	        this.login = source["login"];
 	        this.pass = source["pass"];
 	        this.encoding = source["encoding"];
+	        this.jump = source["jump"];
 	        this.cols = source["cols"];
 	        this.rows = source["rows"];
 	    }
@@ -136,6 +138,7 @@ export namespace main {
 	    login: string;
 	    encoding: string;
 	    pass: string;
+	    jump: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new HostEntry(source);
@@ -148,6 +151,7 @@ export namespace main {
 	        this.login = source["login"];
 	        this.encoding = source["encoding"];
 	        this.pass = source["pass"];
+	        this.jump = source["jump"];
 	    }
 	}
 	export class ImportResult {
@@ -220,6 +224,8 @@ export namespace main {
 	    login: string;
 	    hostName: string;
 	    fromConfig: boolean;
+	    jump: string;
+	    configJump: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SSHTarget(source);
@@ -232,6 +238,8 @@ export namespace main {
 	        this.login = source["login"];
 	        this.hostName = source["hostName"];
 	        this.fromConfig = source["fromConfig"];
+	        this.jump = source["jump"];
+	        this.configJump = source["configJump"];
 	    }
 	}
 	export class SaveResult {
@@ -257,6 +265,7 @@ export namespace main {
 	    login: string;
 	    encoding: string;
 	    pass: string;
+	    jump: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SavedSession(source);
@@ -272,6 +281,7 @@ export namespace main {
 	        this.login = source["login"];
 	        this.encoding = source["encoding"];
 	        this.pass = source["pass"];
+	        this.jump = source["jump"];
 	    }
 	}
 	export class WindowState {

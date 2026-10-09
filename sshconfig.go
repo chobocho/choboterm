@@ -18,6 +18,8 @@ type SSHTarget struct {
 	Login      string `json:"login"`      // "": leave the Login field as it is
 	HostName   string `json:"hostName"`   // address the alias stands for, "" when not from the config
 	FromConfig bool   `json:"fromConfig"` // the name is a Host entry of ~/.ssh/config
+	Jump       string `json:"jump"`       // -J of an ssh command line
+	ConfigJump string `json:"configJump"` // ProxyJump of the config entry
 }
 
 // sshConfigPath is ~/.ssh/config (replaceable in tests).
@@ -155,7 +157,7 @@ func lookupSSHTarget(cfg *ssh_config.Config, input string) SSHTarget {
 			login, host = host[:at], host[at+1:]
 		}
 	}
-	t := SSHTarget{Host: host, Port: port, Login: login, FromConfig: isAlias(cfg, host)}
+	t := SSHTarget{Host: host, Port: port, Login: login, FromConfig: isAlias(cfg, host), Jump: sshCommandJump(input)}
 	if !isCmd && !t.FromConfig {
 		return t // a plain host: Telnet/FTP hosts must not pick up "Host *" settings
 	}
@@ -170,6 +172,9 @@ func lookupSSHTarget(cfg *ssh_config.Config, input string) SSHTarget {
 	}
 	if hn := configGet(cfg, host, "HostName"); hn != "" && t.FromConfig {
 		t.HostName = expandTokens(hn, host, t.Login)
+	}
+	if t.FromConfig {
+		t.ConfigJump = configGet(cfg, host, "ProxyJump")
 	}
 	return t
 }

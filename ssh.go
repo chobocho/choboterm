@@ -19,6 +19,7 @@ import (
 
 type sshSession struct {
 	client  *ssh.Client
+	jumps   []*ssh.Client // ProxyJump hosts the connection goes through, first to last
 	session *ssh.Session
 	stdin   io.WriteCloser
 	stdout  io.Reader
@@ -66,36 +67,46 @@ func (s *sshSession) keepAlive() error {
 func (s *sshSession) Resize(cols, rows int) error { return s.session.WindowChange(rows, cols) }
 func (s *sshSession) Close() error {
 	_ = s.session.Close()
-	return s.client.Close()
+	err := s.client.Close()
+	closeClients(s.jumps)
+	return err
+}
+
+// closeClients closes SSH connections, the last (innermost) one first.
+func closeClients(cs []*ssh.Client) {
+	for i := len(cs) - 1; i >= 0; i-- {
+		_ = cs[i].Close()
+	}
 }
 
 // hostKeyConfirmer asks the user to trust an unknown host key.
 type hostKeyConfirmer func(host, fingerprint string) bool
 
-// dialSSH opens an SSH shell. conn is an already connected socket (from
-// protocol detection) or nil to dial req.Host:req.Port. keys are private key
+// sshTimeout bounds connecting and logging in to one SSH server.
+const sshTimeout = 10 * time.Second
+
+// sshLogin connects to addr and logs in, checking the host key against
+// known_hosts. conn is an already connected socket (protocol detection, or a
+// channel through a jump host) or nil to dial addr. keys are private key
 // files (IdentityFile in ~/.ssh/config) to try before the default ones.
 // ask prompts the user during login (key passphrases); nil cancels prompts.
-func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, ask asker, conn net.Conn, keys []string) (Session, error) {
-	if req.Login == "" {
+func sshLogin(addr, login, pass string, confirm hostKeyConfirmer, ask asker, conn net.Conn, keys []string) (*ssh.Client, error) {
+	if login == "" {
 		return nil, errors.New("SSH 접속에는 Login이 필요합니다")
 	}
-
 	kh, err := loadKnownHosts(confirm)
 	if err != nil {
 		return nil, err
 	}
 
-	auth := newSSHAuth(req.Pass, keys, ask)
+	auth := newSSHAuth(pass, keys, ask)
 	defer auth.Close()
 	cfg := &ssh.ClientConfig{
-		User:            req.Login,
+		User:            login,
 		Auth:            auth.methods,
 		HostKeyCallback: kh.check,
-		Timeout:         10 * time.Second,
+		Timeout:         sshTimeout,
 	}
-
-	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
 	if conn == nil {
 		if conn, err = net.DialTimeout("tcp", addr, cfg.Timeout); err != nil {
 			return nil, fmt.Errorf("SSH 접속 실패: %w", err)
@@ -110,7 +121,16 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, ask asker, conn net.C
 		conn.Close()
 		return nil, fmt.Errorf("SSH 접속 실패: %w", err)
 	}
-	client := ssh.NewClient(c, chans, reqs)
+	return ssh.NewClient(c, chans, reqs), nil
+}
+
+// dialSSH opens an SSH shell (see sshLogin for conn, keys and ask).
+func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, ask asker, conn net.Conn, keys []string) (Session, error) {
+	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
+	client, err := sshLogin(addr, req.Login, req.Pass, confirm, ask, conn, keys)
+	if err != nil {
+		return nil, err
+	}
 
 	session, err := client.NewSession()
 	if err != nil {

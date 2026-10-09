@@ -16,6 +16,7 @@ type HostEntry struct {
 	Login    string `json:"login"`
 	Encoding string `json:"encoding"`
 	Pass     string `json:"pass"`
+	Jump     string `json:"jump"` // SSH jump hosts, as in ConnectRequest
 }
 
 // storedEntry is the on-disk form: the password is DPAPI-encrypted, never plain.
@@ -25,6 +26,7 @@ type storedEntry struct {
 	Login    string `json:"login"`
 	Encoding string `json:"encoding"`
 	PassEnc  string `json:"passEnc,omitempty"`
+	Jump     string `json:"jump,omitempty"`
 	// Before sessions.json these were kept here; they are only read now,
 	// as the starting value of the server's prefs (see prefsFor).
 	Forwards []Forward `json:"forwards,omitempty"`
@@ -56,6 +58,7 @@ func loadHistory() []HostEntry {
 			Login:    s.Login,
 			Encoding: s.Encoding,
 			Pass:     decryptPass(s.PassEnc),
+			Jump:     s.Jump,
 		})
 	}
 	return list
@@ -111,7 +114,7 @@ func addHistory(e HostEntry, pass *string) error {
 	defer historyMu.Unlock()
 
 	old := readHistory()
-	entry := storedEntry{Host: e.Host, Port: e.Port, Login: e.Login, Encoding: e.Encoding}
+	entry := storedEntry{Host: e.Host, Port: e.Port, Login: e.Login, Encoding: e.Encoding, Jump: e.Jump}
 	for _, h := range old {
 		if h.Host == e.Host && h.Port == e.Port {
 			entry.PassEnc = h.PassEnc

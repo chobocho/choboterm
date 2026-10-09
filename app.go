@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"golang.org/x/crypto/ssh"
 )
 
 // Session is a live terminal connection (SSH or Telnet).
@@ -55,6 +56,7 @@ type ConnectRequest struct {
 	Login    string `json:"login"`
 	Pass     string `json:"pass"`
 	Encoding string `json:"encoding"`
+	Jump     string `json:"jump"` // SSH jump hosts (ssh -J); "" = ProxyJump of ~/.ssh/config, "none" = none
 	Cols     int    `json:"cols"`
 	Rows     int    `json:"rows"`
 }
@@ -210,6 +212,9 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	// "ssh [-p port] [user@]name" and names from ~/.ssh/config: req keeps
 	// the name (tab title, history), dial holds the address to connect to.
 	cfg := loadSSHConfig()
+	if j := sshCommandJump(req.Host); j != "" {
+		req.Jump = j // ssh -J on the command line
+	}
 	if _, _, _, isCmd := parseSSHCommand(req.Host); isCmd {
 		st := lookupSSHTarget(cfg, req.Host)
 		req.Host, req.Port = st.Host, st.Port
@@ -224,7 +229,26 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	t.disconnect()
 
 	proto := Protocol(req.Port)
-	var conn net.Conn
+	var (
+		conn  net.Conn
+		jumps []*ssh.Client
+	)
+	// Through jump hosts (ssh -J, ProxyJump): only SSH makes sense, and the
+	// target may not be reachable from here, so it isn't probed first.
+	if spec := proxyJumpFor(cfg, req.Host, req.Jump); spec != "" && (proto == "" || proto == "ssh") {
+		proto = "ssh"
+		if dial.Login == "" {
+			dial.Login = configGet(cfg, req.Host, "User")
+		}
+		hops, err := parseJumps(cfg, spec, dial.Login)
+		if err != nil {
+			return "", err
+		}
+		target := net.JoinHostPort(dial.Host, strconv.Itoa(req.Port))
+		if jumps, conn, err = dialJumps(hops, target, a.confirmHostKey, a.asker(tabID)); err != nil {
+			return "", err
+		}
+	}
 	if proto == "" {
 		c, p, err := dialDetect(net.JoinHostPort(dial.Host, strconv.Itoa(req.Port)))
 		if err != nil {
@@ -255,6 +279,11 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 			dial.Login = configGet(cfg, req.Host, "User")
 		}
 		sess, err = dialSSH(dial, a.confirmHostKey, a.asker(tabID), conn, sshIdentityFiles(cfg, req.Host, dial.Login))
+		if err != nil {
+			closeClients(jumps)
+		} else {
+			sess.(*sshSession).jumps = jumps
+		}
 	} else {
 		sess, err = dialTelnet(dial, conn)
 	}
@@ -268,7 +297,7 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	if proto == "telnet" {
 		savePass = &req.Pass
 	}
-	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, savePass)
+	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc, Jump: req.Jump}, savePass)
 	t.start(sess, proto, req)
 	return proto, nil
 }

@@ -24,6 +24,7 @@ export interface SessionDraft {
     login: string;
     encoding: string;
     pass: string;
+    jump: string;
     session?: main.SavedSession;
 }
 
@@ -41,7 +42,7 @@ export async function openSaveSession(d: SessionDraft): Promise<main.SavedSessio
     const s = d.session;
     titleEl.textContent = s ? '세션 수정' : '세션으로 저장';
     const user = d.login ? d.login + '@' : '';
-    whereEl.textContent = d.port > 0 ? `${user}${d.host}:${d.port} · ${d.encoding || 'UTF-8'}` : `${d.host} (로컬 셸)`;
+    whereEl.textContent = d.port > 0 ? `${user}${d.host}:${d.port} · ${d.encoding || 'UTF-8'}${d.jump ? ` · Jump ${d.jump}` : ''}` : `${d.host} (로컬 셸)`;
     nameInput.value = s?.name ?? d.host;
     groupInput.value = s?.group ?? '';
     passCheck.disabled = !d.pass;
@@ -82,6 +83,7 @@ async function save() {
             login: d.login,
             encoding: d.encoding,
             pass: d.pass,
+            jump: d.jump,
         }), passCheck.checked);
         finish(saved);
     } catch (e) {
@@ -119,12 +121,13 @@ const smLogin = $<HTMLInputElement>('smLogin');
 const smPass = $<HTMLInputElement>('smPass');
 const smSavePass = $<HTMLInputElement>('smSavePass');
 const smCode = $<HTMLSelectElement>('smCode');
+const smJump = $<HTMLInputElement>('smJump');
 const smError = $<HTMLDivElement>('smError');
 const smOpenBtn = $<HTMLButtonElement>('smOpen');
 const smGroupOpen = $<HTMLButtonElement>('smGroupOpen');
 const smDup = $<HTMLButtonElement>('smDup');
 const smDel = $<HTMLButtonElement>('smDel');
-const fields = [smName, smGroup, smHost, smPort, smLogin, smPass, smSavePass, smCode];
+const fields = [smName, smGroup, smHost, smPort, smLogin, smJump, smPass, smSavePass, smCode];
 
 let all: main.SavedSession[] = [];
 let shown: main.SavedSession[] = [];
@@ -244,6 +247,7 @@ function fillFields(x?: main.SavedSession) {
     smPass.value = x?.pass ?? '';
     smSavePass.checked = !!x?.pass;
     smCode.value = x?.encoding || 'UTF-8';
+    smJump.value = x?.jump ?? '';
     say('');
 }
 
@@ -284,6 +288,7 @@ async function flush() {
             login: smLogin.value,
             encoding: smCode.value,
             pass: smPass.value,
+            jump: smJump.value.trim(),
         }), smSavePass.checked);
         say('');
         if (current !== x) return; // another one was picked meanwhile

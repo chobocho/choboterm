@@ -85,6 +85,7 @@ const TEXT: Record<Lang, HelpText> = {
                     ['Host에 cmd · powershell · wsl', '이 PC의 셸(cmd, PowerShell, pwsh, WSL)을 탭에서 열기. "wsl -d Ubuntu"처럼 인자도 가능. ▼ 목록에 "로컬 셸"로 표시'],
                     ['SSH 로그인 질문', 'OTP·인증 코드 같은 서버 질문, 암호 걸린 개인키의 암호는 창으로 물어봄. Pass를 비우면 비밀번호도 물어봄. 에이전트(OpenSSH·Pageant) 키는 자동 사용'],
                     ['Host에 ssh config 이름', '~/.ssh/config의 Host 이름(예: busan)이나 "ssh busan", "ssh -p 2222 user@busan"을 쓰면 HostName·Port·User·IdentityFile을 읽어 접속. ▼ 목록에도 표시'],
+                    ['Jump (점프 호스트)', '배스천을 거쳐 접속(ProxyJump). 접속 창의 Jump 칸에 user@bastion, 여러 개는 쉼표로. 비우면 ~/.ssh/config의 ProxyJump, "ssh -J bastion web"도 됨, none이면 쓰지 않음'],
                 ],
             },
             {
@@ -190,6 +191,7 @@ const TEXT: Record<Lang, HelpText> = {
                     ['cmd · powershell · wsl in Host', 'Opens a shell on this PC (cmd, PowerShell, pwsh, WSL) in the tab. Arguments work too ("wsl -d Ubuntu"). Listed as "local shell" under ▼'],
                     ['SSH login questions', 'One-time codes and other server questions, and passphrases of encrypted keys, are asked in a window. With Pass empty the password is asked too. Agent keys (OpenSSH, Pageant) are used automatically'],
                     ['ssh config name in Host', 'Type a Host name from ~/.ssh/config (e.g. busan), "ssh busan" or "ssh -p 2222 user@busan" to use its HostName, Port, User and IdentityFile. Also listed under ▼'],
+                    ['Jump (jump host)', 'Connect through a bastion (ProxyJump): user@bastion in the Jump field, several separated by commas. Empty = ProxyJump of ~/.ssh/config; "ssh -J bastion web" works too; none = no jump'],
                 ],
             },
             {
