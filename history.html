@@ -5,6 +5,16 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261008_124635.html">history_20261008_124635.html</a></p>
 
+<h2>2026-10-09 — 도커 컨테이너 창 (Ctrl+Shift+J)</h2>
+<ul>
+  <li>포트 포워딩 창: 복사 버튼 글자가 두 줄로 꺾이던 문제 수정(nowrap, 높이 맞춤)</li>
+  <li>docker.go: 지금 탭의 SSH 서버 또는 이 PC(Docker Desktop)의 컨테이너 목록(docker ps 템플릿, .State 없이 Status로 실행 여부 판단 → 옛 docker·podman 호환), 시작/중지/재시작, docker 없으면 podman. 권한 없음·데몬 꺼짐·미설치 오류를 알기 쉬운 메시지로</li>
+  <li>셸(docker exec -it, bash 없으면 sh)·로그(docker logs -f --tail 200)를 새 탭으로: 서버는 같은 SSH 접속에 세션 추가(재로그인 없음, 탭을 닫아도 원래 접속 유지, 원래 접속이 끊기면 함께 닫힘), PC는 로컬 PTY. Enter로 다시 열기, 복제 지원</li>
+  <li>포트 열기: 게시된 서버 포트를 이 PC의 같은 포트로 -L 포워딩 후 브라우저(포트가 사용 중이면 규칙을 남기지 않고 안내)</li>
+  <li>dialSSH에서 openPty 분리. 테스트: 목록 파싱·인자·Windows 인용, WSL 가짜 docker + 테스트 SSH 서버로 목록/동작/exec 탭/접속 유지 확인. 실제 Docker 서버·Docker Desktop에서는 아직 확인 못 함</li>
+  <li>도움말·영어 사전 35개·README 갱신</li>
+</ul>
+
 <h2>2026-10-09 — V0.2.7 릴리스</h2>
 <ul>
   <li>버전 0.2.7(main.go, wails.json, README), build.bat으로 테스트·빌드 후 main 푸시. GitHub 릴리스 v0.2.7 생성(포트 포워딩 연결 수 툴팁 · ssh 명령어 복사)</li>
