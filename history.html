@@ -5,6 +5,12 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261008_124635.html">history_20261008_124635.html</a></p>
 
+<h2>2026-10-09 — README에 아키텍처 그림 추가</h2>
+<ul>
+  <li>docs/architecture.svg 작성: 프론트엔드(WebView2·TypeScript) ↔ Wails 바인딩·이벤트 ↔ Go 백엔드(app.go tab, SSH·Telnet·ConPTY, 파일 전송·Zmodem, 저장소) ↔ 원격 서버·로컬 프로그램, 별도 프로세스인 Lua 실행기</li>
+  <li>README에 "아키텍처" 섹션(그림 + 3줄 설명)을 "소스 구성" 앞에 추가. Edge headless로 렌더링해 글자 넘침 없음 확인</li>
+</ul>
+
 <h2>2026-10-09 — Lua 콘솔: 파일 불러오기</h2>
 <ul>
   <li>Lua 콘솔 상단에 "열기" 버튼, 입력창에서 Ctrl+O. 고른 .lua 파일 내용을 바로 실행하지 않고 입력창에 넣어 보여 줌(고친 뒤 Enter로 실행)</li>
