@@ -164,7 +164,7 @@ func (l *sessionLog) mark(msg string) {
 	} else if st, err := l.f.Stat(); err == nil && st.Size() > 0 && !(l.stamp && l.bol) {
 		b = []byte("\r\n") // raw output may stop in the middle of a line
 	}
-	line := fmt.Sprintf("===== %s %s =====\r\n", time.Now().Format("2006-01-02 15:04:05"), msg)
+	line := fmt.Sprintf("===== %s %s =====\r\n", time.Now().Format("2006-01-02 15:04:05"), tr(msg))
 	_, _ = l.f.Write(append(b, line...))
 	l.bol = true
 }
@@ -409,7 +409,7 @@ func (a *App) ChooseLogDir(current string) (string, error) {
 		current = ""
 	}
 	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            "로그 폴더 선택",
+		Title:            tr("로그 폴더 선택"),
 		DefaultDirectory: current,
 	})
 	if err != nil {

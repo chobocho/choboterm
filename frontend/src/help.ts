@@ -1,5 +1,6 @@
 // F1 help window, switchable between Korean and English.
 
+import {currentLang} from './i18n';
 import {BrowserOpenURL} from '../wailsjs/runtime/runtime';
 
 const REPO = 'https://github.com/chobocho/choboterm';
@@ -111,6 +112,7 @@ const TEXT: Record<Lang, HelpText> = {
                 title: '도움말',
                 rows: [
                     ['F1', '도움말 열기 / 닫기'],
+                    ['언어 (Language)', '설정(Ctrl+Shift+O)에서 자동 / 한국어 / English. 다시 시작하면 적용'],
                     ['Alt+L', '한국어 ↔ English 전환'],
                 ],
             },
@@ -219,6 +221,7 @@ const TEXT: Record<Lang, HelpText> = {
                 title: 'Help',
                 rows: [
                     ['F1', 'Open / close this help'],
+                    ['Language', 'Auto / 한국어 / English in Settings (Ctrl+Shift+O). Applies after a restart'],
                     ['Alt+L', 'Switch English ↔ 한국어'],
                 ],
             },
@@ -250,7 +253,7 @@ const content = $<HTMLDivElement>('helpContent');
 const langBtn = $<HTMLButtonElement>('helpLang');
 const closeBtn = $<HTMLButtonElement>('helpClose');
 
-let lang: Lang = loadLang();
+let lang: Lang | undefined; // read when first shown: the app's language is known by then
 let onClose: (() => void) | undefined;
 
 function loadLang(): Lang {
@@ -260,18 +263,19 @@ function loadLang(): Lang {
     } catch {
         // Storage unavailable: fall back to the default.
     }
-    return 'ko';
+    return currentLang();
 }
 
 function saveLang() {
     try {
-        localStorage.setItem(LANG_KEY, lang);
+        localStorage.setItem(LANG_KEY, lang!);
     } catch {
         // Not remembered; harmless.
     }
 }
 
 function render() {
+    lang ??= loadLang();
     const t = TEXT[lang];
     title.textContent = `${t.title} (F1)`;
     langBtn.textContent = t.other;

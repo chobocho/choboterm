@@ -68,6 +68,8 @@ export function ForwardRemove(arg1:number,arg2:number):Promise<void>;
 
 export function GetHistory():Promise<Array<main.HostEntry>>;
 
+export function GetLanguage():Promise<string>;
+
 export function GetLocalShells():Promise<Array<main.LocalShell>>;
 
 export function GetSSHConfigHosts():Promise<Array<main.SSHConfigHost>>;

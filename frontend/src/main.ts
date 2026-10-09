@@ -17,6 +17,7 @@ import {openSaveSession, openSessionManager, sessionManagerOpen, sessionSaveOpen
 import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
 import {attachHighlight, Highlighter, loadRules} from './highlight';
+import {Lang, startI18n, tr} from './i18n';
 import {imageOpen} from './imageview';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, saveSettings, settings} from './settings';
@@ -24,7 +25,7 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
+    CloseTab, Connect, Disconnect, GetLanguage, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
@@ -121,13 +122,18 @@ let nextId = 1;
 let dragging: Tab | undefined;
 
 function notice(t: Tab, msg: string) {
-    t.term.write(`\r\n\x1b[33m[${msg.replace(/\n/g, '\r\n')}]\x1b[0m\r\n`);
+    t.term.write(`\r\n\x1b[33m[${tr(msg).replace(/\n/g, '\r\n')}]\x1b[0m\r\n`);
+}
+
+/** "Enter: 다시 접속", in yellow after a bracketed reason. */
+function reconnectHint(t: Tab, why: string) {
+    t.term.write(`\x1b[33m[${tr(why)}] ${tr('Enter: 다시 접속')}\x1b[0m\r\n`);
 }
 
 function welcome(t: Tab) {
     t.term.write(`choboterm V${version}\r\n`);
-    t.term.write('\x1b[90mEnter: 접속 창 · Ctrl+Shift+T: 새 탭 · Ctrl+Tab: 탭 전환 · Ctrl+Shift+W: 탭 닫기\r\n');
-    t.term.write('Ctrl+Shift+E: UTF-8 ↔ EUC-KR · Ctrl+Shift+F: 파일 전송 · Ctrl+Shift+D: 연결 끊기\x1b[0m\r\n');
+    t.term.write(`\x1b[90m${tr('Enter: 접속 창 · Ctrl+Shift+T: 새 탭 · Ctrl+Tab: 탭 전환 · Ctrl+Shift+W: 탭 닫기')}\r\n`);
+    t.term.write(`${tr('Ctrl+Shift+E: UTF-8 ↔ EUC-KR · Ctrl+Shift+F: 파일 전송 · Ctrl+Shift+D: 연결 끊기')}\x1b[0m\r\n`);
 }
 
 function applyFontFamily(t: Tab) {
@@ -299,7 +305,7 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
             if (data === '\r') retryNow(t);
             else if (data === '\x1b') {
                 cancelRetry(t);
-                t.term.write('\x1b[33m[자동 재접속을 취소했습니다] Enter: 다시 접속\x1b[0m\r\n');
+                reconnectHint(t, '자동 재접속을 취소했습니다');
             }
         } else if (data === '\r') openDialog(t);
     });
@@ -807,7 +813,7 @@ async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = false):
     applyEncoding(t, req.encoding || 'UTF-8');
     if (protocol === 'ftp') {
         setState(t, 'ftp');
-        t.term.write(`FTP ${req.host}:${req.port}\r\n\x1b[90mCtrl+Shift+F: 파일 전송 창 열기 · 탭을 닫으면 연결이 끊어집니다\x1b[0m\r\n`);
+        t.term.write(`FTP ${req.host}:${req.port}\r\n\x1b[90m${tr('Ctrl+Shift+F: 파일 전송 창 열기 · 탭을 닫으면 연결이 끊어집니다')}\x1b[0m\r\n`);
     } else {
         setState(t, 'on');
         // The theme saved for this server, if any.
@@ -826,13 +832,13 @@ const MAX_RETRIES = 10;
 
 function scheduleRetry(t: Tab, attempt: number, why: string) {
     cancelRetry(t);
-    const reason = `\r\n\x1b[33m[${why.replace(/\n/g, '\r\n')}]\r\n`;
+    const reason = `\r\n\x1b[33m[${tr(why).replace(/\n/g, '\r\n')}]\r\n`;
     if (attempt > MAX_RETRIES) {
-        t.term.write(`${reason}[${MAX_RETRIES}번 시도했지만 연결하지 못했습니다] Enter: 다시 접속\x1b[0m\r\n`);
+        t.term.write(`${reason}[${tr(`${MAX_RETRIES}번 시도했지만 연결하지 못했습니다`)}] ${tr('Enter: 다시 접속')}\x1b[0m\r\n`);
         return;
     }
     const secs = RETRY_DELAYS[Math.min(attempt - 1, RETRY_DELAYS.length - 1)];
-    t.term.write(`${reason}[${secs}초 후 다시 연결합니다 (${attempt}/${MAX_RETRIES})] Enter: 지금 연결 · Esc: 취소\x1b[0m\r\n`);
+    t.term.write(`${reason}[${tr(`${secs}초 후 다시 연결합니다 (${attempt}/${MAX_RETRIES})`)}] ${tr('Enter: 지금 연결 · Esc: 취소')}\x1b[0m\r\n`);
     t.el.classList.add('retry');
     t.retry = {attempt, timer: window.setTimeout(() => retryNow(t), secs * 1000)};
 }
@@ -850,7 +856,7 @@ async function retryNow(t: Tab) {
     if (!t.req || !tabs.has(t.id) || t.state !== 'idle') return;
     t.reconnecting = true;
     t.el.classList.add('retry');
-    t.term.write(`\x1b[90m다시 연결하는 중... ${t.req.host}:${t.req.port}\x1b[0m\r\n`);
+    t.term.write(`\x1b[90m${tr(`다시 연결하는 중... ${t.req.host}:${t.req.port}`)}\x1b[0m\r\n`);
     try {
         await connectTab(t, t.req, true);
         notice(t, '다시 연결했습니다');
@@ -906,13 +912,14 @@ function disconnect(t: Tab) {
     forwardsTabClosed(t.id);
     if (t.retry) {
         cancelRetry(t);
-        t.term.write('\x1b[33m[자동 재접속을 취소했습니다] Enter: 다시 접속\x1b[0m\r\n');
+        reconnectHint(t, '자동 재접속을 취소했습니다');
     }
     if (t.state === 'idle') return;
     closeFiles(t.id);
     Disconnect(t.id);
     setState(t, 'idle');
-    t.term.write('\r\n\x1b[33m[연결을 끊었습니다] Enter: 다시 접속\x1b[0m\r\n');
+    t.term.write('\r\n');
+    reconnectHint(t, '연결을 끊었습니다');
 }
 
 /** The folder in the prompt at the cursor: "user@host:~/src$", "~/src $", "[/etc]#"... */
@@ -987,7 +994,10 @@ EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
     forwardsTabClosed(t.id);
     setState(t, 'idle');
     if (lost && settings.autoReconnect && t.req) scheduleRetry(t, 1, msg);
-    else t.term.write(`\r\n\x1b[33m[${msg}] Enter: 다시 접속\x1b[0m\r\n`);
+    else {
+        t.term.write('\r\n');
+        reconnectHint(t, msg);
+    }
 });
 
 // path: the new log file, or "" when logging stopped.
@@ -2177,8 +2187,9 @@ initAuthPrompt(id => {
     return `${r.login ? r.login + '@' : ''}${r.host}:${r.port}`;
 }, focusActive);
 
-Promise.all([GetVersion(), loadSettings()]).then(([v]) => {
+Promise.all([GetVersion(), loadSettings(), GetLanguage()]).then(([v, , lang]) => {
     version = v;
+    startI18n(lang === 'en' ? 'en' : 'ko' as Lang);
     initTranslucencyPreview(applyTranslucency);
     appName = `choboterm V${v}`;
     applySettings();

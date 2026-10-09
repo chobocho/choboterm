@@ -134,6 +134,10 @@ export function GetHistory() {
   return window['go']['main']['App']['GetHistory']();
 }
 
+export function GetLanguage() {
+  return window['go']['main']['App']['GetLanguage']();
+}
+
 export function GetLocalShells() {
   return window['go']['main']['App']['GetLocalShells']();
 }

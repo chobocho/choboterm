@@ -104,9 +104,9 @@ func addSessions(list []SavedSession) (ImportResult, error) {
 // passwords) to it. It returns the path, or "" if the user cancelled.
 func (a *App) ExportSessions() (string, error) {
 	p, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "세션 내보내기",
+		Title:           tr("세션 내보내기"),
 		DefaultFilename: "choboterm-sessions.json",
-		Filters:         []runtime.FileFilter{{DisplayName: "세션 파일 (*.json)", Pattern: "*.json"}},
+		Filters:         []runtime.FileFilter{{DisplayName: tr("세션 파일 (*.json)"), Pattern: "*.json"}},
 	})
 	if err != nil || p == "" {
 		return "", err
@@ -122,8 +122,8 @@ func (a *App) ExportSessions() (string, error) {
 // sessions. Cancelled = zero result.
 func (a *App) ImportSessions() (ImportResult, error) {
 	p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:   "세션 가져오기",
-		Filters: []runtime.FileFilter{{DisplayName: "세션 파일 (*.json)", Pattern: "*.json"}},
+		Title:   tr("세션 가져오기"),
+		Filters: []runtime.FileFilter{{DisplayName: tr("세션 파일 (*.json)"), Pattern: "*.json"}},
 	})
 	if err != nil || p == "" {
 		return ImportResult{}, err

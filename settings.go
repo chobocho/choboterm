@@ -43,6 +43,8 @@ type Settings struct {
 	LogRaw bool `json:"logRaw"`
 	// LogTime starts each line of a session log with the time it arrived.
 	LogTime bool `json:"logTime"`
+	// Language is the screen language: "ko", "en", or "" to follow Windows.
+	Language string `json:"language"`
 	// Highlight colours keywords in the output.
 	Highlight Highlight `json:"highlight"`
 	// ConsoleHeight is the Lua console's height in pixels, set by dragging

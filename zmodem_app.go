@@ -35,7 +35,7 @@ func (t *tab) cancelZmodem() {
 
 // termMessage prints a status line in the tab's terminal (yellow).
 func (t *tab) termMessage(msg string) {
-	msg = strings.ReplaceAll(msg, "\n", "\r\n")
+	msg = strings.ReplaceAll(tr(msg), "\n", "\r\n")
 	data := "\r\n\x1b[33m" + msg + "\x1b[0m\r\n"
 	t.emit("term:data", base64.StdEncoding.EncodeToString([]byte(data)))
 }
@@ -83,7 +83,7 @@ func (t *tab) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 			msg = fmt.Sprintf("[Zmodem] %d개 파일을 받았습니다: %s\n  %s", len(saved), o.Dir, strings.Join(saved, "\n  "))
 		}
 	} else {
-		files, derr := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{Title: "Zmodem으로 보낼 파일 선택"})
+		files, derr := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{Title: tr("Zmodem으로 보낼 파일 선택")})
 		if derr != nil || len(files) == 0 {
 			p.abort()
 			err = errCancelled

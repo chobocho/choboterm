@@ -71,7 +71,7 @@ func readLog(t *testing.T, path, want string) string {
 func TestSessionLogFollowsOutput(t *testing.T) {
 	useTempSettings(t)
 	dir := filepath.Join(t.TempDir(), "logs")
-	if err := updateSettings(func(s *Settings) { s.LogDir, s.LogTime = dir, false }); err != nil {
+	if err := updateSettings(func(s *Settings) { s.LogDir, s.LogTime, s.Language = dir, false, "ko" }); err != nil {
 		t.Fatal(err)
 	}
 	var changed []string
@@ -117,7 +117,7 @@ func TestSessionLogFollowsOutput(t *testing.T) {
 func TestSessionLogRawKeepsEscapes(t *testing.T) {
 	useTempSettings(t)
 	dir := t.TempDir()
-	if err := updateSettings(func(s *Settings) { s.LogDir, s.LogRaw, s.LogTime = dir, true, false }); err != nil {
+	if err := updateSettings(func(s *Settings) { s.LogDir, s.LogRaw, s.LogTime, s.Language = dir, true, false, "ko" }); err != nil {
 		t.Fatal(err)
 	}
 	var changed []string

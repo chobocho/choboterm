@@ -595,9 +595,9 @@ func (a *App) confirmHostKey(host, fingerprint string) bool {
 	}
 	res, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
 		Type:  runtime.QuestionDialog,
-		Title: "알 수 없는 호스트",
-		Message: fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
-			host, fingerprint),
+		Title: tr("알 수 없는 호스트"),
+		Message: tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
+			host, fingerprint)),
 		Buttons:       []string{"Yes", "No"},
 		DefaultButton: "No",
 	})

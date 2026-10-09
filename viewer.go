@@ -214,7 +214,7 @@ type SaveResult struct {
 // Path is "" if the user cancelled the dialog.
 func (a *App) TextSaveAs(name, text, enc string) (SaveResult, error) {
 	local, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:            "다른 인코딩으로 저장 (" + enc + ")",
+		Title:            tr("다른 인코딩으로 저장 (" + enc + ")"),
 		DefaultDirectory: downloadsDir(),
 		DefaultFilename:  name,
 	})

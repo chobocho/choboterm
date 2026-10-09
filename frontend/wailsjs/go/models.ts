@@ -340,6 +340,7 @@ export namespace main {
 	    logDir: string;
 	    logRaw: boolean;
 	    logTime: boolean;
+	    language: string;
 	    highlight: Highlight;
 	    consoleHeight: number;
 	    macros: Macro[];
@@ -368,6 +369,7 @@ export namespace main {
 	        this.logDir = source["logDir"];
 	        this.logRaw = source["logRaw"];
 	        this.logTime = source["logTime"];
+	        this.language = source["language"];
 	        this.highlight = this.convertValues(source["highlight"], Highlight);
 	        this.consoleHeight = source["consoleHeight"];
 	        this.macros = this.convertValues(source["macros"], Macro);

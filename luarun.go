@@ -409,9 +409,9 @@ type ConsoleFile struct {
 func (a *App) ConsoleOpen() (ConsoleFile, error) {
 	dir, _ := ensureScriptsDir()
 	p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            "Lua 파일 불러오기",
+		Title:            tr("Lua 파일 불러오기"),
 		DefaultDirectory: dir,
-		Filters:          []runtime.FileFilter{{DisplayName: "Lua 스크립트 (*.lua)", Pattern: "*.lua"}},
+		Filters:          []runtime.FileFilter{{DisplayName: tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
 	})
 	if err != nil || p == "" {
 		return ConsoleFile{}, err
@@ -435,10 +435,10 @@ func (a *App) ConsoleOpen() (ConsoleFile, error) {
 // It returns "" if the user cancelled the dialog.
 func (a *App) ConsoleSave(text string) (string, error) {
 	local, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:            "Lua 콘솔 저장",
+		Title:            tr("Lua 콘솔 저장"),
 		DefaultDirectory: downloadsDir(),
 		DefaultFilename:  "lua_console_" + time.Now().Format("20060102_150405") + ".txt",
-		Filters:          []runtime.FileFilter{{DisplayName: "텍스트 (*.txt)", Pattern: "*.txt"}},
+		Filters:          []runtime.FileFilter{{DisplayName: tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
 	})
 	if err != nil || local == "" {
 		return "", err
@@ -520,9 +520,9 @@ func (a *App) RunScriptFile(tabID int) (string, error) {
 	}
 	dir, _ := ensureScriptsDir()
 	p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            "Lua 스크립트 실행",
+		Title:            tr("Lua 스크립트 실행"),
 		DefaultDirectory: dir,
-		Filters:          []runtime.FileFilter{{DisplayName: "Lua 스크립트 (*.lua)", Pattern: "*.lua"}},
+		Filters:          []runtime.FileFilter{{DisplayName: tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
 	})
 	if err != nil || p == "" {
 		return "", err

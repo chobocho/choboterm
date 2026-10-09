@@ -11,6 +11,9 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 
 ## 기능
 
+- **영어 화면 (English UI)**: 설정 창(`Ctrl+Shift+O`)의 "언어 (Language)"에서 자동 / 한국어 / English를 고릅니다. 자동은 Windows 표시 언어를 따릅니다(한국어 Windows면 한국어, 아니면 영어). 다시 시작하면 적용됩니다.
+  - 메뉴, 창, 알림, 오류 메시지, 파일 대화상자 제목, 터미널에 나오는 안내까지 영어로 바뀝니다. F1 도움말은 처음에 화면 언어로 열립니다.
+  - 사전은 `frontend/src/i18n_en.json` 하나이고, Go와 화면이 함께 씁니다. 터미널 출력과 편집 중인 파일 내용은 번역하지 않습니다.
 - **탭**: MobaXterm처럼 여러 접속을 탭으로 띄웁니다. 탭마다 접속, 인코딩, 파일 전송이 따로 동작합니다.
   - 탭 상태 점: 초록 = 접속 중, 회색 = 끊김, 주황 = 파일 전송 중. 보고 있지 않은 탭에 새 출력이 오면 탭 이름이 강조됩니다.
   - `+` 버튼이나 탭 바 빈 곳 더블클릭으로 새 탭, 가운데 클릭으로 닫기, 끌어서 순서 바꾸기
@@ -242,6 +245,10 @@ go test ./...
 | `frontend/src/macros.ts` | 매크로 창, 매크로 단축키, 이스케이프 처리 |
 | `frontend/src/paste.ts` | 여러 줄 붙여넣기 확인 창 |
 | `frontend/src/settings.ts` | 설정 읽기 / 저장 |
+| `frontend/src/i18n.ts` / `i18n.go` / `frontend/src/i18n_en.json` | 영어 화면: 한국어 문구를 사전으로 바꿈(화면은 나타나는 대로, Go는 대화상자·터미널 안내·로그) |
+| `frontend/src/highlight.ts` | 키워드 강조 (xterm 데코레이션) |
+| `frontend/src/imageview.ts` | 이미지 보기 창 |
+| `sshjump.go` | 점프 호스트 (ProxyJump) |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
 | `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
 

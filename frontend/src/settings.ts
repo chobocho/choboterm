@@ -22,6 +22,7 @@ export let settings: main.Settings = main.Settings.createFrom({
     logRaw: false,
     logTime: true,
     consoleHeight: 0,
+    language: '',
     highlight: {
         on: true,
         red: 'error, errors, fail, failed, failure, fatal, denied, refused, exception, panic, critical, 오류, 에러, 실패',

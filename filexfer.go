@@ -302,7 +302,7 @@ func (a *App) FileDownload(tabID int, remotePath string, size int64) (string, er
 		return "", errors.New("연결되어 있지 않습니다")
 	}
 	local, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:            "다운로드",
+		Title:            tr("다운로드"),
 		DefaultDirectory: downloadsDir(),
 		DefaultFilename:  path.Base(remotePath),
 	})
@@ -324,7 +324,7 @@ func (a *App) FileUpload(tabID int, remoteDir string) (int, error) {
 		return 0, errors.New("연결되어 있지 않습니다")
 	}
 	files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "업로드할 파일 선택",
+		Title: tr("업로드할 파일 선택"),
 	})
 	if err != nil || len(files) == 0 {
 		return 0, err
@@ -483,7 +483,7 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 	localDir := a.hooks.downloadDir
 	if localDir == "" {
 		d, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-			Title:            "저장할 폴더 선택",
+			Title:            tr("저장할 폴더 선택"),
 			DefaultDirectory: downloadsDir(),
 		})
 		if err != nil || d == "" {
