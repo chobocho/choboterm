@@ -246,6 +246,7 @@ login: guest
         <ul class="features">
             <li><b>SSH · Telnet · FTP</b><span>22/23/21번 포트는 바로, 다른 포트는 서버 응답으로 자동 판별 (예: Termux 8022)</span></li>
             <li><b>SSH 키 · 에이전트 · OTP</b><span>OpenSSH 에이전트 · Pageant의 키 자동 사용, 암호 걸린 개인키, 인증 코드(OTP) 같은 2단계 인증 질문</span></li>
+            <li><b>점프 호스트 (ProxyJump)</b><span>배스천을 거쳐 내부 서버로. 접속 창의 Jump 칸, ~/.ssh/config의 ProxyJump, ssh -J 모두 지원, 여러 단계도 가능</span></li>
             <li><b>ssh config 이름으로 접속</b><span>Host 칸에 busan 또는 ssh busan만 입력하면 ~/.ssh/config의 주소·포트·사용자·키로 접속</span></li>
             <li><b>탭 · 분할 창</b><span>여러 접속을 탭으로, 한 탭 안을 좌우·위아래로 나눠 창마다 따로 접속. 탭마다 인코딩·파일 전송이 따로 동작</span></li>
             <li><b>로컬 셸</b><span>Host에 cmd · powershell · wsl을 쓰면 이 PC의 셸을 탭에서 바로 실행 (WSL에서 sz / rz도 가능)</span></li>
@@ -258,9 +259,11 @@ login: guest
             <li><b>Lua 스크립트</b><span>send · expect · sleep · screen으로 자동 로그인, 반복 명령 자동화. 매크로 F키나 .lua 파일로 실행, 별도 프로세스에서 돌아 스크립트가 멈춰도 터미널은 그대로</span></li>
             <li><b>Lua 콘솔</b><span>Ctrl+Shift+K로 한 줄씩 바로 실행하는 REPL. 변수 유지, 식의 값 표시, .lua 파일 불러오기(Ctrl+O), 입력·출력 저장(Ctrl+S), 끌어서 높이 조절</span></li>
             <li><b>매크로</b><span>자주 쓰는 명령을 저장해 두고 창이나 F키로 바로 보내기</span></li>
-            <li><b>세션 로그</b><span>받은 출력을 파일에 계속 저장 (접속할 때 자동 시작, 일반 텍스트 또는 원본)</span></li>
-            <li><b>편한 파일 창</b><span>셸의 현재 폴더에서 바로 열림. 여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더 · 새 파일, 맨 위 .. 와 Alt+↑로 상위 폴더</span></li>
-            <li><b>원격 파일 보기 · 편집</b><span>F3 / F4로 받지 않고 바로 열기. UTF-8 · EUC-KR 자동 판별, 찾기·바꾸기, Ctrl+S로 서버에 저장 (인코딩·줄바꿈 유지, 충돌 확인)</span></li>
+            <li><b>세션 로그</b><span>받은 출력을 파일에 계속 저장 (접속할 때 자동 시작, 일반 텍스트 또는 원본), 줄마다 받은 시각 [2026-10-09 21:30:15.123]</span></li>
+            <li><b>키워드 강조</b><span>출력의 error · fail · 오류는 빨강, warning · 경고는 노랑, success · 성공은 초록 배경. 단어는 설정에서 바꾸고, 프로그램 색과 로그는 그대로</span></li>
+            <li><b>편한 파일 창</b><span>셸의 현재 폴더에서 바로 열림. 여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더 · 새 파일, 맨 위 .. 와 Alt+↑로 상위 폴더. 끊긴 전송은 이어받기 · 이어 올리기 (SFTP · FTP)</span></li>
+            <li><b>원격 파일 보기 · 편집</b><span>F3 / F4로 받지 않고 바로 열기. UTF-8 · EUC-KR 자동 판별, 찾기·바꾸기, Ctrl+S로 서버에 저장 (인코딩·줄바꿈 유지, 충돌 확인). JPG · PNG · GIF · BMP · WebP 이미지는 F3으로 이미지 보기 (확대 · 이전/다음)</span></li>
+            <li><b>영어 화면 (English UI)</b><span>설정에서 자동 / 한국어 / English. 메뉴 · 창 · 오류 메시지 · 파일 대화상자까지 영어로</span></li>
             <li><b>복사 · 붙여넣기</b><span>선택하면 복사, 우클릭으로 붙여넣기. 여러 줄은 실행 전에 확인</span></li>
             <li><b>GPU 가속 화면</b><span>WebGL로 그려 htop · vim 같은 TUI도 끊김 없이. 창 제목에 ⚡GPU / 🐢CPU 표시</span></li>
             <li><b>색 테마</b><span>Campbell · PuTTY · Dracula · Solarized · 허큘리스(녹색 모니터) 등 12가지 색 테마, 서버별로 다른 테마 지정, 반투명(창 전체 / 배경만), 커서 모양, 스크롤백 줄 수</span></li>
@@ -270,7 +273,7 @@ login: guest
 
     <section>
         <h2>구조</h2>
-        <img class="shot" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2) ↔ Wails ↔ Go 백엔드 ↔ 서버, 별도 프로세스의 Lua 실행기" loading="lazy"/>
+        <img class="shot" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 별도 프로세스의 Lua 실행기, 화면과 Go가 함께 쓰는 영어 사전" loading="lazy"/>
     </section>
 
     <section>
@@ -294,7 +297,7 @@ login: guest
             <tr><td><kbd>Ctrl+Shift+H</kbd></td><td>세션 관리</td></tr>
             <tr><td><kbd>Ctrl+Shift+P</kbd></td><td>SSH 포트 포워딩</td></tr>
             <tr><td><kbd>Ctrl+Shift+L</kbd></td><td>세션 로그 기록 시작 / 중지</td></tr>
-            <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>설정 (색 테마, 커서, 연결 유지 간격, 자동 재접속 등)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+O</kbd></td><td>설정 (색 테마, 커서, 언어, 키워드 강조, 연결 유지 간격, 로그 등)</td></tr>
             <tr><td><kbd>F1</kbd></td><td>도움말 (한국어 / English)</td></tr>
         </table>
     </section>
