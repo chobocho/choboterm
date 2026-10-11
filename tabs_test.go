@@ -109,3 +109,34 @@ func TestTabsAreIndependent(t *testing.T) {
 		t.Fatal("tab 2 not closed")
 	}
 }
+
+// Closing the window with a tab connected asks the page instead of closing.
+func TestBeforeCloseAsksWhenConnected(t *testing.T) {
+	asked := 0
+	a := NewApp()
+	a.hooks.emit = func(name string, data ...interface{}) {
+		if name == "app:close" {
+			asked++
+		}
+	}
+	a.getTab(1) // a tab that never connected
+	if a.beforeClose(nil) || asked != 0 {
+		t.Fatalf("no connection: asked %d times", asked)
+	}
+
+	a.getTab(2).sess = newPipeSession()
+	if !a.beforeClose(nil) || asked != 1 {
+		t.Fatalf("connected: asked %d times", asked)
+	}
+	// Once the user agreed, the window closes without asking again.
+	a.quit.Store(true)
+	if a.beforeClose(nil) || asked != 1 {
+		t.Fatalf("after agreeing: asked %d times", asked)
+	}
+	a.quit.Store(false)
+
+	a.CloseTab(2)
+	if a.beforeClose(nil) {
+		t.Fatal("still asks after the tab was closed")
+	}
+}

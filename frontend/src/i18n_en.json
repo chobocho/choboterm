@@ -424,6 +424,8 @@
   "크기": "Size",
   "키워드 강조": "Keyword highlighting",
   "탭 닫기": "Close tab",
+  "choboterm 끝내기": "Quit choboterm",
+  "연결된 탭이 {}개 있습니다. 창을 닫으면 모두 끊어집니다. 닫을까요?": "Connected tabs: {}. Closing the window disconnects them all. Close it?",
   "\"{}\" 탭은 연결되어 있습니다. 닫으면 연결이 끊어집니다. 닫을까요?": "The tab \"{}\" is connected. Closing it disconnects. Close it?",
   "탭 닫기 (Ctrl+Shift+W)": "Close tab (Ctrl+Shift+W)",
   "탭과 터미널이 글자까지 비칩니다. 설정·질문 창은 불투명합니다.": "Tabs and terminals are see-through, text too. Settings and question windows stay opaque.",

@@ -26,11 +26,11 @@ import {themeByName, THEMES} from './themes';
 import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
 
 import {
-    CloseTab, Connect, Disconnect, DockerOpen, GetLanguage, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Resize, Send, SendBreak,
+    CloseTab, Connect, Disconnect, DockerOpen, GetLanguage, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Quit, Resize, Send, SendBreak,
     SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
-import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, Environment, EventsOn, WindowSetTitle} from '../wailsjs/runtime/runtime';
+import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, Environment, EventsOn, WindowSetTitle, WindowUnminimise} from '../wailsjs/runtime/runtime';
 import {isLinux, setPlatform} from './platform';
 import {checkUpdate} from './update';
 
@@ -1056,6 +1056,14 @@ EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
         t.term.write('\r\n');
         reconnectHint(t, msg);
     }
+});
+
+// The window is closing with tabs still connected: ask first.
+EventsOn('app:close', async () => {
+    WindowUnminimise();
+    const n = [...tabs.values()].filter(t => t.state !== 'idle').length;
+    if (n === 0 || await ask('choboterm 끝내기', `연결된 탭이 ${n}개 있습니다. 창을 닫으면 모두 끊어집니다. 닫을까요?`, '닫기')) return Quit();
+    if (!askOpen()) focusActive();
 });
 
 // path: the new log file, or "" when logging stopped.

@@ -71,6 +71,7 @@ type App struct {
 	// rules (see forwardRule).
 	fwdMu sync.Mutex
 	shown sync.Once
+	quit  atomic.Bool // the user agreed to close the window (see beforeClose)
 }
 
 // tab is one connection with its own terminal tab in the frontend.
@@ -122,12 +123,44 @@ func (a *App) domReady(ctx context.Context) {
 	})
 }
 
-// beforeClose remembers the window position for the next start.
+// beforeClose remembers the window position for the next start. With a tab
+// still connected the window stays open and the page asks first; Quit closes it.
 func (a *App) beforeClose(ctx context.Context) bool {
 	if w, ok := currentWindowState(); ok && w.valid() {
 		_ = updateSettings(func(s *Settings) { s.Window = &w })
 	}
+	if !a.quit.Load() && a.connected() {
+		a.emit("app:close")
+		return true
+	}
 	return false
+}
+
+// connected reports whether any tab has a connection open.
+func (a *App) connected() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, t := range a.tabs {
+		if t.session() != nil {
+			return true
+		}
+		// An FTP tab has no session, only files. A file operation holds the lock.
+		if !t.files.mu.TryLock() {
+			return true
+		}
+		open := t.files.fs != nil
+		t.files.mu.Unlock()
+		if open {
+			return true
+		}
+	}
+	return false
+}
+
+// Quit closes the window without asking again.
+func (a *App) Quit() {
+	a.quit.Store(true)
+	runtime.Quit(a.ctx)
 }
 
 func (a *App) shutdown(ctx context.Context) {

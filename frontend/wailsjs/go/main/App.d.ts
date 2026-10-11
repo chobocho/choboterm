@@ -98,6 +98,8 @@ export function LogPath(arg1:number):Promise<string>;
 
 export function LookupSSH(arg1:string):Promise<main.SSHTarget>;
 
+export function Quit():Promise<void>;
+
 export function Resize(arg1:number,arg2:number,arg3:number):Promise<void>;
 
 export function RunScript(arg1:number,arg2:string,arg3:string):Promise<void>;

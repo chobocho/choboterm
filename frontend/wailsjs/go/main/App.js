@@ -194,6 +194,10 @@ export function LookupSSH(arg1) {
   return window['go']['main']['App']['LookupSSH'](arg1);
 }
 
+export function Quit() {
+  return window['go']['main']['App']['Quit']();
+}
+
 export function Resize(arg1, arg2, arg3) {
   return window['go']['main']['App']['Resize'](arg1, arg2, arg3);
 }
