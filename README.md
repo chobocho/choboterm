@@ -86,7 +86,7 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
   - In EUC-KR mode, special characters like `─ │ ■ ○ ※` are drawn two cells wide, as on old terminals.
   - The font is chosen per encoding in the Settings window (default: UTF-8 = D2Coding, EUC-KR = GulimChe). Even if you choose D2Coding or similar for EUC-KR, symbols like `▒ ─ ■` are drawn with GulimChe so they join without gaps.
   - The same encoding applies to FTP file names and Zmodem file names.
-- **Copy / paste**: Like PuTTY, selecting with the mouse copies immediately and right-clicking pastes. `Ctrl+Shift+C` / `Ctrl+Shift+V` work too.
+- **Copy / paste**: Like PuTTY, selecting with the mouse copies immediately and right-clicking pastes. `Ctrl+Shift+C` / `Ctrl+Shift+V` work too. In programs that use the mouse themselves (edit, vim, tmux...), hold `Shift` while dragging or right-clicking. What such a program copies itself (OSC 52) also reaches the system clipboard.
   - When pasting multiple lines, each line may run as a command, so the content is shown first for confirmation. You can turn this off with "Don't ask again".
   - In programs that use the mouse, such as mc or htop, paste with Shift+right-click.
 - **Font size**: Change with `Ctrl+wheel`, `Ctrl+=` / `Ctrl+-` and reset with `Ctrl+0`. Applies to all tabs and is kept for the next launch.

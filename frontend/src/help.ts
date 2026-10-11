@@ -42,7 +42,7 @@ const TEXT: Record<Lang, HelpText> = {
             {
                 title: '복사 / 붙여넣기',
                 rows: [
-                    ['마우스로 선택', '선택하면 바로 복사'],
+                    ['마우스로 선택', '선택하면 바로 복사 (마우스를 쓰는 프로그램에서는 Shift+드래그)'],
                     ['우클릭', '붙여넣기 (마우스를 쓰는 프로그램에서는 Shift+우클릭)'],
                     ['Ctrl+Shift+C / Ctrl+Shift+V', '복사 / 붙여넣기'],
                     ['여러 줄 붙여넣기', '실행 전에 확인 창 표시 (다시 묻지 않기 선택 가능)'],
@@ -153,7 +153,7 @@ const TEXT: Record<Lang, HelpText> = {
             {
                 title: 'Copy / Paste',
                 rows: [
-                    ['Select with mouse', 'Copies right away'],
+                    ['Select with mouse', 'Copies right away (Shift+drag in programs that use the mouse)'],
                     ['Right-click', 'Paste (Shift+right-click in programs that use the mouse)'],
                     ['Ctrl+Shift+C / Ctrl+Shift+V', 'Copy / Paste'],
                     ['Multi-line paste', 'Asks before pasting (can be turned off)'],

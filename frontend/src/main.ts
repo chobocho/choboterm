@@ -298,6 +298,21 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     // Window size, splits and dragged dividers all change the pane's size.
     new ResizeObserver(() => fitPane(t)).observe(pane);
 
+    // Programs that use the mouse themselves (edit, vim, tmux) copy with OSC 52:
+    // "c;<base64>". Only setting is honored; a program can't read the clipboard ("?").
+    term.parser.registerOscHandler(52, data => {
+        const b64 = data.slice(data.indexOf(';') + 1);
+        if (b64 === '?' || b64.length > 4_000_000) return true;
+        try {
+            const text = new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+            dbg(`tab ${t.id} osc 52: ${text.length} chars`);
+            if (text) ClipboardSetText(text).catch(e => dbg(`clipboard set failed: ${e}`));
+        } catch (e) {
+            dbg(`tab ${t.id} osc 52: bad data (${e})`);
+        }
+        return true;
+    });
+
     // Shells can report their folder as OSC 7 file://host/path (e.g. with vte.sh).
     term.parser.registerOscHandler(7, data => {
         const m = /^file:\/\/[^/]*(\/.*)$/.exec(data);
@@ -342,6 +357,11 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
             window.removeEventListener('mouseup', up, true);
             dbg(`tab ${t.id} (${t.proto}) mouseup: selection ${t.term.getSelection().length} chars, mouse mode ${term.modes.mouseTrackingMode}`);
             copySelection(t);
+            // The program on the other side took the drag (edit, vim, tmux...): nothing was selected here.
+            const dragged = Math.abs(e.clientX - ev.clientX) + Math.abs(e.clientY - ev.clientY) > 8;
+            if (dragged && !ev.shiftKey && term.modes.mouseTrackingMode !== 'none' && !t.term.hasSelection()) {
+                toast('프로그램이 마우스를 쓰는 중입니다. Shift+드래그로 선택 · 복사');
+            }
         };
         window.addEventListener('mouseup', up, true);
     });
