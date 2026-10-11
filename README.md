@@ -1,4 +1,4 @@
-# choboterm V0.2.14
+# choboterm V0.2.15
 
 **English** · [한국어](README.ko.md)
 
@@ -34,6 +34,7 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
   - New tab with the `+` button or by double-clicking an empty area of the tab bar, close with a middle click, drag to reorder
   - The end of the window title shows how the current tab is rendered: `⚡GPU` = GPU accelerated (WebGL), `🐢CPU` = the GPU is not available, so the regular renderer is used (only software WebGL is present, or the GPU was reset)
   - Tab context menu: Reconnect, Duplicate (a new tab to the same server), File transfer, Disconnect, Close tab
+  - Closing a connected tab, or the window while tabs are connected, asks first. Without a connection it closes right away.
   - **Split panes**: Split a tab with `Ctrl+Shift+\` (right, the `|` shape) / `Ctrl+Shift+-` (down) or from the tab context menu. Each new pane connects separately, and its connect window is pre-filled with the current server, so just press `Enter`. You can keep splitting as many times as you like.
     - Click or use `Alt+arrow keys` to move to another pane (only in split tabs; otherwise the arrow keys are passed to the program). The current pane has a blue border.
     - Drag the divider to resize; double-click it to go back to half and half.

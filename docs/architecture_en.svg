@@ -16,7 +16,7 @@
 
   <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm Architecture</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.14 · <tspan class="new">NEW</tspan> = added in this version</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.15 · <tspan class="new">NEW</tspan> = added in this version</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -32,8 +32,8 @@
     <rect x="35" y="501" width="240" height="48" rx="5"/>
     <rect x="35" y="559" width="240" height="48" rx="5"/>
   </g>
-  <text x="47" y="115" class="title">main.ts</text>
-  <text x="47" y="132" class="sub">Tabs · terminal · connect (Port ↔ Baud)</text>
+  <text x="47" y="115" class="title">main.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="132" class="sub">Tabs · terminal · close question · OSC 52 copy</text>
   <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">Keyword highlight (xterm decorations)</text>
   <text x="47" y="231" class="title">files.ts</text>
@@ -44,7 +44,7 @@
   <text x="47" y="364" class="sub">Ctrl+Shift+K open/close · input · save</text>
   <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">Docker window (shell · logs · open port)</text>
-  <text x="47" y="463" class="title">sessions · prefs · update.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="463" class="title">sessions · prefs · update.ts</text>
   <text x="47" y="480" class="sub">Sessions, settings · update check, macros</text>
   <text x="47" y="521" class="title">i18n.ts</text>
   <text x="47" y="538" class="sub">English UI: translates text via dictionary</text>
@@ -70,7 +70,7 @@
   <text x="415" y="82" class="head" fill="#1e6b41">Go backend — choboterm.exe</text>
 
   <rect x="415" y="95" width="340" height="75" rx="5" class="item" stroke="#2f8f5b"/>
-  <text x="427" y="114" class="title">app.go — App · tab (one per tab)</text>
+  <text x="427" y="114" class="title">app.go — App · tab (one per tab) · close question <tspan class="new">NEW</tspan></text>
   <text x="427" y="133" class="sub">pump: batches output per 16ms · 256KB, detects Zmodem</text>
   <text x="427" y="151" class="sub">codec.go UTF-8↔CP949 · sessionlog.go (timestamps) · keepalive</text>
 
@@ -113,7 +113,7 @@
   <text x="427" y="437" class="sub">settings.go · session_store.go · history_store.go</text>
   <text x="427" y="455" class="sub">settings.json · sessions.json · hosts.json (DPAPI · keyring)</text>
   <text x="427" y="473" class="sub">i18n_en.json: English dictionary shared by UI and Go</text>
-  <text x="427" y="488" class="sub">update.go: update check (GitHub, off by default) <tspan class="new">NEW</tspan></text>
+  <text x="427" y="488" class="sub">update.go: update check (GitHub, off by default)</text>
 
   <!-- Lua host -->
   <line x1="585" y1="507" x2="585" y2="543" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
@@ -156,5 +156,5 @@
   <text x="825" y="579" class="sub">Built in Ubuntu 22.04 container</text>
   <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
   <text x="825" y="615" class="sub">Get via curl · install.sh</text>
-  <text x="825" y="633" class="sub">Update check: releases API <tspan class="new">NEW</tspan></text>
+  <text x="825" y="633" class="sub">Update check: releases API</text>
 </svg>

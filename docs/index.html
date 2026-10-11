@@ -325,7 +325,8 @@ login: guest
             <li><b>편한 파일 창</b><span>셸의 현재 폴더에서 바로 열림. 여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더 · 새 파일, 맨 위 .. 와 Alt+↑로 상위 폴더. 끊긴 전송은 이어받기 · 이어 올리기 (SFTP · FTP)</span></li>
             <li><b>원격 파일 보기 · 편집</b><span>F3 / F4로 받지 않고 바로 열기. UTF-8 · EUC-KR 자동 판별, 찾기·바꾸기, Ctrl+S로 서버에 저장 (인코딩·줄바꿈 유지, 충돌 확인). JPG · PNG · GIF · BMP · WebP 이미지는 F3으로 이미지 보기 (확대 · 이전/다음)</span></li>
             <li><b>영어 화면 (English UI)</b><span>설정에서 자동 / 한국어 / English. 메뉴 · 창 · 오류 메시지 · 파일 대화상자까지 영어로</span></li>
-            <li><b>복사 · 붙여넣기</b><span>선택하면 복사, 우클릭으로 붙여넣기. 여러 줄은 실행 전에 확인</span></li>
+            <li><b>복사 · 붙여넣기</b><span>선택하면 복사, 우클릭으로 붙여넣기. 여러 줄은 실행 전에 확인. 마우스를 쓰는 프로그램(edit · vim · tmux)에서는 Shift+드래그, 그 프로그램이 복사한 내용(OSC 52)도 클립보드로</span></li>
+            <li><b>닫기 전에 확인</b><span>연결된 탭을 닫거나 연결된 탭이 있는 채로 창을 닫으면 먼저 물어봄. 연결이 없으면 바로 닫힘</span></li>
             <li><b>GPU 가속 화면</b><span>WebGL로 그려 htop · vim 같은 TUI도 끊김 없이. 창 제목에 ⚡GPU / 🐢CPU 표시</span></li>
             <li><b>색 테마</b><span>Campbell · PuTTY · Dracula · Solarized · 허큘리스(녹색 모니터) 등 12가지 색 테마, 서버별로 다른 테마 지정, 반투명(창 전체 / 배경만), 커서 모양, 스크롤백 줄 수</span></li>
             <li><b>검색 · 글꼴 · 링크</b><span>스크롤백 검색, Ctrl+휠 글꼴 크기, Ctrl+클릭으로 URL 열기, 창 위치 기억</span></li>
@@ -357,7 +358,8 @@ login: guest
             <li><b>Handy file window</b><span>Opens in the shell's current folder. Multiple selection, whole folders up and down, drag and drop from Explorer, delete · rename · new folder · new file, .. at the top and Alt+↑ for the parent. Interrupted transfers resume (SFTP · FTP)</span></li>
             <li><b>View · edit remote files</b><span>F3 / F4 open files without downloading. UTF-8 · EUC-KR detected, find and replace, Ctrl+S saves to the server (keeps encoding and line endings, checks for conflicts). F3 on JPG · PNG · GIF · BMP · WebP shows the image (zoom · previous / next)</span></li>
             <li><b>English UI</b><span>Auto / 한국어 / English in Settings. Menus, windows, error messages and file dialogs in English</span></li>
-            <li><b>Copy · paste</b><span>Selecting copies, right click pastes. Several lines are confirmed before they run</span></li>
+            <li><b>Copy · paste</b><span>Selecting copies, right click pastes. Several lines are confirmed before they run. Shift+drag in programs that use the mouse (edit · vim · tmux); what they copy themselves (OSC 52) reaches the clipboard too</span></li>
+            <li><b>Asks before closing</b><span>Closing a connected tab, or the window while tabs are connected, asks first. Without a connection it closes right away</span></li>
             <li><b>GPU-accelerated screen</b><span>Drawn with WebGL, so TUIs like htop and vim run smoothly. ⚡GPU / 🐢CPU in the window title</span></li>
             <li><b>Color themes</b><span>12 themes such as Campbell · PuTTY · Dracula · Solarized · Hercules (green monitor), a theme per server, translucency (whole window / background only), cursor shape, scrollback lines</span></li>
             <li><b>Search · fonts · links</b><span>Scrollback search, Ctrl+wheel font size, Ctrl+click opens URLs, window position remembered</span></li>
