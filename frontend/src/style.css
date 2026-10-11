@@ -55,9 +55,16 @@ html, body {
 .tab.active {
     height: 29px;
     margin-bottom: -1px;
-    background: #000;
+    background: #3a3f4b;
     color: #fff;
-    border-color: #4a4c52;
+    border-color: #5a6070;
+    /* An accent line on top, so the selected tab stands out from the dark bar. */
+    box-shadow: inset 0 2px 0 #4c9aff;
+}
+
+.tab.active .label {
+    font-size: 13px;
+    font-weight: bold;
 }
 
 .tab .dot {
