@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-11 — V0.2.15 릴리스</h2>
+<ul>
+  <li>버전 0.2.15(닫기 전에 확인, 선택된 탭 제목 가독성, 마우스를 쓰는 프로그램의 Shift+드래그 안내 · OSC 52 복사). build.bat(테스트 통과) + build_linux.sh(WSL에 docker.io 잠시 설치, Ubuntu 22.04 컨테이너 테스트 통과)로 exe · tar.gz 빌드</li>
+  <li>main 푸시(31f3d36), GitHub 릴리스 v0.2.15(두 파일, 최신 링크 200), V0.2.14 릴리스 삭제(태그 유지) → 릴리스는 V0.2.15 하나. releases/latest API도 v0.2.15</li>
+  <li>아키텍처 그림 한국어·영어 V0.2.15: main.ts(닫기 확인 · OSC 52 복사)와 app.go(창 닫기 확인) NEW, 지난 NEW(update.ts · update.go · releases API) 제거. Edge 헤드리스로 그려 확인(잘리는 글자 수정)</li>
+  <li>README · README.ko 버전과 닫기 확인 설명, 소개 페이지에 "닫기 전에 확인" 항목과 복사 설명 보강(한·영). Pages 반영 확인</li>
+  <li>정리: WSL의 docker.io·데이터 삭제, build/bin의 리눅스 바이너리 삭제. release 폴더의 debug.on은 그대로 둠</li>
+</ul>
+
 <h2>2026-10-11 — 편집기 Ctrl+C가 클립보드로 안 넘어옴 (tmux 안)</h2>
 <ul>
   <li>사용자 확인: edit에서 Ctrl+C 한 내용이 Windows 클립보드로 안 들어옴. 로그: edit을 tmux 안에서 실행, Ctrl+C()는 전송됐지만 OSC 52가 choboterm까지 한 번도 오지 않음("osc 52" 로그 0건)</li>
