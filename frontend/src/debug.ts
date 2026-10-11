@@ -43,6 +43,12 @@ document.addEventListener('mousedown', ev => {
     const el = ev.target as HTMLElement | null;
     dbg(`mousedown ${ev.button} at ${ev.clientX},${ev.clientY} on ${el?.tagName}.${el?.className ?? ''}`);
 }, true);
+document.addEventListener('mouseup', ev => {
+    const el = ev.target as HTMLElement | null;
+    dbg(`mouseup ${ev.button} at ${ev.clientX},${ev.clientY} on ${el?.tagName}.${el?.className ?? ''}`);
+}, true);
+window.addEventListener('blur', () => dbg('window blur'));
+window.addEventListener('focus', () => dbg('window focus'));
 
 // Heartbeat: frames drawn and timer lag per second. Gaps in the log mean the page froze.
 let frames = 0;

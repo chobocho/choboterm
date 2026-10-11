@@ -1,4 +1,4 @@
-import {dbg} from './debug';
+import {dbg, debugOn} from './debug';
 import '@xterm/xterm/css/xterm.css';
 import './style.css';
 
@@ -676,7 +676,11 @@ function copySelection(t: Tab) {
     const text = t.term.getSelection();
     if (text) {
         ClipboardSetText(text)
-            .then(ok => dbg(`clipboard set ${text.length} chars: ${ok}`))
+            .then(async ok => {
+                dbg(`clipboard set ${text.length} chars: ${ok}`);
+                // Read it back: did the clipboard really take it?
+                if (debugOn()) dbg(`clipboard now ${(await ClipboardGetText()) === text ? 'matches' : 'DIFFERS'}`);
+            })
             .catch(e => dbg(`clipboard set failed: ${e}`));
     }
 }
