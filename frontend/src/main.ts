@@ -13,7 +13,7 @@ import {initTranslucencyPreview, openPrefs, prefsOpen} from './prefs';
 import {expandMacro, macroForKey, macrosOpen, openMacros} from './macros';
 import {forwardsOpen, forwardsTabClosed, openForwards} from './forwards';
 import {containersOpen, containersTabClosed, DockerMode, DockerSource, openContainers} from './containers';
-import {askOpen} from './dialog';
+import {ask, askOpen} from './dialog';
 import {openSaveSession, openSessionManager, sessionManagerOpen, sessionSaveOpen} from './sessions';
 import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
@@ -366,7 +366,7 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     el.addEventListener('auxclick', ev => {
         if (ev.button === 1) { // middle click closes, like browsers and MobaXterm
             ev.preventDefault();
-            closeTab(t);
+            requestClose(t);
         }
     });
     el.addEventListener('contextmenu', ev => {
@@ -375,7 +375,7 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
         showMenu(t, ev.clientX, ev.clientY);
     });
     x.addEventListener('mousedown', ev => ev.stopPropagation());
-    x.addEventListener('click', () => closeTab(t));
+    x.addEventListener('click', () => requestClose(t));
 
     // Drag to reorder; a split tab moves as a whole.
     el.addEventListener('dragstart', ev => {
@@ -748,6 +748,16 @@ function cycleTab(step: number) {
     if (list.length < 2 || !active) return;
     const i = list.indexOf(active);
     activate(list[(i + step + list.length) % list.length]);
+}
+
+/** Closes tab t at the user's request; a tab with a live connection asks first. */
+async function requestClose(t: Tab) {
+    if (t.state !== 'idle') {
+        const yes = await ask('탭 닫기', `"${t.label.textContent}" 탭은 연결되어 있습니다. 닫으면 연결이 끊어집니다. 닫을까요?`, '닫기');
+        if (!tabs.has(t.id)) return; // closed some other way while asking
+        if (!yes) return askOpen() ? undefined : focusActive(); // asked again for another tab: leave the focus there
+    }
+    closeTab(t);
 }
 
 function closeTab(t: Tab) {
@@ -1212,7 +1222,7 @@ menu.addEventListener('click', ev => {
             disconnect(t);
             break;
         case 'close':
-            closeTab(t);
+            requestClose(t);
             break;
     }
 });
@@ -2308,7 +2318,7 @@ window.addEventListener('keydown', ev => {
             openDialog(null);
             break;
         case 'W':
-            if (t) closeTab(t);
+            if (t) requestClose(t);
             break;
         case 'D':
             if (t) disconnect(t);
