@@ -8,7 +8,9 @@
 <h2>2026-10-11 — 편집기 Ctrl+C가 클립보드로 안 넘어옴 (tmux 안)</h2>
 <ul>
   <li>사용자 확인: edit에서 Ctrl+C 한 내용이 Windows 클립보드로 안 들어옴. 로그: edit을 tmux 안에서 실행, Ctrl+C()는 전송됐지만 OSC 52가 choboterm까지 한 번도 오지 않음("osc 52" 로그 0건)</li>
-  <li>판단: tmux가 안쪽 프로그램의 OSC 52를 바깥 터미널로 넘기지 않는 기본 설정(set-clipboard external) 때문으로 추정. 서버에서 <code>tmux set -g set-clipboard on</code>이 필요. choboterm 코드 변경 없음, 사용자 확인 대기</li>
+  <li>판단: tmux가 안쪽 프로그램의 OSC 52를 바깥 터미널로 넘기지 않는 기본 설정(set-clipboard external) 때문으로 추정. 서버에서 <code>tmux set -g set-clipboard on</code>이 필요. choboterm 코드 변경 없음</li>
+  <li>WSL tmux 3.4로 확인: 기본 설정에서는 안쪽 프로그램의 OSC 52가 바깥으로 안 나오고, set-clipboard on이면 그대로 나옴</li>
+  <li>사용자 확인(새 빌드 release\choboterm.exe): tmux 밖 printf 시험, tmux 밖 edit의 Ctrl+C, tmux 안(set-clipboard on) edit의 Ctrl+C 모두 Windows 클립보드로 들어옴 → 해결. 계속 쓰려면 서버 ~/.tmux.conf에 <code>set -g set-clipboard on</code></li>
 </ul>
 
 <h2>2026-10-11 — 드래그 복사가 가끔 안 되는 문제: 원인과 수정</h2>
