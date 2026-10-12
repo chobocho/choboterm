@@ -137,6 +137,18 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
   - Both modes apply immediately without a restart.
 - **Window position memory**: The window size, position and maximized state are saved on close and restored on the next launch. If the saved position is off screen, for example after unplugging a monitor, the window is moved to a visible spot.
 - **Recent connection history**: The Host list keeps the last 20. Passwords are stored for Telnet only, encrypted. Per-server color themes and port forwarding rules are not deleted when an entry drops out of the history.
+- **Web server (use it in a browser)**: Like zellij, choboterm's screen also works in a browser. Turn it on under "Web server" in the Settings window, or run `choboterm --web`. The window keeps working, and each browser page has its own tabs.
+  - The default address is `127.0.0.1:7681` (this PC only). An address other PCs can reach, such as `0.0.0.0:7681`, is served over HTTPS (a self-signed certificate is made once; its fingerprint is shown in Settings and at start). `--cert` / `--key` use your own certificate.
+  - The first visit asks for the access token; opening the address shown in Settings (with the token) logs in directly. "New token" disconnects every browser and makes them log in again. **Anyone with the address (token) can use this PC's shells and saved sessions, so don't share it.**
+  - File windows: a browser on this PC opened with "Open in browser" in Settings uses the same file dialogs as the window (choosing where to save, ...). A browser on another PC uploads and downloads instead (several files or folders as one .zip). Things that only make sense on this PC, such as choosing the log folder or opening Explorer, aren't available from another PC.
+  - After a short network drop the browser reconnects and gets the output it missed. A page disconnected for more than 60 seconds (`--grace`) has its tabs closed.
+  - Closing the window while browsers are connected closes only the window's tabs and hides it (the web server keeps running). Starting choboterm again shows the hidden window; it quits when the last browser leaves. With the web server on, only one choboterm runs.
+  - Browsers don't pass keys like `Ctrl+W`, `Ctrl+T`, `Ctrl+N` to the page; once connected, closing the page asks first. Over plain HTTP from another PC (`--insecure`) reading the clipboard (the paste shortcut) is blocked, so use HTTPS.
+  - **Web server without the window**: `choboterm --headless` runs only the web server (it prints the address with the token at start; `Ctrl+C` stops it). On servers without GTK/WebKit, use `choboterm-headless` (a static Linux binary) / `choboterm-headless.exe`.
+
+    ```sh
+    ./choboterm-headless --web=0.0.0.0:7681      # then open https://this-pc:7681/ from another PC
+    ```
 
 X11 forwarding is not supported.
 
@@ -178,6 +190,7 @@ File transfer window: `↑` `↓` `Home` `End` to select (`Shift` for a range), 
 - Sessions, per-server color themes and port forwarding: `%AppData%\choboterm\sessions.json` (passwords are stored only as DPAPI-encrypted values)
 - Settings: `%AppData%\choboterm\settings.json`
 - Session logs: `Documents\choboterm\logs` (changeable in the Settings window)
+- Web server: the access token `%AppData%\choboterm\web-token`, the self-signed certificate `web-cert.pem` / `web-key.pem` (same folder). Files exchanged with browsers on other PCs stay briefly in a temporary folder and are then deleted.
 - On Linux, `~/.config/choboterm` is used instead of `%AppData%\choboterm`, and `~/Documents` instead of `Documents`. Passwords are encrypted with AES-GCM using a key kept in the keyring.
 
 ## Build
@@ -191,9 +204,11 @@ wails dev     # development mode (hot reload)
 wails build   # produces build/bin/choboterm.exe
 ```
 
-Running `build.bat` does tests → `wails build` → copying to `release\choboterm.exe` in one go. (The `release` folder is not committed to git.)
+Running `build.bat` does tests → `wails build` → copying to `release\choboterm.exe` in one go, and also builds `release\choboterm-headless.exe` for the web server without the window (a console program; no WebView2 needed). (The `release` folder is not committed to git.)
 
-The Linux version is built with `build_linux.sh`, which produces `release/choboterm-linux-amd64.tar.gz`. To run on older distributions, it tests and builds inside an Ubuntu 22.04 Docker container (`tools/linux/Dockerfile`); with `--native`, it builds with this machine's Go and libraries (`libgtk-3-dev`, `libwebkit2gtk-4.1-dev`). On Windows, run it in WSL (the frontend reuses the `frontend/dist` built by `build.bat`).
+The build without the window is `go build -tags headless`. It leaves out the Wails window code, so on Linux `CGO_ENABLED=0` gives a static binary that needs no GTK/WebKit.
+
+The Linux version is built with `build_linux.sh`, which produces `release/choboterm-linux-amd64.tar.gz` and `release/choboterm-headless-linux-amd64` (the static binary without the window). To run on older distributions, it tests and builds inside an Ubuntu 22.04 Docker container (`tools/linux/Dockerfile`); with `--native`, it builds with this machine's Go and libraries (`libgtk-3-dev`, `libwebkit2gtk-4.1-dev`). On Windows, run it in WSL (the frontend reuses the `frontend/dist` built by `build.bat`).
 
 ```sh
 wsl -- ./build_linux.sh
@@ -266,6 +281,8 @@ Tests that need a real server run only when the environment variables are set.
 - The UI is handled by TypeScript (xterm.js) inside WebView2; connections, file transfer and storage are handled by Go. The two communicate through Wails bindings (Go method calls) and events.
 - Each tab has one `tab` on the Go side, and server output is batched in 16ms · 256KB units and sent as `term:data` events. Encoding conversion, Zmodem detection, session logging and forwarding to Lua scripts happen at the same time.
 - Lua scripts run in a separate process launched as `choboterm.exe --lua-host`, so the app is unaffected even if a script hangs or uses up its memory.
+- The web server (`web*.go`, `web_shim.js`) serves the same `frontend/dist` to browsers and provides, over one WebSocket, the `window.go` / `window.runtime` that Wails injects into the window. Each page calls through its own `App` (sharing the state), so methods know who called. A page numbers its tabs from `clientID<<20` (the window from 0, as before), so events go only to the tab's page. Output goes as binary frames instead of base64 and is kept until the page acknowledges it (a reconnect gets exactly what was missed; too much unacknowledged output pauses reading).
+- Every file dialog goes through `App.picker()` (`picker.go`): native Wails dialogs for the window and a browser on this PC, uploads and downloads for a browser elsewhere. "This PC" is decided by a one-time code given to the browser choboterm opened itself, not by the address alone (SSH forwarding and proxies also arrive from 127.0.0.1).
 - SSH can go through jump hosts (`sshjump.go`): at each hop, it logs in to the next server over a channel of the previous connection.
 - Keyword highlighting (`highlight.ts`) does not modify server output; it paints only on top of the screen with xterm decorations.
 - Docker containers (`docker.go`, `containers.ts`): on a server, one more session is opened on the tab's SSH connection to run `docker ps` · `docker exec`, so there is no need to log in again. On this PC, Docker Desktop's `docker` is run directly, and shell tabs are opened with ConPTY.
@@ -288,6 +305,9 @@ Tests that need a real server run only when the environment variables are set.
 | `session_store.go` | Saved sessions, per-server settings (color theme · port forwarding) |
 | `session_import.go` / `putty_windows.go` | Session import · export, reading PuTTY sessions |
 | `settings.go` | User settings (`settings.json`) |
+| `web.go` / `web_client.go` / `web_files.go` / `web_tls.go` / `web_shim.js` | Web server: login and page, one WebSocket per page (calls, events, replay, flow control), uploads and downloads, TLS, the browser side's `window.go` / `window.runtime` |
+| `web_app.go` / `web_headless.go` / `cli.go` / `main_window.go` / `main_headless.go` | The web server in Settings, hiding the window, running without the window, command line options |
+| `picker.go` · `raise_windows.go` | File dialogs abstraction (window · browser on this PC · browser elsewhere); bringing a dialog opened for a browser on this PC to the front |
 | `window_windows.go` | Saving and restoring window size and position (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` · `secret_linux.go` | Password encryption (Windows DPAPI; Linux AES-GCM with a key from the keyring) |
 | `frontend/src/main.ts` | Tabs, terminal, connect window, shortcuts |
@@ -297,7 +317,7 @@ Tests that need a real server run only when the environment variables are set.
 | `luahost.go` / `luarun.go` | Lua scripts: the runner in a separate process and the app-side manager (output forwarding, input send limits, stop · force kill) |
 | `luajob_windows.go` · `luajob_linux.go` | Memory limit for the script process (Windows Job Object; Linux watches `/proc`) |
 | `build_linux.sh` · `tools/linux/` | Linux build (Ubuntu 22.04 container) and tar.gz packaging (install script, desktop entry) |
-| `frontend/src/platform.ts` | Current OS (hides Windows-only items on Linux) |
+| `frontend/src/platform.ts` | Current OS (hides Windows-only items on Linux), whether the page runs in a browser and where its tab ids start |
 | `frontend/src/sessions.ts` | Save-session window, Sessions window, import · export |
 | `frontend/src/help.ts` | F1 help window (한국어 / English) |
 | `frontend/src/search.ts` | Scrollback search bar |
