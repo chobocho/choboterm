@@ -529,7 +529,9 @@ func zipFolder(dir, dst string) error {
 
 // safeFileName makes a name from the page or a server usable as one file name.
 func safeFileName(name, fallback string) string {
-	name = filepath.Base(strings.ReplaceAll(name, "\\", "/"))
+	// path.Base, not filepath.Base: on Windows "a:b.txt" would lose "a:" as
+	// if it were a drive. Both separators count, as names come from anywhere.
+	name = path.Base(strings.ReplaceAll(name, "\\", "/"))
 	name = strings.Map(func(r rune) rune {
 		if r < 32 || strings.ContainsRune(`<>:"/\|?*`, r) {
 			return '_'

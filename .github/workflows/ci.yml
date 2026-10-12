@@ -1,0 +1,42 @@
+# Tests every pull request and every push to main on Windows and Linux
+# (free for this public repository). The release workflow builds and tests
+# again for the release itself.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      # The page (frontend/dist) is embedded into the Go program.
+      - name: Build the page
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Vet
+        run: |
+          go vet ./...
+          go vet -tags headless ./...
+      - name: Test
+        run: go test ./...

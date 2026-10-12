@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -95,6 +96,12 @@ func (j *luaJob) watch() {
 func (j *luaJob) hitMemoryLimit() bool { return j.hit.Load() }
 
 // close stops watching and ends the process if it is still running.
+// memoryReport describes the process's memory use against the limit (for
+// diagnosing a script that didn't end).
+func (j *luaJob) memoryReport() string {
+	return fmt.Sprintf("rss %dMB, limit %dMB, hit %v", procRSS(j.pid)>>20, j.limit>>20, j.hit.Load())
+}
+
 func (j *luaJob) close() {
 	j.once.Do(func() { close(j.done) })
 	if j.alive() {

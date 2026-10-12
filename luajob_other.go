@@ -15,3 +15,5 @@ func newLuaJob(pid int, limitBytes uint64) (*luaJob, error) { return &luaJob{}, 
 func (j *luaJob) hitMemoryLimit() bool { return false }
 
 func (j *luaJob) close() {}
+
+func (j *luaJob) memoryReport() string { return "no memory limit on this OS" }
