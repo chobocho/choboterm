@@ -48,12 +48,6 @@ var (
 	serialFrame = regexp.MustCompile(`(?i)^([5-8])([neo])([12])$`)
 )
 
-// isSerial reports whether the Host field names a serial port.
-func isSerial(host string) bool {
-	name, _, _ := strings.Cut(strings.TrimSpace(host), " ")
-	return serialName.MatchString(name)
-}
-
 // parseSerial reads the Host field of a serial port; port is the Port field,
 // used as the speed when the Host field gives none (the usual 21/22/23 of a
 // server mean nothing here and give the default speed).

@@ -46,18 +46,21 @@ type TabState = 'idle' | 'on' | 'ftp';
 
 // Host field texts that run a program on this PC instead of connecting (see localshell.go).
 const LOCAL_SHELL = /^(cmd|powershell|pwsh|wsl)(\.exe)?(\s|$)/i;
+const TERMUX_LOCAL_SHELL = /^(bash|zsh|fish|sh)(\s|$)/i;
 
 function isLocal(host: string): boolean {
-    return LOCAL_SHELL.test(host.trim());
+    const name = host.trim();
+    return LOCAL_SHELL.test(name) || (import.meta.env.VITE_TERMUX === '1' && TERMUX_LOCAL_SHELL.test(name));
 }
 
 // Host field texts that open a serial port; the Port field is then the speed (see serial.go).
 const SERIAL_PORT = /^(com[1-9]\d*|\/dev\/\S+)(\s|$)/i;
 const DEFAULT_BAUD = '115200';
 const BAUDS = [300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
+const SERIAL_SUPPORTED = import.meta.env.VITE_TERMUX !== '1';
 
 function isSerial(host: string): boolean {
-    return SERIAL_PORT.test(host.trim());
+    return SERIAL_SUPPORTED && SERIAL_PORT.test(host.trim());
 }
 
 // A tab bar entry. It shows one or more panes (split with Ctrl+Shift+\ / -);

@@ -41,6 +41,9 @@ func TestIsSerial(t *testing.T) {
 		"COM1": true, "com3 9600": true, " /dev/ttyUSB0 ": true,
 		"COM": false, "computer": false, "com3.example.com": false, "cmd": false, "192.168.0.1": false,
 	} {
+		if !serialSupported {
+			want = false
+		}
 		if got := isSerial(host); got != want {
 			t.Errorf("isSerial(%q) = %v, want %v", host, got, want)
 		}
@@ -48,6 +51,9 @@ func TestIsSerial(t *testing.T) {
 }
 
 func TestConnectSerialMissingPort(t *testing.T) {
+	if !serialSupported {
+		t.Skip("serial ports are disabled in this build")
+	}
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
 	name := "COM250"

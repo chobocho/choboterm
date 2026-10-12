@@ -215,6 +215,17 @@ Linux 버전은 `build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`와 `r
 wsl -- ./build_linux.sh
 ```
 
+### Termux (headless)
+
+Termux에서 Go와 Node.js를 설치(`pkg install golang nodejs`)한 뒤 `./build_termux.sh`를 실행합니다. `release/choboterm-termux-arm64`에 창 없는 Android/ARM64 바이너리만 빌드하며, Termux 시스템 패키지나 설정은 변경하지 않습니다(npm 의존성은 `frontend/node_modules`에 설치됩니다). Termux 버전은 웹 UI와 로컬 셸을 지원하고 시리얼 포트는 지원하지 않습니다. Termux용 프런트엔드와 Go 빌드 태그는 기존 Linux·Windows 빌드와 분리되어 있습니다.
+
+```sh
+./build_termux.sh
+./release/choboterm-termux-arm64 --web=0.0.0.0:7681
+```
+
+출력된 HTTPS 주소를 브라우저에서 엽니다. `--web=127.0.0.1:7681`을 쓰면 이 기기에서만 접속할 수 있습니다.
+
 ## 릴리스
 
 1. `main.go`의 `AppVersion`과 `wails.json`의 `productVersion`을 올립니다.

@@ -215,6 +215,17 @@ The Linux version is built with `build_linux.sh`, which produces `release/chobot
 wsl -- ./build_linux.sh
 ```
 
+### Termux (headless)
+
+On Termux, install Go and Node.js (`pkg install golang nodejs`), then run `./build_termux.sh`. It builds only the headless Android/ARM64 binary at `release/choboterm-termux-arm64`; it does not install system packages or change Termux settings (npm dependencies are installed locally in `frontend/node_modules`). The Termux build serves the web UI, supports local shell sessions, and does not include serial-port support. The Termux frontend and Go build tags are isolated from the regular Linux/Windows builds.
+
+```sh
+./build_termux.sh
+./release/choboterm-termux-arm64 --web=0.0.0.0:7681
+```
+
+Open the printed HTTPS URL in a browser. Use `--web=127.0.0.1:7681` to restrict access to the device.
+
 ## Release
 
 1. Bump `AppVersion` in `main.go` and `productVersion` in `wails.json`.

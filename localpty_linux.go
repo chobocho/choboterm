@@ -23,7 +23,11 @@ type ptySession struct {
 // startPty runs cmdline (shell syntax, see commandLine) in a new pseudo
 // terminal of cols x rows, in dir.
 func startPty(cmdline, dir string, cols, rows int) (Session, error) {
-	cmd := exec.Command("/bin/sh", "-c", "exec "+cmdline)
+	shell := "/bin/sh"
+	if _, err := os.Stat(shell); err != nil {
+		shell = "sh" // Termux keeps shell binaries in $PREFIX/bin, not /bin.
+	}
+	cmd := exec.Command(shell, "-c", "exec "+cmdline)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor")
 	tty, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})

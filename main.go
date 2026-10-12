@@ -1,14 +1,10 @@
 package main
 
 import (
-	"embed"
 	"fmt"
 	"io/fs"
 	"os"
 )
-
-//go:embed all:frontend/dist
-var assets embed.FS
 
 // AppVersion is shown in the window title. Keep in sync with wails.json productVersion.
 const AppVersion = "0.2.18"
@@ -33,7 +29,7 @@ func main() {
 		}
 		return
 	}
-	page, err := fs.Sub(assets, "frontend/dist")
+	page, err := fs.Sub(assets, assetDir)
 	if err != nil {
 		panic(err) // embedded at build time
 	}
