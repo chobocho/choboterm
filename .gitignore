@@ -6,3 +6,4 @@ frontend/dist-termux
 .idea/
 __pycache__/
 release/
+frontend/e2e/.tmp
