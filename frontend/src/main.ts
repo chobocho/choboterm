@@ -390,8 +390,69 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     // On Android, a long touch can produce a contextmenu event. Treating it as
     // a right-click here opens the paste prompt and interrupts touch selection.
     let lastTouchAt = 0;
+    let touchTimer = 0;
+    let touchStart: {x: number; y: number; id: number} | undefined;
+    let touchAnchor: {start: number; end: number} | undefined;
     if (import.meta.env.VITE_TERMUX === '1') {
-        pane.addEventListener('touchstart', () => { lastTouchAt = Date.now(); }, {passive: true});
+        pane.addEventListener('touchstart', ev => {
+            lastTouchAt = Date.now();
+            dbg(`tab ${t.id} touchstart: ${ev.touches.length} touch(es)`);
+            if (ev.touches.length !== 1) {
+                clearTimeout(touchTimer);
+                touchTimer = 0;
+                touchStart = undefined;
+                touchAnchor = undefined;
+                return;
+            }
+            const touch = ev.touches[0];
+            touchStart = {x: touch.clientX, y: touch.clientY, id: touch.identifier};
+            touchAnchor = undefined;
+            clearTimeout(touchTimer);
+            touchTimer = window.setTimeout(() => {
+                touchTimer = 0;
+                if (!touchStart) return;
+                const pos = touchCell(t, touchStart.x, touchStart.y);
+                if (!pos) return;
+                touchAnchor = selectTouchWord(t, pos.col, pos.row);
+                if (touchAnchor) dbg(`tab ${t.id} long touch: selected ${t.term.getSelection().length} chars`);
+            }, 500);
+        }, {passive: true});
+        pane.addEventListener('touchmove', ev => {
+            if (!touchStart) return;
+            const touch = Array.from(ev.touches).find(x => x.identifier === touchStart!.id);
+            if (!touch) return;
+            if (!touchAnchor) {
+                if (Math.abs(touch.clientX - touchStart.x) + Math.abs(touch.clientY - touchStart.y) > 12) {
+                    clearTimeout(touchTimer);
+                    touchTimer = 0;
+                    dbg(`tab ${t.id} touch selection cancelled: moved before long press`);
+                    touchStart = undefined;
+                }
+                return;
+            }
+            ev.preventDefault();
+            const pos = touchCell(t, touch.clientX, touch.clientY, true);
+            if (pos) extendTouchSelection(t, touchAnchor, pos.col, pos.row);
+        }, {passive: false});
+        pane.addEventListener('touchend', ev => {
+            if (!touchStart || !Array.from(ev.changedTouches).some(x => x.identifier === touchStart!.id)) return;
+            clearTimeout(touchTimer);
+            touchTimer = 0;
+            if (touchAnchor) {
+                ev.preventDefault();
+                dbg(`tab ${t.id} long touch end: selection ${t.term.getSelection().length} chars`);
+                copySelection(t);
+            }
+            touchStart = undefined;
+            touchAnchor = undefined;
+        }, {passive: false});
+        pane.addEventListener('touchcancel', () => {
+            dbg(`tab ${t.id} touchcancel`);
+            clearTimeout(touchTimer);
+            touchTimer = 0;
+            touchStart = undefined;
+            touchAnchor = undefined;
+        }, {passive: true});
     }
     pane.addEventListener('contextmenu', ev => {
         ev.preventDefault();
@@ -719,6 +780,43 @@ termsEl.addEventListener('wheel', ev => {
 }, {capture: true, passive: false});
 
 // ---- Clipboard ----
+
+function touchCell(t: Tab, x: number, y: number, clamp = false): {col: number; row: number} | undefined {
+    const screen = t.term.element?.querySelector<HTMLElement>('.xterm-screen');
+    if (!screen || !t.term.cols || !t.term.rows) return;
+    const rect = screen.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0 || (!clamp && (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom))) return;
+    const col = Math.max(0, Math.min(t.term.cols - 1, Math.floor((x - rect.left) / rect.width * t.term.cols)));
+    const row = Math.max(0, Math.min(t.term.rows - 1, Math.floor((y - rect.top) / rect.height * t.term.rows)));
+    return {col, row: t.term.buffer.active.viewportY + row};
+}
+
+function selectTouchWord(t: Tab, col: number, row: number): {start: number; end: number} | undefined {
+    const buffer = t.term.buffer.active;
+    const line = buffer.getLine(row);
+    if (!line) return;
+    const isWordCell = (x: number) => {
+        const cell = line.getCell(x);
+        if (!cell) return false;
+        const chars = cell.getChars();
+        return cell.getWidth() === 0 || (chars !== '' && !/^\\s+$/u.test(chars));
+    };
+    // A wide character's second cell has no chars of its own.
+    if (!isWordCell(col) && col > 0 && line.getCell(col)?.getWidth() === 0) col--;
+    if (!isWordCell(col)) return {start: row * t.term.cols + col, end: row * t.term.cols + col};
+    let left = col;
+    let right = col;
+    while (left > 0 && isWordCell(left - 1)) left--;
+    while (right + 1 < t.term.cols && isWordCell(right + 1)) right++;
+    return {start: row * t.term.cols + left, end: row * t.term.cols + right};
+}
+
+function extendTouchSelection(t: Tab, anchor: {start: number; end: number}, col: number, row: number) {
+    const point = row * t.term.cols + col;
+    const start = point < anchor.start ? point : anchor.start;
+    const end = point > anchor.end ? point : anchor.end;
+    t.term.select(start % t.term.cols, Math.floor(start / t.term.cols), end - start + 1);
+}
 
 function copySelection(t: Tab) {
     const text = t.term.getSelection();

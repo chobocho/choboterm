@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-12 — V0.2.20: Termux 긴 누르기 복사</h2>
+<ul>
+  <li>Termux Android 브라우저에서 터미널을 길게 눌러도 복사되지 않는 문제 수정: 500ms 누르면 단어 선택, 누른 채 이동하면 선택 확장, 손을 떼면 클립보드에 복사. Windows · Linux의 기존 마우스 드래그 복사는 유지</li>
+  <li>진단 로그에 touchstart · touchcancel · 선택 결과 추가. release/debug.log에는 터치 이벤트가 없고 버튼 mouseup 및 선택 0자만 기록되어 기존 로그만으로는 길게 누르기 동작 여부를 확인할 수 없었음</li>
+  <li>VITE_TERMUX=1 프런트엔드 빌드 통과. Android 기기에서 실제 동작은 아직 확인하지 않음</li>
+</ul>
+
 <h2>2026-10-12 — V0.2.18</h2>
 <ul>
   <li>v0.2.17 릴리스 실행이 Windows 테스트 2개로 실패(Release · 태그 안 생김) → 버전 0.2.18</li>
