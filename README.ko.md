@@ -1,11 +1,11 @@
-# choboterm V0.2.15
+# choboterm V0.2.16
 
 [English](README.md) · **한국어**
 
 옛 ZTerm처럼 간결하게 쓸 수 있는 Windows · Linux용 SSH / Telnet / FTP / 시리얼 터미널입니다.
 Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었습니다. 텍스트 뷰어는 [CodeMirror 6](https://codemirror.net)(MIT)을 씁니다.
 
-**[⬇ Windows (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · **[⬇ Linux x86_64 (tar.gz)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz)** · [소개 페이지](https://chobocho.github.io/choboterm/) · [모든 버전](https://github.com/chobocho/choboterm/releases)
+**[⬇ Windows (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · **[⬇ Linux x86_64 (tar.gz)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz)** · [창 없는 웹 서버: Linux](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-headless-linux-amd64) / [Windows](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-headless.exe) · [소개 페이지](https://chobocho.github.io/choboterm/) · [모든 버전](https://github.com/chobocho/choboterm/releases)
 
 - **Windows**: 설치 없이 내려받아 실행하면 됩니다. 코드 서명이 없어 처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요.
 - **Linux**: 압축을 풀고 `./choboterm`으로 실행합니다. `./install.sh`를 실행하면 `~/.local/bin`과 프로그램 메뉴에 등록됩니다.
@@ -217,11 +217,11 @@ wsl -- ./build_linux.sh
 ## 릴리스
 
 1. `main.go`의 `AppVersion`과 `wails.json`의 `productVersion`을 올립니다.
-2. `build.bat`으로 `release\choboterm.exe`를, 이어서 `wsl -- ./build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`를 만듭니다. (실행 중인 choboterm은 먼저 종료)
+2. `build.bat`으로 `release\choboterm.exe`와 `release\choboterm-headless.exe`를, 이어서 `wsl -- ./build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`와 `release/choboterm-headless-linux-amd64`를 만듭니다. (실행 중인 choboterm은 먼저 종료)
 3. 커밋·푸시 후 GitHub Release를 만듭니다.
 
    ```sh
-   gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" --title "choboterm V0.2.0" --notes "..."
+   gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.0" --notes "..."
    ```
 
 소개 페이지(`docs/`, GitHub Pages 기준: `main` 브랜치 `/docs`)의 다운로드 버튼은 항상 최신 릴리스의 `choboterm.exe`를 가리키므로 따로 고칠 필요가 없습니다.

@@ -307,6 +307,7 @@ login: guest
             <li><b>점프 호스트 (ProxyJump)</b><span>배스천을 거쳐 내부 서버로. 접속 창의 Jump 칸, ~/.ssh/config의 ProxyJump, ssh -J 모두 지원, 여러 단계도 가능</span></li>
             <li><b>ssh config 이름으로 접속</b><span>Host 칸에 busan 또는 ssh busan만 입력하면 ~/.ssh/config의 주소·포트·사용자·키로 접속</span></li>
             <li><b>탭 · 분할 창</b><span>여러 접속을 탭으로, 한 탭 안을 좌우·위아래로 나눠 창마다 따로 접속. 탭마다 인코딩·파일 전송이 따로 동작</span></li>
+            <li><b>웹 서버 (브라우저로 접속)</b><span>zellij처럼 choboterm 화면을 브라우저에서도. 설정 창이나 choboterm --web으로 켜고, 토큰으로 로그인. 이 PC의 브라우저는 창과 같은 파일 대화상자, 다른 PC는 업로드 · 다운로드. 다른 PC에서 접속하면 HTTPS, 네트워크가 잠깐 끊겨도 이어서 받기. 창 없이 서버만 띄우는 choboterm-headless도 제공</span></li>
             <li><b>로컬 셸</b><span>Host에 cmd · powershell · wsl(Linux는 bash · zsh)을 쓰면 이 PC의 셸을 탭에서 바로 실행 (WSL에서 sz / rz도 가능)</span></li>
             <li><b>시리얼 포트</b><span>Host에 COM3(Linux는 /dev/ttyUSB0), Port 칸에 속도(baud). "COM3 9600 7E1 rtscts"처럼 패리티·흐름 제어도 지정. 연결된 포트 목록, Break 신호, USB를 다시 꽂으면 자동 재접속</span></li>
             <li><b>EUC-KR (CP949)</b><span>옛 BBS 한글과 ─│■▒ 특수문자 2칸 폭까지, 굴림체 등 인코딩별 글꼴 선택</span></li>
@@ -340,6 +341,7 @@ login: guest
             <li><b>Jump hosts (ProxyJump)</b><span>Reach inner servers through a bastion: the Jump field, ProxyJump in ~/.ssh/config and ssh -J, several hops too</span></li>
             <li><b>Connect by ssh config name</b><span>Type busan or ssh busan in Host and the address, port, user and key come from ~/.ssh/config</span></li>
             <li><b>Tabs · split panes</b><span>Connections in tabs; split a tab left/right or top/bottom with a connection in each pane. Encoding and file transfer per tab</span></li>
+            <li><b>Web server (use it in a browser)</b><span>Like zellij, choboterm's screen in a browser too. Turn it on in Settings or with choboterm --web and log in with a token. A browser on this PC gets the window's file dialogs, other PCs upload and download. HTTPS when other PCs connect; a short network drop picks up where it left off. choboterm-headless runs only the server, without a window</span></li>
             <li><b>Local shells</b><span>cmd · powershell · wsl (bash · zsh on Linux) in Host runs this PC's shell in a tab (sz / rz work in WSL too)</span></li>
             <li><b>Serial ports</b><span>COM3 (/dev/ttyUSB0 on Linux) in Host, the speed (baud) in Port. Parity and flow control too: "COM3 9600 7E1 rtscts". Lists connected ports, sends a break, reconnects when a USB adapter is plugged back in</span></li>
             <li><b>EUC-KR (CP949)</b><span>Korean text of old BBSes, with ─│■▒ symbols two cells wide, and a font per encoding such as GulimChe</span></li>
@@ -368,8 +370,8 @@ login: guest
 
     <section>
         <h2><span class="ko">구조</span><span class="en">Architecture</span></h2>
-        <img class="shot ko" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드 ↔ 서버(점프 호스트 경유 포함), 시리얼 포트, 도커 컨테이너, 별도 프로세스의 Lua 실행기, 새 버전 확인(GitHub)" loading="lazy"/>
-        <img class="shot en" src="architecture_en.svg" alt="choboterm architecture: frontend (WebView2 · WebKitGTK) ↔ Wails ↔ Go backend ↔ servers (through jump hosts too), serial ports, Docker containers, Lua runner in its own process, update check (GitHub)" loading="lazy"/>
+        <img class="shot ko" src="architecture.svg" alt="choboterm 아키텍처: 프론트엔드(WebView2 · WebKitGTK) ↔ Wails ↔ Go 백엔드, 브라우저 ↔ 웹 서버(HTTPS · WebSocket) ↔ 서버(점프 호스트 경유 포함), 시리얼 포트, 도커 컨테이너, 별도 프로세스의 Lua 실행기, 새 버전 확인(GitHub)" loading="lazy"/>
+        <img class="shot en" src="architecture_en.svg" alt="choboterm architecture: frontend (WebView2 · WebKitGTK) ↔ Wails ↔ Go backend, browsers ↔ web server (HTTPS · WebSocket) ↔ servers (through jump hosts too), serial ports, Docker containers, Lua runner in its own process, update check (GitHub)" loading="lazy"/>
     </section>
 
     <section class="ko">
@@ -440,6 +442,12 @@ cd choboterm-linux-amd64
 ./install.sh                          # ~/.local/bin/choboterm, 프로그램 메뉴 등록
 setsid ~/.local/bin/choboterm >/dev/null 2>&1 &   # 터미널을 닫아도 창이 유지됨</code></pre>
         <p class="note">Linux에서는 키링(GNOME Keyring, KWallet 등)이 있을 때만 비밀번호를 저장하고, 반투명 창과 PuTTY 세션 가져오기는 지원하지 않습니다. macOS는 지원하지 않습니다.</p>
+        <p><b>웹 서버</b>: 설정 창(<kbd>Ctrl+Shift+O</kbd>)의 "웹 서버"에서 켜고 "브라우저로 열기"를 누르거나, <code>choboterm --web</code>으로 실행합니다. 기본은 이 PC에서만(<code>127.0.0.1:7681</code>) 접속하고, <code>0.0.0.0:7681</code>처럼 다른 PC에서 접속할 수 있는 주소면 HTTPS(자체 서명 인증서)로 엽니다.
+            GTK · WebKit이 없는 서버에서는 창 없는 <code>choboterm-headless</code>를 씁니다 (Windows: <code>choboterm-headless.exe</code>).</p>
+        <pre class="cmd"><code>curl -LO https://github.com/chobocho/choboterm/releases/latest/download/choboterm-headless-linux-amd64
+chmod +x choboterm-headless-linux-amd64
+./choboterm-headless-linux-amd64 --web=0.0.0.0:7681   # 출력된 https://...?token=... 주소를 브라우저로</code></pre>
+        <p class="note">주소(토큰)를 아는 사람은 이 PC의 셸과 저장된 세션을 쓸 수 있으니 공유하지 마세요. 브라우저는 Ctrl+W · Ctrl+T 같은 키를 페이지에 넘기지 않습니다.</p>
     </section>
     <section class="en">
         <h2>Install</h2>
@@ -456,6 +464,12 @@ cd choboterm-linux-amd64
 ./install.sh                          # ~/.local/bin/choboterm and a menu entry
 setsid ~/.local/bin/choboterm >/dev/null 2>&1 &   # keeps running after the terminal closes</code></pre>
         <p class="note">On Linux passwords are saved only when a keyring (GNOME Keyring, KWallet...) is available; translucent windows and PuTTY session import are Windows only. macOS is not supported.</p>
+        <p><b>Web server</b>: turn it on under "Web server" in Settings (<kbd>Ctrl+Shift+O</kbd>) and click "Open in browser", or run <code>choboterm --web</code>. By default only this PC can connect (<code>127.0.0.1:7681</code>); an address other PCs can reach, such as <code>0.0.0.0:7681</code>, is served over HTTPS (self-signed certificate).
+            On servers without GTK / WebKit, use <code>choboterm-headless</code>, which has no window (Windows: <code>choboterm-headless.exe</code>).</p>
+        <pre class="cmd"><code>curl -LO https://github.com/chobocho/choboterm/releases/latest/download/choboterm-headless-linux-amd64
+chmod +x choboterm-headless-linux-amd64
+./choboterm-headless-linux-amd64 --web=0.0.0.0:7681   # open the printed https://...?token=... address</code></pre>
+        <p class="note">Anyone with the address (token) can use this PC's shells and saved sessions, so don't share it. Browsers don't pass keys like Ctrl+W · Ctrl+T to the page.</p>
     </section>
 
     <footer>

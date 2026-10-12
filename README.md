@@ -1,11 +1,11 @@
-# choboterm V0.2.15
+# choboterm V0.2.16
 
 **English** · [한국어](README.ko.md)
 
 An SSH / Telnet / FTP / serial terminal for Windows and Linux that is as simple to use as the old ZTerm.
 Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). The text viewer uses [CodeMirror 6](https://codemirror.net) (MIT).
 
-**[⬇ Windows (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · **[⬇ Linux x86_64 (tar.gz)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz)** · [Project page](https://chobocho.github.io/choboterm/) · [All releases](https://github.com/chobocho/choboterm/releases)
+**[⬇ Windows (choboterm.exe)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm.exe)** · **[⬇ Linux x86_64 (tar.gz)](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-linux-amd64.tar.gz)** · [Web server without the window: Linux](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-headless-linux-amd64) / [Windows](https://github.com/chobocho/choboterm/releases/latest/download/choboterm-headless.exe) · [Project page](https://chobocho.github.io/choboterm/) · [All releases](https://github.com/chobocho/choboterm/releases)
 
 - **Windows**: No installation needed; just download and run. The executable is not code-signed, so if a "Windows protected your PC" window appears on first launch, click **More info → Run anyway**.
 - **Linux**: Extract the archive and run `./choboterm`. Running `./install.sh` registers it in `~/.local/bin` and the application menu.
@@ -217,11 +217,11 @@ wsl -- ./build_linux.sh
 ## Release
 
 1. Bump `AppVersion` in `main.go` and `productVersion` in `wails.json`.
-2. Build `release\choboterm.exe` with `build.bat`, then `release/choboterm-linux-amd64.tar.gz` with `wsl -- ./build_linux.sh`. (Quit any running choboterm first.)
+2. Build `release\choboterm.exe` and `release\choboterm-headless.exe` with `build.bat`, then `release/choboterm-linux-amd64.tar.gz` and `release/choboterm-headless-linux-amd64` with `wsl -- ./build_linux.sh`. (Quit any running choboterm first.)
 3. Commit and push, then create a GitHub Release.
 
    ```sh
-   gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" --title "choboterm V0.2.0" --notes "..."
+   gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.0" --notes "..."
    ```
 
 The download button on the project page (`docs/`, served by GitHub Pages from the `main` branch `/docs`) always points to the latest release's `choboterm.exe`, so it needs no changes.

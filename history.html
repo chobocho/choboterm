@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-12 — V0.2.16: 웹 서버 (브라우저로 접속)</h2>
+<ul>
+  <li>웹 서버 PR #1 머지: 창 + 웹(<code>--web</code>, 설정 창), 창 없는 웹(<code>--headless</code>, <code>-tags headless</code>). 대화상자는 App.picker로 통일(창 · 이 PC 브라우저 = Wails, 다른 PC = 업로드 · 다운로드), 탭 번호 clientID&lt;&lt;20, 바이너리 출력 · ack · 재전송, 토큰 · Origin · TLS</li>
+  <li>버전 0.2.16, README · README.ko에 다운로드 링크(headless)와 릴리스 파일 4개, 소개 페이지에 웹 서버 항목과 headless 설치(한·영)</li>
+  <li>아키텍처 그림 한국어·영어 V0.2.16 새로 그림: 브라우저 상자, HTTPS · WebSocket 경로, web.go · picker.go · prefs.ts NEW, 배포에 headless. Chromium으로 그려 넘치는 글자 확인 · 수정</li>
+  <li>빌드: Windows는 Linux에서 <code>wails build -platform windows/amd64</code>(버전 리소스 0.2.16 확인) + headless.exe(콘솔). Linux는 Ubuntu 22.04 컨테이너(일반 사용자로 go test 전체 통과, GLIBC 2.34까지) + headless 정적 바이너리</li>
+  <li>GitHub 릴리스는 이 세션의 GitHub 토큰이 없어 만들지 못함 → 파일 4개를 사용자에게 전달</li>
+</ul>
+
 <h2>2026-10-11 — V0.2.15 릴리스</h2>
 <ul>
   <li>버전 0.2.15(닫기 전에 확인, 선택된 탭 제목 가독성, 마우스를 쓰는 프로그램의 Shift+드래그 안내 · OSC 52 복사). build.bat(테스트 통과) + build_linux.sh(WSL에 docker.io 잠시 설치, Ubuntu 22.04 컨테이너 테스트 통과)로 exe · tar.gz 빌드</li>
