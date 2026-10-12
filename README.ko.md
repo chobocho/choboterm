@@ -1,4 +1,4 @@
-# choboterm V0.2.17
+# choboterm V0.2.18
 
 [English](README.md) · **한국어**
 
@@ -219,7 +219,7 @@ wsl -- ./build_linux.sh
 
 1. `main.go`의 `AppVersion`과 `wails.json`의 `productVersion`을 올립니다.
 2. `build.bat`으로 `release\choboterm.exe`와 `release\choboterm-headless.exe`를, 이어서 `wsl -- ./build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`와 `release/choboterm-headless-linux-amd64`를 만듭니다. (실행 중인 choboterm은 먼저 종료)
-3. 커밋·푸시 후 버전 태그를 푸시합니다: `git tag v0.2.17 && git push origin v0.2.17`. `release` 워크플로(`.github/workflows/release.yml`)가 Windows와 Ubuntu 22.04에서 파일 4개를 빌드하고 GitHub Release를 만듭니다. 태그를 푸시하지 않고 하려면 Actions > release > Run workflow에서 Tag `v0.2.17`, Ref `main`으로 실행합니다(빌드한 커밋에 태그가 생김). 손으로 만들 때는:
+3. 커밋·푸시 후 버전 태그를 푸시합니다: `git tag v0.2.18 && git push origin v0.2.18`. `release` 워크플로(`.github/workflows/release.yml`)가 Windows와 Ubuntu 22.04에서 파일 4개를 빌드하고 GitHub Release를 만듭니다. 태그를 푸시하지 않고 하려면 Actions > release > Run workflow에서 Tag `v0.2.18`, Ref `main`으로 실행합니다(빌드한 커밋에 태그가 생김). 손으로 만들 때는:
 
    ```sh
    gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.0" --notes "..."

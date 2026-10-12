@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261009_230942.html">history_20261009_230942.html</a></p>
 
+<h2>2026-10-12 — V0.2.18</h2>
+<ul>
+  <li>v0.2.17 릴리스 실행이 Windows 테스트 2개로 실패(Release · 태그 안 생김) → 버전 0.2.18</li>
+  <li>safeFileName: Windows에서 filepath.Base가 "a:"를 드라이브로 보고 잘라 냄 → path.Base로 수정</li>
+  <li>Lua 메모리 한도(Windows): 프로세스가 한도(128MB)에 닿은 채 멈춤(CI 진단으로 확인) → 한도에 닿으면 choboterm이 Job을 끝내도록 감시 추가</li>
+  <li>CI 워크플로(.github/workflows/ci.yml): PR · main 푸시마다 Windows · Ubuntu 22.04에서 vet · test. 수정본 CI 통과</li>
+</ul>
+
 <h2>2026-10-12 — V0.2.17</h2>
 <ul>
   <li>V0.2.16은 릴리스하지 않고(태그 · Release 없음) 버전을 0.2.17로 올림. 웹 서버(V0.2.16 항목)와 닫기 질문 · 다시 실행 시 창 보이기 · 설정의 새 버전 확인 한 줄 정리를 모두 포함</li>
