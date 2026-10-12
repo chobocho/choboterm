@@ -17,6 +17,7 @@ import {highlightSelectionMatches, search, searchKeymap} from '@codemirror/searc
 import {FileSaveText, TextSaveAs} from '../wailsjs/go/main/App';
 import {ask} from './dialog';
 import {formatSize} from './files';
+import {setViewerOpen} from './viewer-state';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -105,10 +106,6 @@ function extensions() {
         wrap.of(wrapping ? EditorView.lineWrapping : []),
         EditorView.updateListener.of(u => u.docChanged && paintDirty()),
     ];
-}
-
-export function viewerOpen() {
-    return !overlay.hidden;
 }
 
 /** Drops a UTF-8 sequence cut off at the end (the file was loaded only partly). */
@@ -233,6 +230,7 @@ export function openViewer(f: ViewFile, edit = false) {
     encSelect.options[0].textContent = `자동 (${detected})`;
     encSelect.value = 'auto';
     overlay.hidden = false;
+    setViewerOpen(true);
     render(detected);
     setEditing(false);
     if (edit) startEditing();
@@ -251,6 +249,7 @@ export async function closeViewer() {
     file = undefined;
     editing = false;
     overlay.hidden = true;
+    setViewerOpen(false);
     panel.classList.remove('editing');
     view.setState(EditorState.create({extensions: extensions()}));
     done?.();

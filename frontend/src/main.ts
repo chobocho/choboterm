@@ -5,7 +5,7 @@ import './style.css';
 import {Terminal} from '@xterm/xterm';
 import {FitAddon} from '@xterm/addon-fit';
 import {WebLinksAddon} from '@xterm/addon-web-links';
-import {WebglAddon} from '@xterm/addon-webgl';
+import type {WebglAddon} from '@xterm/addon-webgl';
 import {ambiguousFontReady, fontFamily, loadUnicodeWidths, NARROW, WIDE} from './cjkwidth';
 import {helpOpen, toggleHelp} from './help';
 import {confirmPaste, pasteConfirmOpen} from './paste';
@@ -16,7 +16,7 @@ import {containersOpen, containersTabClosed, DockerMode, DockerSource, openConta
 import {ask, askOpen, choose} from './dialog';
 import {openSaveSession, openSessionManager, sessionManagerOpen, sessionSaveOpen} from './sessions';
 import {authPromptOpen, initAuthPrompt} from './authprompt';
-import {viewerOpen} from './viewer';
+import {viewerOpen} from './viewer-state';
 import {attachHighlight, Highlighter, loadRules} from './highlight';
 import {Lang, startI18n, tr} from './i18n';
 import {imageOpen} from './imageview';
@@ -113,6 +113,7 @@ interface Tab {
     title?: string;
     // The GPU (WebGL) renderer, while it draws this tab instead of the DOM renderer.
     webgl?: WebglAddon;
+    webglLoading?: boolean;
     // Color theme chosen for this tab's server; undefined: the one in Settings.
     theme?: string;
 }
@@ -182,27 +183,33 @@ const hardwareWebgl = (() => {
 })();
 
 // The default DOM renderer rebuilds a span per styled run on every frame, which makes
-// full-screen TUIs with many colors (sc-im, htop...) stutter; draw with WebGL instead.
-// Returns the WebGL renderer if it is in use; onLost runs if it is dropped later.
-function useWebgl(term: Terminal, onLost: () => void): WebglAddon | undefined {
+// full-screen TUIs with many colors (sc-im, htop...) stutter; load WebGL on demand.
+async function useWebgl(t: Tab): Promise<void> {
     if (!hardwareWebgl) {
         dbg('webgl skipped: no hardware WebGL');
-        return undefined;
+        t.webglLoading = false;
+        return;
     }
     try {
+        const {WebglAddon} = await import('@xterm/addon-webgl');
+        // The tab may have closed or switched back to DOM rendering while the chunk loaded.
+        if (tabs.get(t.id) !== t || t.webgl || (glassOn() && !translucency.gpu)) return;
         const webgl = new WebglAddon();
         // GPU reset or too many contexts: drop back to the DOM renderer.
         webgl.onContextLoss(() => {
             dbg('webgl context lost; back to DOM renderer');
             webgl.dispose();
-            onLost();
+            t.webgl = undefined;
+            if (t === active) updateTitle();
         });
-        term.loadAddon(webgl);
+        t.term.loadAddon(webgl);
+        t.webgl = webgl;
         dbg('webgl renderer loaded');
-        return webgl;
+        if (t === active) updateTitle();
     } catch (e) {
         console.warn('WebGL renderer unavailable; using the DOM renderer', e);
-        return undefined;
+    } finally {
+        t.webglLoading = false;
     }
 }
 
@@ -213,11 +220,9 @@ function useWebgl(term: Terminal, onLost: () => void): WebglAddon | undefined {
  */
 function chooseRenderer(t: Tab) {
     const want = !glassOn() || translucency.gpu;
-    if (want && !t.webgl) {
-        t.webgl = useWebgl(t.term, () => {
-            t.webgl = undefined;
-            if (t === active) updateTitle();
-        });
+    if (want && !t.webgl && !t.webglLoading) {
+        t.webglLoading = true;
+        void useWebgl(t);
     } else if (!want && t.webgl) {
         t.webgl.dispose();
         t.webgl = undefined;

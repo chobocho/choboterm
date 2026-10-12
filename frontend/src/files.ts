@@ -17,7 +17,7 @@ import {
 import {main} from '../wailsjs/go/models';
 import {EventsOn, OnFileDrop} from '../wailsjs/runtime/runtime';
 import {ask, askText} from './dialog';
-import {openViewer, viewerOpen} from './viewer';
+import {viewerOpen} from './viewer-state';
 import {imageOpen, isImage, openImages} from './imageview';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -300,6 +300,7 @@ function viewFile(v: View, edit = false) {
     return run(v, async () => {
         const res = await FileView(v.tabId, path, e.size);
         const data = Uint8Array.from(atob(res.data), c => c.charCodeAt(0));
+        const {openViewer} = await import('./viewer');
         openViewer({
             tabId: v.tabId,
             name: e.name,
