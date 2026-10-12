@@ -1,0 +1,447 @@
+# Methods a page may call (Wails bindings, and browsers through the web server)
+
+AnswerPrompt(int, []string, bool)
+CheckUpdate(bool) (UpdateInfo, error)
+ChooseLogDir(string) (string, error)
+CloseTab(int)
+Connect(int, ConnectRequest) (string, error)
+ConsoleEval(int, int, string) (error)
+ConsoleInterrupt(int)
+ConsoleOpen() (ConsoleFile, error)
+ConsoleSave(string) (string, error)
+DebugEnabled() (bool)
+DebugLog(string)
+DeleteSession(string) (error)
+Disconnect(int)
+DockerAction(int, string, string) (error)
+DockerList(int, bool) ([]Container, error)
+DockerOpen(int, int, string, string, string, int, int) (error)
+ExportSessions() (string, error)
+FileCancel(int)
+FileClose(int)
+FileCreate(int, string, string) (error)
+FileDelete(int, string, []FileEntry) (int, error)
+FileDownload(int, string, int64) (string, error)
+FileDownloadMany(int, string, []FileEntry) (DownloadResult, error)
+FileImage(int, string, int64) (ViewResult, error)
+FileList(int, string) ([]FileEntry, error)
+FileMkdir(int, string, string) (error)
+FileOpen(int) (FileOpenResult, error)
+FileRename(int, string, string, string) (error)
+FileSaveText(int, TextSave) (TextSaveResult, error)
+FileStartDir(int, string) (string)
+FileUpload(int, string) (int, error)
+FileUploadPaths(int, string, []string) (int, error)
+FileView(int, string, int64) (ViewResult, error)
+ForwardAdd(int, Forward) (ForwardStatus, error)
+ForwardList(int) ([]ForwardStatus, error)
+ForwardRemove(int, int) (error)
+GetHistory() ([]HostEntry)
+GetLanguage() (string)
+GetLocalShells() ([]LocalShell)
+GetSSHConfigHosts() ([]SSHConfigHost)
+GetSerialPorts() ([]SerialPort)
+GetSessions() ([]SavedSession)
+GetSettings() (Settings)
+GetVersion() (string)
+ImportPuTTY() (ImportResult, error)
+ImportSessions() (ImportResult, error)
+LogPath(int) (string)
+LookupSSH(string) (SSHTarget)
+Quit()
+Resize(int, int, int)
+RunScript(int, string, string) (error)
+RunScriptFile(int) (string, error)
+SaveSession(SavedSession, bool) (SavedSession, error)
+SaveSettings(Settings) (error)
+ScriptScreen(int, int, string)
+Send(int, string)
+SendBreak(int) (error)
+SetEncoding(int, string) (string)
+SetTabTheme(int, string) (bool, error)
+ShowLogs(int) (error)
+ShowScripts() (error)
+StartConsole(int) (error)
+StartLog(int) (string, error)
+StopLog(int)
+StopScript(int)
+TabTheme(int) (string)
+TextSaveAs(string, string, string) (SaveResult, error)
+WebHideWindow() (error)
+WebNewToken() (WebInfo, error)
+WebOpen() (error)
+WebStart(string) (WebInfo, error)
+WebStatus() (WebInfo)
+WebStop() (error)
+
+# Structs with JSON fields (exchanged with the page, or saved in files)
+
+connectRequest {
+    "host" string
+    "port" int
+    "login" string
+    "pass" string
+    "encoding" string
+    "jump" string
+    "cols" int
+    "rows" int
+}
+
+consoleFile {
+    "name" string
+    "text" string
+}
+
+container {
+    "id" string
+    "name" string
+    "image" string
+    "status" string
+    "running" bool
+    "ports" string
+    "published" []dockerPort
+    "created" string
+}
+
+dockerPort {
+    "ip" string
+    "port" int
+    "to" string
+}
+
+downloadResult {
+    "dir" string
+    "count" int
+}
+
+exportSession {
+    "name" string
+    "group,omitempty" string
+    "host" string
+    "port" int
+    "login,omitempty" string
+    "encoding,omitempty" string
+    "jump,omitempty" string
+}
+
+fileEntry {
+    "name" string
+    "size" int64
+    "isDir" bool
+    "modTime" string
+}
+
+fileOpenResult {
+    "home" string
+    "protocol" string
+}
+
+forward {
+    "type" string
+    "bindAddr" string
+    "bindPort" int
+    "host" string
+    "port" int
+}
+
+forwardStatus {
+    (embedded) forward
+    "id" int
+    "error" string
+    "conns" int
+    "standby" bool
+}
+
+highlight {
+    "on" bool
+    "red" string
+    "yellow" string
+    "green" string
+}
+
+hostEntry {
+    "host" string
+    "port" int
+    "login" string
+    "encoding" string
+    "pass" string
+    "jump" string
+}
+
+importResult {
+    "added" int
+    "skipped" int
+}
+
+localShell {
+    "name" string
+    "label" string
+}
+
+luaMsg {
+    "t" string
+    "id,omitempty" int
+    "d,omitempty" string
+    "name,omitempty" string
+    "err,omitempty" string
+    "limit,omitempty" uint64
+}
+
+macro {
+    "name" string
+    "key" string
+    "text" string
+    "kind" string
+}
+
+prompt {
+    "id" int
+    "tab" int
+    "title" string
+    "message" string
+    "fields" []promptField
+    "ok" string
+    "cancel" string
+}
+
+promptField {
+    "label" string
+    "secret" bool
+}
+
+sSHConfigHost {
+    "host" string
+    "hostName" string
+    "port" int
+    "login" string
+}
+
+sSHTarget {
+    "host" string
+    "port" int
+    "login" string
+    "hostName" string
+    "fromConfig" bool
+    "jump" string
+    "configJump" string
+}
+
+saveResult {
+    "path" string
+    "bad" int
+}
+
+savedSession {
+    "id" string
+    "name" string
+    "group" string
+    "host" string
+    "port" int
+    "login" string
+    "encoding" string
+    "pass" string
+    "jump" string
+}
+
+scriptStatus {
+    "name" string
+    "started" int64
+    "console" bool
+}
+
+serialPort {
+    "name" string
+    "label" string
+}
+
+serverPrefs {
+    "host" string
+    "port" int
+    "forwards,omitempty" []forward
+    "theme,omitempty" string
+}
+
+sessionsDoc {
+    "sessions" []storedSession
+    "servers" []serverPrefs
+}
+
+sessionsExport {
+    "format" string
+    "version" int
+    "sessions" []exportSession
+}
+
+settings {
+    "fontSize" int
+    "fontUtf8" string
+    "fontEucKr" string
+    "theme" string
+    "cursorStyle" string
+    "cursorBlink" bool
+    "scrollback" int
+    "translucency" string
+    "opacity" int
+    "glassGpu" bool
+    "pasteNoConfirm" bool
+    "keepAlive" int
+    "autoReconnect" bool
+    "logAuto" bool
+    "logDir" string
+    "logRaw" bool
+    "logTime" bool
+    "language" string
+    "highlight" highlight
+    "consoleHeight" int
+    "macros" []macro
+    "updateCheck" bool
+    "window,omitempty" *windowState
+    "update,omitempty" *updateState
+    "web,omitempty" *webSettings
+}
+
+storedEntry {
+    "host" string
+    "port" int
+    "login" string
+    "encoding" string
+    "passEnc,omitempty" string
+    "jump,omitempty" string
+    "forwards,omitempty" []forward
+    "theme,omitempty" string
+}
+
+storedSession {
+    "id" string
+    "name" string
+    "group,omitempty" string
+    "host" string
+    "port" int
+    "login,omitempty" string
+    "encoding,omitempty" string
+    "passEnc,omitempty" string
+    "jump,omitempty" string
+}
+
+textSave {
+    "path" string
+    "text" string
+    "encoding" string
+    "size" int64
+    "modTime" string
+    "ignoreConflict" bool
+    "allowLossy" bool
+}
+
+textSaveResult {
+    "saved" bool
+    "conflict" bool
+    "bad" int
+    "size" int64
+    "modTime" string
+    "data" string
+}
+
+updateInfo {
+    "checked" bool
+    "current" string
+    "latest" string
+    "newer" bool
+    "url" string
+}
+
+updateState {
+    "last" time
+    "notified" string
+}
+
+viewResult {
+    "data" string
+    "truncated" bool
+    "size" int64
+    "modTime" string
+}
+
+webIn {
+    "c" uint64
+    "m" string
+    "a" []rawMessage
+    "ack" uint64
+    "cancel" string
+}
+
+webInfo {
+    "running" bool
+    "enabled" bool
+    "addr" string
+    "url" string
+    "tls" bool
+    "fingerprint" string
+    "remote" bool
+    "clients" int
+    "error" string
+}
+
+webPick {
+    "id" string
+    "title" string
+    "multiple" bool
+    "accept" string
+}
+
+webSettings {
+    "enabled" bool
+    "addr" string
+}
+
+windowState {
+    "left" int
+    "top" int
+    "right" int
+    "bottom" int
+    "maximized" bool
+}
+
+xferEnd {
+    "ok" bool
+    "message" string
+}
+
+xferProgress {
+    "name" string
+    "done" int64
+    "total" int64
+    "upload" bool
+}
+
+# Default settings
+
+{
+  "fontSize": 15,
+  "fontUtf8": "D2Coding",
+  "fontEucKr": "GulimChe",
+  "theme": "choboterm",
+  "cursorStyle": "block",
+  "cursorBlink": true,
+  "scrollback": 5000,
+  "translucency": "off",
+  "opacity": 85,
+  "glassGpu": false,
+  "pasteNoConfirm": false,
+  "keepAlive": 60,
+  "autoReconnect": true,
+  "logAuto": false,
+  "logDir": "",
+  "logRaw": false,
+  "logTime": true,
+  "language": "",
+  "highlight": {
+    "on": true,
+    "red": "error, errors, fail, failed, failure, fatal, denied, refused, exception, panic, critical, 오류, 에러, 실패",
+    "yellow": "warn, warning, warnings, timeout, deprecated, 경고",
+    "green": "success, successful, succeeded, passed, 성공, 완료"
+  },
+  "consoleHeight": 0,
+  "macros": [],
+  "updateCheck": false
+}
