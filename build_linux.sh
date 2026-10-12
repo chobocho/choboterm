@@ -12,7 +12,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-version=$(sed -n 's/^const AppVersion = "\(.*\)"/\1/p' main.go)
+version=$(sed -n 's/^const Version = "\(.*\)"/\1/p' internal/version/version.go)
 name=choboterm-linux-amd64
 
 # npm of Windows (seen from WSL as /mnt/c/...) can't build here.

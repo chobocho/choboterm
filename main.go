@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+
+	"choboterm/internal/version"
 )
 
-// AppVersion is shown in the window title. Keep in sync with wails.json productVersion.
-const AppVersion = "0.2.20"
-
 // appName is the window title prefix, e.g. "choboterm V0.1.0".
-const appName = "choboterm V" + AppVersion
+const appName = "choboterm V" + version.Version
 
 func main() {
 	// The same exe runs Lua scripts in a child process (see luahost.go).

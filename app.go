@@ -17,6 +17,8 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/dbg"
+	"choboterm/internal/version"
 )
 
 // Session is a live terminal connection (SSH or Telnet).
@@ -132,14 +134,14 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	if a.webStart != nil {
 		if err := a.startWebServer(*a.webStart); err != nil {
-			debugf("web: %v", err)
+			dbg.Printf("web: %v", err)
 		}
 	}
 }
 
 // domReady shows the window at its saved position the first time the page loads.
 func (a *App) domReady(ctx context.Context) {
-	debugf("dom ready")
+	dbg.Printf("dom ready")
 	a.shown.Do(func() {
 		if w := loadSettings().Window; w != nil {
 			restoreWindowBounds(*w)
@@ -469,7 +471,7 @@ func (t *tab) keepAlive(sess Session, every time.Duration) {
 			misses = 0
 			continue
 		}
-		debugf("tab %d keepalive failed: %v", t.id, err)
+		dbg.Printf("tab %d keepalive failed: %v", t.id, err)
 		if misses++; misses < keepAliveMisses {
 			continue
 		}
@@ -523,9 +525,9 @@ func (t *tab) pump(sess Session) {
 		if len(pending) > 0 {
 			lastEmit = time.Now()
 			if len(pending) <= 64 {
-				debugf("tab %d emit %d bytes %q", t.id, len(pending), pending)
+				dbg.Printf("tab %d emit %d bytes %q", t.id, len(pending), pending)
 			} else {
-				debugf("tab %d emit %d bytes", t.id, len(pending))
+				dbg.Printf("tab %d emit %d bytes", t.id, len(pending))
 			}
 			t.log.write(pending)
 			if s := t.script.Load(); s != nil {
@@ -570,7 +572,7 @@ func (t *tab) pump(sess Session) {
 				pending = append(pending, t.codec.Decode(held)...)
 				flush()
 				err := <-readErr
-				debugf("tab %d read ended: %v", t.id, err)
+				dbg.Printf("tab %d read ended: %v", t.id, err)
 				t.mu.Lock()
 				current := t.sess == sess
 				if current {
@@ -594,7 +596,7 @@ func (t *tab) pump(sess Session) {
 					} else if lost {
 						msg = "연결이 끊어졌습니다: " + err.Error()
 					}
-					debugf("tab %d closed: %q lost=%v", t.id, msg, lost)
+					dbg.Printf("tab %d closed: %q lost=%v", t.id, msg, lost)
 					t.log.mark(msg)
 					t.emit("term:closed", msg, lost)
 				}
@@ -629,7 +631,7 @@ func (a *App) Send(tabID int, data string) {
 	if sess == nil {
 		return
 	}
-	debugf("tab %d send %q", tabID, data)
+	dbg.Printf("tab %d send %q", tabID, data)
 	if t.zmodemActive() {
 		// Keyboard input is not sent during a transfer; Ctrl+C / Ctrl+X cancel it.
 		if strings.ContainsAny(data, "\x03\x18") {
@@ -648,7 +650,7 @@ func (a *App) SetEncoding(tabID int, name string) string {
 
 // GetVersion returns the application version (e.g. "0.1.0").
 func (a *App) GetVersion() string {
-	return AppVersion
+	return version.Version
 }
 
 // Resize propagates a tab's terminal size to the remote side.
@@ -657,7 +659,7 @@ func (a *App) Resize(tabID, cols, rows int) {
 	if t == nil {
 		return
 	}
-	debugf("tab %d resize %dx%d", tabID, cols, rows)
+	dbg.Printf("tab %d resize %dx%d", tabID, cols, rows)
 	if sess := t.session(); sess != nil && cols > 0 && rows > 0 {
 		_ = sess.Resize(cols, rows)
 	}

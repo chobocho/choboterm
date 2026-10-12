@@ -15,6 +15,8 @@ import (
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
+
+	"choboterm/internal/dbg"
 )
 
 // DCB.Flags bits (winbase.h).
@@ -117,12 +119,12 @@ func (s *serialSession) Read(p []byte) (int, error) {
 		// io.EOF after the long timeout is a read that got nothing: wait again.
 		// Sooner, the device is gone (the driver no longer waits).
 		if n == 0 && errors.Is(err, io.EOF) && time.Since(start) < 24*time.Hour {
-			debugf("serial read: nothing after %v", time.Since(start))
+			dbg.Printf("serial read: nothing after %v", time.Since(start))
 			return 0, errSerialGone
 		}
 		if n > 0 || !errors.Is(err, io.EOF) {
 			if err != nil && !errors.Is(err, io.EOF) {
-				debugf("serial read: %v", err)
+				dbg.Printf("serial read: %v", err)
 				err = errSerialGone
 			}
 			return n, err

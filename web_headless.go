@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"choboterm/internal/version"
 )
 
 // runHeadless runs only the web server (--headless, or a headless build)
@@ -25,7 +27,7 @@ func runHeadless(opts cliOptions) int {
 		}
 		return 1
 	}
-	fmt.Printf("choboterm V%s web server (no window)\n\n  %s\n\n", AppVersion, w.URL(false))
+	fmt.Printf("choboterm V%s web server (no window)\n\n  %s\n\n", version.Version, w.URL(false))
 	if w.tls {
 		fmt.Printf("  TLS certificate SHA-256: %s\n  (compare it with the one your browser shows before trusting it)\n\n", w.fp)
 	}

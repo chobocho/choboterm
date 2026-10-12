@@ -13,6 +13,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+
+	"choboterm/internal/dbg"
 )
 
 // errKeyCancelled means the user cancelled the passphrase prompt of a key the server accepts.
@@ -67,11 +69,11 @@ func newSSHAuth(pass string, keys []string, ask asker) *sshAuth {
 		// waiting on the pipe), so closing the conn after the login can't block.
 		list, err := agent.NewClient(struct{ io.ReadWriter }{conn}).Signers()
 		if err != nil {
-			debugf("ssh agent %s: %v", src.name, err)
+			dbg.Printf("ssh agent %s: %v", src.name, err)
 			conn.Close()
 			continue
 		}
-		debugf("ssh agent %s: %d key(s)", src.name, len(list))
+		dbg.Printf("ssh agent %s: %d key(s)", src.name, len(list))
 		a.agents = append(a.agents, conn)
 		for _, s := range list {
 			add(s)
@@ -183,7 +185,7 @@ func loadKeyFile(path string, ask asker) ssh.Signer {
 	}
 	var missing *ssh.PassphraseMissingError
 	if !errors.As(err, &missing) {
-		debugf("key %s: %v", path, err)
+		dbg.Printf("key %s: %v", path, err)
 		return nil
 	}
 	unlockedKeys.Lock()
@@ -266,7 +268,7 @@ func (k *lockedKey) unlock() (ssh.Signer, error) {
 		}
 		s, err := ssh.ParsePrivateKeyWithPassphrase(k.data, []byte(vals[0]))
 		if err != nil {
-			debugf("key %s: %v", k.path, err)
+			dbg.Printf("key %s: %v", k.path, err)
 			msg = fmt.Sprintf("암호가 틀렸습니다. 다시 입력하세요.\n%s", k.path)
 			continue
 		}

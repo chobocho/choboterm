@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"choboterm/internal/dbg"
+	"choboterm/internal/version"
 )
 
 // The update check asks GitHub for the latest release and tells the user
@@ -40,7 +43,7 @@ const updateEvery = 24 * time.Hour
 // it always asks and always reports. Otherwise (at start) it asks only when
 // the check is turned on and hasn't run today, and reports a new version once.
 func (a *App) CheckUpdate(manual bool) (UpdateInfo, error) {
-	info := UpdateInfo{Current: AppVersion}
+	info := UpdateInfo{Current: version.Version}
 	s := loadSettings()
 	if !manual {
 		if !s.UpdateCheck {
@@ -58,15 +61,15 @@ func (a *App) CheckUpdate(manual bool) (UpdateInfo, error) {
 		cur.Update.Last = time.Now()
 	})
 	if err != nil {
-		debugf("update check: %v", err)
+		dbg.Printf("update check: %v", err)
 		if manual {
 			return info, fmt.Errorf("새 버전을 확인하지 못했습니다: %w", err)
 		}
 		return info, nil // a check at start fails quietly (offline, proxy...)
 	}
 	info.Checked, info.Latest, info.URL = true, latest, url
-	info.Newer = newerVersion(latest, AppVersion)
-	debugf("update check: current %s, latest %s, newer %v", AppVersion, latest, info.Newer)
+	info.Newer = newerVersion(latest, version.Version)
+	dbg.Printf("update check: current %s, latest %s, newer %v", version.Version, latest, info.Newer)
 	if info.Newer && !manual {
 		if s.Update != nil && s.Update.Notified == latest {
 			info.Newer = false // already told about this one
@@ -78,7 +81,7 @@ func (a *App) CheckUpdate(manual bool) (UpdateInfo, error) {
 }
 
 // fetchLatestRelease returns the newest release's version ("0.2.14") and page.
-func fetchLatestRelease() (version, page string, err error) {
+func fetchLatestRelease() (latest, page string, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, latestReleaseURL, nil)
@@ -86,7 +89,7 @@ func fetchLatestRelease() (version, page string, err error) {
 		return "", "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "choboterm/"+AppVersion)
+	req.Header.Set("User-Agent", "choboterm/"+version.Version)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", "", err

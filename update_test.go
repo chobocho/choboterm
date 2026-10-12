@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"choboterm/internal/version"
 )
 
 func TestNewerVersion(t *testing.T) {
@@ -91,7 +93,7 @@ func TestCheckUpdateOncePerDayAndVersion(t *testing.T) {
 
 func TestCheckUpdateCurrent(t *testing.T) {
 	useTempSettings(t)
-	fakeGitHub(t, "v"+AppVersion)
+	fakeGitHub(t, "v"+version.Version)
 	if info, err := NewApp().CheckUpdate(true); err != nil || !info.Checked || info.Newer {
 		t.Fatalf("same version: %+v %v", info, err)
 	}

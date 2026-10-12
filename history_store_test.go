@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/secret"
 )
 
 func TestHistoryRemembersEncryptedPassword(t *testing.T) {
@@ -93,18 +94,18 @@ func TestTabThemeSavedPerHost(t *testing.T) {
 // (Linux without a keyring).
 func requireSecretStore(t *testing.T) {
 	t.Helper()
-	if _, err := protectSecret([]byte("x")); errors.Is(err, errNoSecretStore) {
+	if _, err := secret.Protect([]byte("x")); errors.Is(err, secret.ErrNoStore) {
 		t.Skip("no secret store:", err)
 	}
 }
 
 func TestSecretRoundTrip(t *testing.T) {
 	requireSecretStore(t)
-	enc, err := protectSecret([]byte("비번 pw"))
+	enc, err := secret.Protect([]byte("비번 pw"))
 	if err != nil || strings.Contains(string(enc), "pw") {
 		t.Fatalf("protect: %q %v", enc, err)
 	}
-	if plain, err := unprotectSecret(enc); err != nil || string(plain) != "비번 pw" {
+	if plain, err := secret.Unprotect(enc); err != nil || string(plain) != "비번 pw" {
 		t.Fatalf("unprotect: %q %v", plain, err)
 	}
 }

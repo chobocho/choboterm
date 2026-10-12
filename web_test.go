@@ -25,6 +25,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/version"
 )
 
 // isClosed and input read a pipeSession under its lock (the pump and the
@@ -291,7 +292,7 @@ func TestWebCalls(t *testing.T) {
 
 	var v string
 	json.Unmarshal(c.callOK("GetVersion"), &v)
-	if v != AppVersion {
+	if v != version.Version {
 		t.Fatalf("version %q", v)
 	}
 	// An error result rejects the call, like Wails.

@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"golang.org/x/sys/unix"
+
+	"choboterm/internal/dbg"
 )
 
 // serialRates are the speeds termios can set.
@@ -101,7 +103,7 @@ func (s *serialSession) Read(p []byte) (int, error) {
 	}
 	// A device that went away reads as end of file or EIO.
 	if err != nil && n == 0 {
-		debugf("serial read: %v", err)
+		dbg.Printf("serial read: %v", err)
 		err = errSerialGone
 	}
 	return n, err

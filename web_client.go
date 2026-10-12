@@ -29,6 +29,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"choboterm/internal/dbg"
 )
 
 // webMaxUnacked is how much output may wait for the page's
@@ -128,7 +130,7 @@ func (c *webClient) event(name string, data []interface{}) {
 		D []interface{} `json:"d"`
 	}{name, data})
 	if err != nil {
-		debugf("web: event %s: %v", name, err)
+		dbg.Printf("web: event %s: %v", name, err)
 		return
 	}
 	c.push(false, b, false)
@@ -176,7 +178,7 @@ func (c *webClient) close() {
 	close(c.done)
 	c.cond.Broadcast()
 	c.mu.Unlock()
-	debugf("web: client %d closed", c.id)
+	dbg.Printf("web: client %d closed", c.id)
 
 	if conn != nil {
 		// 1001 "closed" tells the page not to reconnect (see web_shim.js).
@@ -265,7 +267,7 @@ func (c *webClient) serve(conn *websocket.Conn, seq uint64) {
 	c.ackLocked(seq) // the page has these
 	c.cond.Broadcast()
 	c.mu.Unlock()
-	debugf("web: client %d connected (gen %d, seq %d)", c.id, gen, seq)
+	dbg.Printf("web: client %d connected (gen %d, seq %d)", c.id, gen, seq)
 	c.srv.changed()
 
 	stop := make(chan struct{})
@@ -278,7 +280,7 @@ func (c *webClient) serve(conn *websocket.Conn, seq uint64) {
 	if c.gen == gen && !c.closed {
 		c.conn = nil
 		c.timer.Reset(c.srv.opts.Grace)
-		debugf("web: client %d disconnected; closing in %v", c.id, c.srv.opts.Grace)
+		dbg.Printf("web: client %d disconnected; closing in %v", c.id, c.srv.opts.Grace)
 	}
 	c.cond.Broadcast()
 	c.mu.Unlock()
@@ -466,7 +468,7 @@ func webInvoke(a *App, method string, args []json.RawMessage) (result interface{
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			debugf("web: %s panicked: %v", method, r)
+			dbg.Printf("web: %s panicked: %v", method, r)
 			result, err = nil, fmt.Errorf("%s: %v", method, r)
 		}
 	}()

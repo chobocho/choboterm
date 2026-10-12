@@ -15,6 +15,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"choboterm/internal/version"
 )
 
 // The methods Wails binds are exactly the exported methods of *App, and the
@@ -246,7 +248,7 @@ func TestTabIDsComeFromThePage(t *testing.T) {
 
 // GetVersion is what the window title and the update check use.
 func TestGetVersion(t *testing.T) {
-	if NewApp().GetVersion() != AppVersion {
+	if NewApp().GetVersion() != version.Version {
 		t.Fatal("version")
 	}
 }

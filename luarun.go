@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"choboterm/internal/dbg"
 )
 
 const (
@@ -128,7 +130,7 @@ func (t *tab) startHost(name string, first luaMsg) error {
 	go s.readLoop(stdout)
 	go s.sendLoop()
 	go s.wait()
-	debugf("tab %d script %q started (pid %d)", t.id, name, cmd.Process.Pid)
+	dbg.Printf("tab %d script %q started (pid %d)", t.id, name, cmd.Process.Pid)
 	t.emit("script:start", ScriptStatus{Name: name, Started: s.started.UnixMilli(), Console: s.console})
 	return nil
 }
@@ -221,7 +223,7 @@ func (s *scriptRun) reply(id int, d string, err error) {
 func (s *scriptRun) readLoop(r io.Reader) {
 	defer func() {
 		if p := recover(); p != nil {
-			debugf("tab %d script reader panic: %v", s.t.id, p)
+			dbg.Printf("tab %d script reader panic: %v", s.t.id, p)
 			s.fail("스크립트 처리 중 오류가 나서 멈췄습니다")
 		}
 	}()
@@ -312,7 +314,7 @@ func (s *scriptRun) screen(id int) {
 	case text := <-ch:
 		s.reply(id, text, nil)
 	case <-time.After(luaScreenWait):
-		debugf("tab %d screen() #%d: no answer from the page in %v", s.t.id, id, luaScreenWait)
+		dbg.Printf("tab %d screen() #%d: no answer from the page in %v", s.t.id, id, luaScreenWait)
 		s.reply(id, "", errors.New("화면 내용을 읽지 못했습니다"))
 	case <-s.ended:
 	}
@@ -346,7 +348,7 @@ func (s *scriptRun) wait() {
 	stopped := s.stopped && msg == s.reason
 	s.mu.Unlock()
 	elapsed := time.Since(s.started)
-	debugf("tab %d script %q ended after %v: %q", s.t.id, s.name, elapsed, msg)
+	dbg.Printf("tab %d script %q ended after %v: %q", s.t.id, s.name, elapsed, msg)
 	s.t.emit("script:end", elapsed.Milliseconds(), msg, stopped)
 }
 

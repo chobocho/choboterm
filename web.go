@@ -30,6 +30,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"choboterm/internal/dbg"
 )
 
 const (
@@ -173,7 +175,7 @@ func startWeb(a *App, page fs.FS, opts webOptions) (*webServer, error) {
 	}
 	go func() { _ = w.srv.Serve(ln) }()
 	a.web.Store(w)
-	debugf("web: listening on %s", w.URL(false))
+	dbg.Printf("web: listening on %s", w.URL(false))
 	return w, nil
 }
 

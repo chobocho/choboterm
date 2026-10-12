@@ -1,4 +1,4 @@
-package main
+package dbg
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"choboterm/internal/version"
 )
 
 // Debug log: set CHOBOTERM_DEBUG=1, or put a file named debug.on next to the exe, to write
@@ -25,10 +27,10 @@ func init() {
 		return
 	}
 	debugLog.f, _ = os.Create(filepath.Join(dir, "debug.log"))
-	debugf("debug log started, version %s", AppVersion)
+	Printf("debug log started, version %s", version.Version)
 }
 
-func debugf(format string, args ...interface{}) {
+func Printf(format string, args ...interface{}) {
 	debugLog.mu.Lock()
 	defer debugLog.mu.Unlock()
 	if debugLog.f == nil {
@@ -37,15 +39,15 @@ func debugf(format string, args ...interface{}) {
 	fmt.Fprintf(debugLog.f, "%s [go] %s\n", time.Now().Format("15:04:05.000"), fmt.Sprintf(format, args...))
 }
 
-// DebugEnabled tells the frontend whether to send diagnostics.
-func (a *App) DebugEnabled() bool {
+// Enabled reports whether the debug log is being written.
+func Enabled() bool {
 	debugLog.mu.Lock()
 	defer debugLog.mu.Unlock()
 	return debugLog.f != nil
 }
 
-// DebugLog writes a frontend diagnostic line.
-func (a *App) DebugLog(msg string) {
+// PrintJS writes a line of the page's diagnostics.
+func PrintJS(msg string) {
 	debugLog.mu.Lock()
 	defer debugLog.mu.Unlock()
 	if debugLog.f == nil {

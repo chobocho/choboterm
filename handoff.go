@@ -24,6 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"choboterm/internal/dbg"
 )
 
 // showWindowHook shows the window (tests replace it: no real window there).
@@ -110,7 +112,7 @@ func handoffToRunning(o webOptions) bool {
 	}
 	got, err := hex.DecodeString(ans.Proof)
 	ok := err == nil && hmac.Equal(got, showProof(token, nonce))
-	debugf("web: handoff to %s: %v", addr, ok)
+	dbg.Printf("web: handoff to %s: %v", addr, ok)
 	return ok
 }
 

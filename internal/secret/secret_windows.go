@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package secret
 
 import (
 	"errors"
@@ -10,15 +10,15 @@ import (
 )
 
 // errNoSecretStore: DPAPI is always there on Windows.
-var errNoSecretStore = errors.New("비밀번호를 저장할 수 없습니다")
+var ErrNoStore = errors.New("비밀번호를 저장할 수 없습니다")
 
-// protectSecret encrypts data with DPAPI for the current Windows user.
-func protectSecret(plain []byte) ([]byte, error) {
+// Protect encrypts data with DPAPI for the current Windows user.
+func Protect(plain []byte) ([]byte, error) {
 	return dpapi(plain, true)
 }
 
-// unprotectSecret decrypts data produced by protectSecret.
-func unprotectSecret(cipher []byte) ([]byte, error) {
+// Unprotect decrypts data produced by protectSecret.
+func Unprotect(cipher []byte) ([]byte, error) {
 	return dpapi(cipher, false)
 }
 

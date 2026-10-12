@@ -27,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"choboterm/internal/dbg"
 )
 
 //go:embed web_shim.js
@@ -467,7 +469,7 @@ func (p browserPicker) finishDir(dir string) func(bool) string {
 		err = zipFolder(dir, zp)
 		_ = os.RemoveAll(dir)
 		if err != nil {
-			debugf("web: zip: %v", err)
+			dbg.Printf("web: zip: %v", err)
 			_ = os.RemoveAll(zipDir)
 			return ""
 		}

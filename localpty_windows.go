@@ -9,6 +9,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"choboterm/internal/dbg"
 )
 
 // ptySession runs a local program in a Windows pseudo console (ConPTY), so
@@ -83,7 +85,7 @@ func startPty(cmdline, dir string, cols, rows int) (Session, error) {
 	// when the program exits; Read then sees the end.
 	go func() {
 		_, _ = windows.WaitForSingleObject(pi.Process, windows.INFINITE)
-		debugf("local program exited: %s", cmdline)
+		dbg.Printf("local program exited: %s", cmdline)
 		s.closeConsole()
 		windows.CloseHandle(pi.Process)
 	}()

@@ -1,6 +1,6 @@
 //go:build linux && !termux
 
-package main
+package secret
 
 import (
 	"crypto/aes"
@@ -17,7 +17,7 @@ import (
 // keyring (Secret Service: GNOME Keyring, KWallet...). Without a keyring
 // nothing is saved.
 
-var errNoSecretStore = errors.New("비밀번호를 저장할 키링(Secret Service)이 없습니다")
+var ErrNoStore = errors.New("비밀번호를 저장할 키링(Secret Service)이 없습니다")
 
 const keyringService, keyringUser = "choboterm", "secret-key"
 
@@ -29,14 +29,14 @@ func secretKey() ([]byte, error) {
 			return k, nil
 		}
 	} else if !errors.Is(err, keyring.ErrNotFound) {
-		return nil, fmt.Errorf("%w: %v", errNoSecretStore, err)
+		return nil, fmt.Errorf("%w: %v", ErrNoStore, err)
 	}
 	k := make([]byte, 32)
 	if _, err := rand.Read(k); err != nil {
 		return nil, err
 	}
 	if err := keyring.Set(keyringService, keyringUser, base64.StdEncoding.EncodeToString(k)); err != nil {
-		return nil, fmt.Errorf("%w: %v", errNoSecretStore, err)
+		return nil, fmt.Errorf("%w: %v", ErrNoStore, err)
 	}
 	return k, nil
 }
@@ -53,8 +53,8 @@ func secretAEAD() (cipher.AEAD, error) {
 	return cipher.NewGCM(b)
 }
 
-// protectSecret encrypts data with the key in the keyring: nonce, then sealed data.
-func protectSecret(plain []byte) ([]byte, error) {
+// Protect encrypts data with the key in the keyring: nonce, then sealed data.
+func Protect(plain []byte) ([]byte, error) {
 	if len(plain) == 0 {
 		return nil, nil
 	}
@@ -69,8 +69,8 @@ func protectSecret(plain []byte) ([]byte, error) {
 	return g.Seal(nonce, nonce, plain, nil), nil
 }
 
-// unprotectSecret decrypts data produced by protectSecret.
-func unprotectSecret(data []byte) ([]byte, error) {
+// Unprotect decrypts data produced by protectSecret.
+func Unprotect(data []byte) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}

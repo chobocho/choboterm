@@ -15,6 +15,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
+
+	"choboterm/internal/dbg"
 )
 
 type sshSession struct {
@@ -37,13 +39,13 @@ func (s *sshSession) Read(p []byte) (int, error) {
 		go func() { done <- s.session.Wait() }()
 		select {
 		case werr := <-done:
-			debugf("ssh output EOF; session.Wait: %v", werr)
+			dbg.Printf("ssh output EOF; session.Wait: %v", werr)
 			var missing *ssh.ExitMissingError
 			if errors.As(werr, &missing) {
 				err = errConnLost
 			}
 		case <-time.After(5 * time.Second):
-			debugf("ssh output EOF; session.Wait timed out")
+			dbg.Printf("ssh output EOF; session.Wait timed out")
 		}
 	}
 	return n, err
@@ -137,7 +139,7 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, ask asker, conn net.C
 		client.Close()
 		return nil, err
 	}
-	go func() { debugf("ssh connection to %s ended: %v", req.Host, client.Wait()) }()
+	go func() { dbg.Printf("ssh connection to %s ended: %v", req.Host, client.Wait()) }()
 	return sess, nil
 }
 

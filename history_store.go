@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"choboterm/internal/secret"
 )
 
 // HostEntry is one remembered connection as shown in the Host list.
@@ -84,7 +86,7 @@ func encryptPass(pass string) string {
 	if pass == "" {
 		return ""
 	}
-	enc, err := protectSecret([]byte(pass))
+	enc, err := secret.Protect([]byte(pass))
 	if err != nil {
 		return ""
 	}
@@ -99,7 +101,7 @@ func decryptPass(passEnc string) string {
 	if err != nil {
 		return ""
 	}
-	plain, err := unprotectSecret(raw)
+	plain, err := secret.Unprotect(raw)
 	if err != nil {
 		return ""
 	}

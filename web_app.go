@@ -9,6 +9,8 @@ import (
 	"net"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"choboterm/internal/dbg"
 )
 
 // webPage is the page the web server serves (frontend/dist, set by main).
@@ -179,7 +181,7 @@ func (a *App) WebHideWindow() error {
 	}
 	a.hidden.Store(true)
 	runtime.WindowHide(a.ctx)
-	debugf("web: window hidden; %d page(s) connected", a.web.Load().connectedCount())
+	dbg.Printf("web: window hidden; %d page(s) connected", a.web.Load().connectedCount())
 	return nil
 }
 

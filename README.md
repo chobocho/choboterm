@@ -230,7 +230,7 @@ Open the printed HTTPS URL in a browser. Use `--web=127.0.0.1:7681` to restrict 
 
 ## Release
 
-1. Bump `AppVersion` in `main.go` and `productVersion` in `wails.json`.
+1. Bump `Version` in `internal/version/version.go` and `productVersion` in `wails.json`.
 2. Build `release\choboterm.exe` and `release\choboterm-headless.exe` with `build.bat`, then `release/choboterm-linux-amd64.tar.gz` and `release/choboterm-headless-linux-amd64` with `wsl -- ./build_linux.sh`. (Quit any running choboterm first.)
 3. Commit and push, then push the version tag: `git tag v0.2.20 && git push origin v0.2.20`. The `release` workflow (`.github/workflows/release.yml`) builds the four files on Windows and Ubuntu 22.04 and publishes the GitHub Release. Without pushing a tag: Actions > release > Run workflow with Tag `v0.2.20` and Ref `main` (the tag is created on the commit built). To do it by hand instead:
 
