@@ -10,12 +10,14 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"choboterm/internal/sshconn"
+	"choboterm/internal/testutil"
+	"choboterm/internal/transfer"
 )
 
 // openSFTPTab connects tab 1 of a new App to an SFTP server serving root.
 func openSFTPTab(t *testing.T, root string) (*App, string) {
 	t.Helper()
-	client, err := ssh.Dial("tcp", startSFTPServer(t, root), &ssh.ClientConfig{
+	client, err := ssh.Dial("tcp", testutil.StartSFTPServer(t, root), &ssh.ClientConfig{
 		User: "test", HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
@@ -49,7 +51,7 @@ func TestDownloadResume(t *testing.T) {
 	a, wd := openSFTPTab(t, root)
 	downloads := t.TempDir()
 	a.hooks.downloadDir = downloads
-	entries := []FileEntry{{Name: "big.bin", Size: int64(len(data))}}
+	entries := []transfer.FileEntry{{Name: "big.bin", Size: int64(len(data))}}
 	local := filepath.Join(downloads, "big.bin")
 	part := local + partSuffix
 

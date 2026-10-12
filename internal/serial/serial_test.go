@@ -1,11 +1,7 @@
-package main
+package serial
 
 import (
-	"runtime"
-	"strings"
 	"testing"
-
-	"choboterm/internal/terminal"
 )
 
 func TestParseSerial(t *testing.T) {
@@ -27,7 +23,7 @@ func TestParseSerial(t *testing.T) {
 		{"COM0", 0, "error"},
 	}
 	for _, c := range cases {
-		got, err := parseSerial(c.host, c.port)
+		got, err := Parse(c.host, c.port)
 		s := got.String()
 		if err != nil {
 			s = "error"
@@ -43,27 +39,11 @@ func TestIsSerial(t *testing.T) {
 		"COM1": true, "com3 9600": true, " /dev/ttyUSB0 ": true,
 		"COM": false, "computer": false, "com3.example.com": false, "cmd": false, "192.168.0.1": false,
 	} {
-		if !serialSupported {
+		if !Supported {
 			want = false
 		}
-		if got := isSerial(host); got != want {
+		if got := IsPort(host); got != want {
 			t.Errorf("isSerial(%q) = %v, want %v", host, got, want)
 		}
-	}
-}
-
-func TestConnectSerialMissingPort(t *testing.T) {
-	if !serialSupported {
-		t.Skip("serial ports are disabled in this build")
-	}
-	a := NewApp()
-	a.hooks.emit = func(string, ...interface{}) {}
-	name := "COM250"
-	if runtime.GOOS == "linux" {
-		name = "/dev/ttyUSB250"
-	}
-	_, err := a.Connect(1, terminal.ConnectRequest{Host: name, Port: 9600})
-	if err == nil || !strings.Contains(err.Error(), "포트가 없습니다") {
-		t.Fatalf("Connect(%s) error = %v, want a missing port", name, err)
 	}
 }

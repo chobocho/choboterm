@@ -1,26 +1,21 @@
-package main
+package transfer
 
 import (
 	"bytes"
 	"context"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
-)
 
-func testPayload(n int, seed int64) []byte {
-	b := make([]byte, n)
-	rand.New(rand.NewSource(seed)).Read(b)
-	return b
-}
+	"choboterm/internal/testutil"
+)
 
 func noProgress(XferProgress) {}
 
 // pipePeers connects two zmPeers back to back.
-func pipePeers(ctx context.Context, escAll bool) (*zmPeer, *zmPeer) {
+func pipePeers(ctx context.Context, escAll bool) (*ZmodemPeer, *ZmodemPeer) {
 	ab := make(chan []byte, 4096)
 	ba := make(chan []byte, 4096)
 	send := func(ch chan []byte) func([]byte) error {
@@ -29,8 +24,8 @@ func pipePeers(ctx context.Context, escAll bool) (*zmPeer, *zmPeer) {
 			return nil
 		}
 	}
-	a := &zmPeer{ctx: ctx, in: ba, write: send(ab), escAll: escAll, timeout: 5 * time.Second}
-	b := &zmPeer{ctx: ctx, in: ab, write: send(ba), escAll: escAll, timeout: 5 * time.Second}
+	a := &ZmodemPeer{Ctx: ctx, In: ba, Write: send(ab), EscAll: escAll, Timeout: 5 * time.Second}
+	b := &ZmodemPeer{Ctx: ctx, In: ab, Write: send(ba), EscAll: escAll, Timeout: 5 * time.Second}
 	return a, b
 }
 
@@ -39,7 +34,7 @@ func TestZmodemLoopback(t *testing.T) {
 		src := t.TempDir()
 		dst := t.TempDir()
 		files := map[string][]byte{
-			"big.bin":   testPayload(300_000, 1), // several windows
+			"big.bin":   testutil.Payload(300_000, 1), // several windows
 			"empty.txt": {},
 			"한글.txt":    []byte("안녕\r\n\x18\x11\x13\xff\x7f"),
 		}
@@ -55,9 +50,9 @@ func TestZmodemLoopback(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		sender, receiver := pipePeers(ctx, escAll)
 		errc := make(chan error, 1)
-		go func() { errc <- zmSend(sender, paths, zmOptions{Progress: noProgress}) }()
+		go func() { errc <- ZmodemSend(sender, paths, ZmodemOptions{Progress: noProgress}) }()
 
-		saved, err := zmReceive(receiver, zmOptions{Dir: dst, Progress: noProgress})
+		saved, err := ZmodemReceive(receiver, ZmodemOptions{Dir: dst, Progress: noProgress})
 		if err != nil {
 			t.Fatalf("escAll=%v receive: %v", escAll, err)
 		}
@@ -82,18 +77,18 @@ func TestZmodemLoopback(t *testing.T) {
 }
 
 func TestZmodemDetection(t *testing.T) {
-	i, recv := findZmodemStart([]byte("rz\r**\x18B00000000000000\r\x8a\x11"))
+	i, recv := FindZmodemStart([]byte("rz\r**\x18B00000000000000\r\x8a\x11"))
 	if i != 3 || !recv {
 		t.Fatalf("sz start: %d %v", i, recv)
 	}
-	i, recv = findZmodemStart([]byte("rz waiting to receive.**\x18B0100000023be50\r\x8a\x11"))
+	i, recv = FindZmodemStart([]byte("rz waiting to receive.**\x18B0100000023be50\r\x8a\x11"))
 	if i != 22 || recv {
 		t.Fatalf("rz start: %d %v", i, recv)
 	}
-	if n := partialSigSuffix([]byte("abc**\x18")); n != 3 {
+	if n := PartialSigSuffix([]byte("abc**\x18")); n != 3 {
 		t.Fatalf("partial = %d", n)
 	}
-	if n := partialSigSuffix([]byte("abc")); n != 0 {
+	if n := PartialSigSuffix([]byte("abc")); n != 0 {
 		t.Fatalf("partial = %d", n)
 	}
 }
@@ -119,7 +114,7 @@ func TestSanitizeFileName(t *testing.T) {
 // (In Git Bash also set MSYS2_ENV_CONV_EXCL=CHOBOTERM_LRZSZ so the path isn't rewritten.)
 // The directory must contain sz and rz (e.g. from `apt-get download lrzsz && dpkg -x`).
 
-func wslPeer(t *testing.T, ctx context.Context, script string, escAll bool) (*zmPeer, *exec.Cmd) {
+func wslPeer(t *testing.T, ctx context.Context, script string, escAll bool) (*ZmodemPeer, *exec.Cmd) {
 	t.Helper()
 	cmd := exec.Command("wsl.exe", "--", "sh", "-c", script)
 	stdin, err := cmd.StdinPipe()
@@ -147,20 +142,9 @@ func wslPeer(t *testing.T, ctx context.Context, script string, escAll bool) (*zm
 			}
 		}
 	}()
-	p := &zmPeer{ctx: ctx, in: in, escAll: escAll, timeout: 10 * time.Second,
-		write: func(b []byte) error { _, err := stdin.Write(b); return err }}
+	p := &ZmodemPeer{Ctx: ctx, In: in, EscAll: escAll, Timeout: 10 * time.Second,
+		Write: func(b []byte) error { _, err := stdin.Write(b); return err }}
 	return p, cmd
-}
-
-func wslRun(t *testing.T, script string, stdin []byte) []byte {
-	t.Helper()
-	cmd := exec.Command("wsl.exe", "--", "sh", "-c", script)
-	cmd.Stdin = bytes.NewReader(stdin)
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("%s: %v", script, err)
-	}
-	return out
 }
 
 func TestZmodemLrzsz(t *testing.T) {
@@ -168,19 +152,19 @@ func TestZmodemLrzsz(t *testing.T) {
 	if bin == "" {
 		t.Skip("CHOBOTERM_LRZSZ not set")
 	}
-	big := testPayload(500_000, 7)
+	big := testutil.Payload(500_000, 7)
 	small := []byte("hello\r\n\x18\x11\x13\xff")
 
-	wslRun(t, "rm -rf /tmp/zt && mkdir -p /tmp/zt/out /tmp/zt/in", nil)
-	wslRun(t, "cat > /tmp/zt/out/big.bin", big)
-	wslRun(t, "cat > /tmp/zt/out/한글.txt", small)
+	testutil.WSLRun(t, "rm -rf /tmp/zt && mkdir -p /tmp/zt/out /tmp/zt/in", nil)
+	testutil.WSLRun(t, "cat > /tmp/zt/out/big.bin", big)
+	testutil.WSLRun(t, "cat > /tmp/zt/out/한글.txt", small)
 
 	for _, escAll := range []bool{false, true} {
 		// Remote sz -> us.
 		ctx := context.Background()
 		dst := t.TempDir()
 		p, cmd := wslPeer(t, ctx, bin+"/sz -q /tmp/zt/out/big.bin /tmp/zt/out/한글.txt", escAll)
-		saved, err := zmReceive(p, zmOptions{Dir: dst, Progress: noProgress})
+		saved, err := ZmodemReceive(p, ZmodemOptions{Dir: dst, Progress: noProgress})
 		if err != nil {
 			t.Fatalf("escAll=%v receive from sz: %v", escAll, err)
 		}
@@ -203,18 +187,18 @@ func TestZmodemLrzsz(t *testing.T) {
 		up2 := filepath.Join(src, "올림.txt")
 		os.WriteFile(up1, big, 0o644)
 		os.WriteFile(up2, small, 0o644)
-		wslRun(t, "rm -f /tmp/zt/in/*", nil)
+		testutil.WSLRun(t, "rm -f /tmp/zt/in/*", nil)
 		p, cmd = wslPeer(t, ctx, "cd /tmp/zt/in && "+bin+"/rz -q", escAll)
-		if err := zmSend(p, []string{up1, up2}, zmOptions{Progress: noProgress}); err != nil {
+		if err := ZmodemSend(p, []string{up1, up2}, ZmodemOptions{Progress: noProgress}); err != nil {
 			t.Fatalf("escAll=%v send to rz: %v", escAll, err)
 		}
 		if err := cmd.Wait(); err != nil {
 			t.Fatalf("rz exit: %v", err)
 		}
-		if got := wslRun(t, "cat /tmp/zt/in/up.bin", nil); !bytes.Equal(got, big) {
+		if got := testutil.WSLRun(t, "cat /tmp/zt/in/up.bin", nil); !bytes.Equal(got, big) {
 			t.Fatalf("escAll=%v rz up.bin: %d bytes", escAll, len(got))
 		}
-		if got := wslRun(t, "cat /tmp/zt/in/올림.txt", nil); !bytes.Equal(got, small) {
+		if got := testutil.WSLRun(t, "cat /tmp/zt/in/올림.txt", nil); !bytes.Equal(got, small) {
 			t.Fatalf("escAll=%v rz 올림.txt: %q", escAll, got)
 		}
 	}

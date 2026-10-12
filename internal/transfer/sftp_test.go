@@ -1,72 +1,15 @@
-package main
+package transfer
 
 import (
 	"bytes"
-	"crypto/ed25519"
-	"crypto/rand"
-	"net"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/testutil"
 )
-
-// startSFTPServer runs an in-process SSH server that only serves the sftp subsystem.
-func startSFTPServer(t *testing.T, root string) string {
-	t.Helper()
-	_, priv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	signer, err := ssh.NewSignerFromKey(priv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg := &ssh.ServerConfig{NoClientAuth: true}
-	cfg.AddHostKey(signer)
-
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { ln.Close() })
-
-	go func() {
-		for {
-			nc, err := ln.Accept()
-			if err != nil {
-				return
-			}
-			go func() {
-				_, chans, reqs, err := ssh.NewServerConn(nc, cfg)
-				if err != nil {
-					return
-				}
-				go ssh.DiscardRequests(reqs)
-				for nch := range chans {
-					ch, chReqs, err := nch.Accept()
-					if err != nil {
-						continue
-					}
-					go func() {
-						for req := range chReqs {
-							ok := req.Type == "subsystem" && string(req.Payload[4:]) == "sftp"
-							req.Reply(ok, nil)
-							if ok {
-								srv, _ := sftp.NewServer(ch, sftp.WithServerWorkingDirectory(root))
-								_ = srv.Serve()
-								ch.Close()
-							}
-						}
-					}()
-				}
-			}()
-		}
-	}()
-	return ln.Addr().String()
-}
 
 func TestSFTPRoundTrip(t *testing.T) {
 	root := t.TempDir()
@@ -77,7 +20,7 @@ func TestSFTPRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client, err := ssh.Dial("tcp", startSFTPServer(t, root), &ssh.ClientConfig{
+	client, err := ssh.Dial("tcp", testutil.StartSFTPServer(t, root), &ssh.ClientConfig{
 		User:            "test",
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
@@ -86,7 +29,7 @@ func TestSFTPRoundTrip(t *testing.T) {
 	}
 	defer client.Close()
 
-	fs, err := newSFTP(client)
+	fs, err := NewSFTP(client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +44,7 @@ func TestSFTPRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sortEntries(list)
+	SortEntries(list)
 	if len(list) != 2 || list[0].Name != "sub" || !list[0].IsDir || list[1].Name != "hello.txt" || list[1].Size != int64(len("hello 한글")) {
 		t.Fatalf("list = %+v", list)
 	}

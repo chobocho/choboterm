@@ -8,7 +8,7 @@ import {DockerMode, DockerSource} from './containers';
 import {Highlighter} from './highlight';
 import {attachSearch} from './search';
 import {filesOpen, focusFiles} from './files';
-import {main} from '../wailsjs/go/models';
+import {main, terminal} from '../wailsjs/go/models';
 import type {ScriptBox} from './luaconsole';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -39,7 +39,7 @@ export interface Tab {
     proto: string; // "ssh" / "telnet" / "ftp" / "local" / "serial" as reported by Connect
     encoding: string;
     // Last connection, kept in memory only, for reconnect / duplicate.
-    req?: main.ConnectRequest;
+    req?: terminal.ConnectRequest;
     // A docker exec / logs tab (no req): what to open again on reconnect.
     docker?: {src: DockerSource; id: string; name: string; mode: DockerMode};
     // The saved session req came from: its name is the tab label.

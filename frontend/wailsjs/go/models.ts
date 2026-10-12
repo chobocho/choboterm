@@ -186,34 +186,27 @@ export namespace config {
 
 }
 
-export namespace main {
+export namespace localshell {
 	
-	export class ConnectRequest {
-	    host: string;
-	    port: number;
-	    login: string;
-	    pass: string;
-	    encoding: string;
-	    jump: string;
-	    cols: number;
-	    rows: number;
+	export class LocalShell {
+	    name: string;
+	    label: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new ConnectRequest(source);
+	        return new LocalShell(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.host = source["host"];
-	        this.port = source["port"];
-	        this.login = source["login"];
-	        this.pass = source["pass"];
-	        this.encoding = source["encoding"];
-	        this.jump = source["jump"];
-	        this.cols = source["cols"];
-	        this.rows = source["rows"];
+	        this.name = source["name"];
+	        this.label = source["label"];
 	    }
 	}
+
+}
+
+export namespace main {
+	
 	export class ConsoleFile {
 	    name: string;
 	    text: string;
@@ -301,24 +294,6 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.dir = source["dir"];
 	        this.count = source["count"];
-	    }
-	}
-	export class FileEntry {
-	    name: string;
-	    size: number;
-	    isDir: boolean;
-	    modTime: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new FileEntry(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.size = source["size"];
-	        this.isDir = source["isDir"];
-	        this.modTime = source["modTime"];
 	    }
 	}
 	export class FileOpenResult {
@@ -419,62 +394,6 @@ export namespace main {
 	        this.skipped = source["skipped"];
 	    }
 	}
-	export class LocalShell {
-	    name: string;
-	    label: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new LocalShell(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.label = source["label"];
-	    }
-	}
-	export class SSHConfigHost {
-	    host: string;
-	    hostName: string;
-	    port: number;
-	    login: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new SSHConfigHost(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.host = source["host"];
-	        this.hostName = source["hostName"];
-	        this.port = source["port"];
-	        this.login = source["login"];
-	    }
-	}
-	export class SSHTarget {
-	    host: string;
-	    port: number;
-	    login: string;
-	    hostName: string;
-	    fromConfig: boolean;
-	    jump: string;
-	    configJump: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new SSHTarget(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.host = source["host"];
-	        this.port = source["port"];
-	        this.login = source["login"];
-	        this.hostName = source["hostName"];
-	        this.fromConfig = source["fromConfig"];
-	        this.jump = source["jump"];
-	        this.configJump = source["configJump"];
-	    }
-	}
 	export class SaveResult {
 	    path: string;
 	    bad: number;
@@ -515,20 +434,6 @@ export namespace main {
 	        this.encoding = source["encoding"];
 	        this.pass = source["pass"];
 	        this.jump = source["jump"];
-	    }
-	}
-	export class SerialPort {
-	    name: string;
-	    label: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new SerialPort(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.label = source["label"];
 	    }
 	}
 	export class TextSave {
@@ -641,6 +546,126 @@ export namespace main {
 	        this.remote = source["remote"];
 	        this.clients = source["clients"];
 	        this.error = source["error"];
+	    }
+	}
+
+}
+
+export namespace serial {
+	
+	export class SerialPort {
+	    name: string;
+	    label: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SerialPort(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.label = source["label"];
+	    }
+	}
+
+}
+
+export namespace sshconn {
+	
+	export class SSHConfigHost {
+	    host: string;
+	    hostName: string;
+	    port: number;
+	    login: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHConfigHost(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.hostName = source["hostName"];
+	        this.port = source["port"];
+	        this.login = source["login"];
+	    }
+	}
+	export class SSHTarget {
+	    host: string;
+	    port: number;
+	    login: string;
+	    hostName: string;
+	    fromConfig: boolean;
+	    jump: string;
+	    configJump: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHTarget(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.login = source["login"];
+	        this.hostName = source["hostName"];
+	        this.fromConfig = source["fromConfig"];
+	        this.jump = source["jump"];
+	        this.configJump = source["configJump"];
+	    }
+	}
+
+}
+
+export namespace terminal {
+	
+	export class ConnectRequest {
+	    host: string;
+	    port: number;
+	    login: string;
+	    pass: string;
+	    encoding: string;
+	    jump: string;
+	    cols: number;
+	    rows: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConnectRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.login = source["login"];
+	        this.pass = source["pass"];
+	        this.encoding = source["encoding"];
+	        this.jump = source["jump"];
+	        this.cols = source["cols"];
+	        this.rows = source["rows"];
+	    }
+	}
+
+}
+
+export namespace transfer {
+	
+	export class FileEntry {
+	    name: string;
+	    size: number;
+	    isDir: boolean;
+	    modTime: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.size = source["size"];
+	        this.isDir = source["isDir"];
+	        this.modTime = source["modTime"];
 	    }
 	}
 

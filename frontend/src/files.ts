@@ -14,7 +14,7 @@ import {
     FileImage,
     FileView,
 } from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {transfer} from '../wailsjs/go/models';
 import {EventsOn, OnFileDrop} from '../wailsjs/runtime/runtime';
 import {ask, askText} from './dialog';
 import {viewerOpen} from './viewer-state';
@@ -46,7 +46,7 @@ interface View {
     tabId: number;
     heading: string;
     cwd: string;
-    entries: main.FileEntry[];
+    entries: transfer.FileEntry[];
     selected: number; // the row with the keyboard focus
     picked: Set<number>; // selected rows (Ctrl/Shift+click)
     anchor: number; // where a Shift selection starts
@@ -97,7 +97,7 @@ function parentPath(dir: string) {
 }
 
 // The ".." row at the top of every folder but "/": opening it goes to the parent folder.
-const UP = main.FileEntry.createFrom({name: '..', isDir: true, size: 0, modTime: ''});
+const UP = transfer.FileEntry.createFrom({name: '..', isDir: true, size: 0, modTime: ''});
 
 /** Goes to the parent folder and selects the folder we came from. */
 function goUp(v: View) {
@@ -107,9 +107,9 @@ function goUp(v: View) {
 }
 
 /** The selected entries, in list order (the focused row if nothing is picked). Never the ".." row. */
-function pickedEntries(v: View): main.FileEntry[] {
+function pickedEntries(v: View): transfer.FileEntry[] {
     const idx = v.picked.size > 0 ? [...v.picked].sort((a, b) => a - b) : [v.selected];
-    return idx.map(i => v.entries[i]).filter((e): e is main.FileEntry => !!e && e !== UP);
+    return idx.map(i => v.entries[i]).filter((e): e is transfer.FileEntry => !!e && e !== UP);
 }
 
 // ---- rendering (only for the visible view) ----
@@ -285,7 +285,7 @@ function download(v: View) {
 }
 
 /** The one selected entry if it is a file the viewer can open. */
-function viewable(v: View): main.FileEntry | undefined {
+function viewable(v: View): transfer.FileEntry | undefined {
     const list = pickedEntries(v);
     return list.length === 1 && !list[0].isDir ? list[0] : undefined;
 }
@@ -317,7 +317,7 @@ function viewFile(v: View, edit = false) {
 }
 
 /** Shows e in the image viewer; ← → go through the other images of the folder. */
-function viewImages(v: View, e: main.FileEntry) {
+function viewImages(v: View, e: transfer.FileEntry) {
     const dir = v.cwd;
     const images = v.entries.filter(x => x !== UP && !x.isDir && isImage(x.name));
     openImages({

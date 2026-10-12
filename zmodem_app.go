@@ -11,6 +11,7 @@ import (
 	"choboterm/internal/i18n"
 	"choboterm/internal/telnet"
 	"choboterm/internal/terminal"
+	"choboterm/internal/transfer"
 )
 
 // zmodemState tracks a tab's running ZMODEM transfer, if any.
@@ -51,20 +52,20 @@ func (t *tab) runZmodem(sess terminal.Session, receive bool, in <-chan []byte, d
 	t.zm.mu.Unlock()
 
 	_, telnet := sess.(*telnet.Session)
-	p := &zmPeer{
-		ctx:     ctx,
-		in:      in,
-		write:   func(b []byte) error { _, err := sess.Write(b); return err },
-		escAll:  telnet, // Telnet may mangle CR and control bytes in transit
-		timeout: 15 * time.Second,
+	p := &transfer.ZmodemPeer{
+		Ctx:     ctx,
+		In:      in,
+		Write:   func(b []byte) error { _, err := sess.Write(b); return err },
+		EscAll:  telnet, // Telnet may mangle CR and control bytes in transit
+		Timeout: 15 * time.Second,
 	}
 
 	var last time.Time
 	pick := a.picker()
-	o := zmOptions{
+	o := transfer.ZmodemOptions{
 		DecodeName: t.codec.DecodeString,
 		EncodeName: t.codec.EncodeString,
-		Progress: func(x XferProgress) {
+		Progress: func(x transfer.XferProgress) {
 			if now := time.Now(); now.Sub(last) >= 100*time.Millisecond || x.Done == x.Total {
 				last = now
 				t.emit("xfer:progress", x)
@@ -81,7 +82,7 @@ func (t *tab) runZmodem(sess terminal.Session, receive bool, in <-chan []byte, d
 		o.Dir, finish = pick.receiveDir()
 		t.termMessage("[Zmodem] 파일을 받는 중입니다... (Ctrl+C: 취소)")
 		var saved []string
-		saved, err = zmReceive(p, o)
+		saved, err = transfer.ZmodemReceive(p, o)
 		where := finish(len(saved) > 0)
 		if len(saved) > 0 {
 			msg = fmt.Sprintf("[Zmodem] %d개 파일을 받았습니다: %s\n  %s", len(saved), where, strings.Join(saved, "\n  "))
@@ -90,11 +91,11 @@ func (t *tab) runZmodem(sess terminal.Session, receive bool, in <-chan []byte, d
 		files, release, derr := pick.openFiles(pickOpts{Title: i18n.Tr("Zmodem으로 보낼 파일 선택")})
 		defer release()
 		if derr != nil || len(files) == 0 {
-			p.abort()
-			err = errCancelled
+			p.Abort()
+			err = transfer.ErrCancelled
 		} else {
 			t.termMessage(fmt.Sprintf("[Zmodem] %d개 파일을 보내는 중입니다... (Ctrl+C: 취소)", len(files)))
-			if err = zmSend(p, files, o); err == nil {
+			if err = transfer.ZmodemSend(p, files, o); err == nil {
 				msg = fmt.Sprintf("[Zmodem] %d개 파일을 보냈습니다", len(files))
 			}
 		}
@@ -107,26 +108,26 @@ func (t *tab) runZmodem(sess terminal.Session, receive bool, in <-chan []byte, d
 
 	if err != nil {
 		if ctx.Err() != nil {
-			err = errCancelled
+			err = transfer.ErrCancelled
 		}
 		if msg != "" {
 			msg += "\n"
 		}
 		msg += "[Zmodem] " + err.Error()
 	}
-	t.emit("xfer:end", XferEnd{OK: err == nil, Message: msg})
+	t.emit("xfer:end", transfer.XferEnd{OK: err == nil, Message: msg})
 	t.termMessage(msg)
 
-	if errors.Is(err, errCancelled) {
+	if errors.Is(err, transfer.ErrCancelled) {
 		// Give the remote a moment to print its own cancel message.
 		time.Sleep(200 * time.Millisecond)
 	}
-	done <- p.buf
+	done <- p.Buf
 }
 
 func (a *App) downloadDir() string {
 	if a.hooks.downloadDir != "" {
 		return a.hooks.downloadDir
 	}
-	return downloadsDir()
+	return transfer.DownloadsDir()
 }

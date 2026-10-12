@@ -1,12 +1,12 @@
 //go:build windows
 
-package main
+package localshell
 
 import "strings"
 
-// localShells are the Host field names that start a local program, in list order.
-var localShells = []struct {
-	name, label, exe, args string
+// Shells are the Host field names that start a local program, in list order.
+var Shells = []struct {
+	Name, Label, Exe, args string
 }{
 	{"cmd", "명령 프롬프트 (cmd)", "cmd.exe", ""},
 	{"powershell", "Windows PowerShell", "powershell.exe", "-NoLogo"},
@@ -22,11 +22,11 @@ func quoteArg(s string) string {
 	return s
 }
 
-// commandLine is exe with args as a command line for startPty.
-func commandLine(exe string, args []string) string {
-	cmd := winQuote(exe)
+// CommandLine is exe with args as a command line for startPty.
+func CommandLine(exe string, args []string) string {
+	cmd := WinQuote(exe)
 	for _, a := range args {
-		cmd += " " + winQuote(a)
+		cmd += " " + WinQuote(a)
 	}
 	return cmd
 }

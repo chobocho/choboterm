@@ -15,7 +15,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"choboterm/internal/localshell"
 	"choboterm/internal/sshconn"
+	"choboterm/internal/testutil"
 )
 
 func TestParseContainers(t *testing.T) {
@@ -64,7 +66,7 @@ func TestWinQuote(t *testing.T) {
 		`x y\`:                   `"x y\\"`,
 		``:                       `""`,
 	} {
-		if got := winQuote(in); got != want {
+		if got := localshell.WinQuote(in); got != want {
 			t.Errorf("%q: got %q want %q", in, got, want)
 		}
 	}
@@ -101,7 +103,7 @@ func TestDockerError(t *testing.T) {
 func startDockerSSHServer(t *testing.T) string {
 	t.Helper()
 	// The script goes in on stdin: wsl.exe would expand the $ in an argument.
-	wslRun(t, "rm -rf /tmp/fakedocker && mkdir -p /tmp/fakedocker && cat > /tmp/fakedocker/docker && chmod +x /tmp/fakedocker/docker", []byte(`#!/bin/sh
+	testutil.WSLRun(t, "rm -rf /tmp/fakedocker && mkdir -p /tmp/fakedocker && cat > /tmp/fakedocker/docker && chmod +x /tmp/fakedocker/docker", []byte(`#!/bin/sh
 if [ "$1" = ps ]; then
   printf 'c1\tweb\tnginx\tUp 1 hour\t0.0.0.0:8080->80/tcp\t1 hour ago\n'
   [ "$4" = -a ] && printf 'c2\told\tbusybox\tExited (1) 1 day ago\t\t1 day ago\n'

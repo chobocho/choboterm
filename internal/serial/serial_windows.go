@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package serial
 
 import (
 	"errors"
@@ -34,10 +34,10 @@ const (
 	dcbControlFields = 0x7fff
 )
 
-// openSerial opens and sets up a serial port. The handle is opened for
+// Open opens and sets up a serial port. The handle is opened for
 // overlapped I/O, so os.File reads and writes run at the same time and Close
 // ends a read that is waiting for data.
-func openSerial(c serialConfig) (*serialSession, error) {
+func Open(c serialConfig) (*Session, error) {
 	path, err := windows.UTF16PtrFromString(`\\.\` + c.Name)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func openSerial(c serialConfig) (*serialSession, error) {
 		windows.CloseHandle(h)
 		return nil, fmt.Errorf("%s 포트를 설정할 수 없습니다: %w", c.Name, err)
 	}
-	return &serialSession{f: os.NewFile(uintptr(h), c.Name)}, nil
+	return &Session{f: os.NewFile(uintptr(h), c.Name)}, nil
 }
 
 func setupSerial(h windows.Handle, c serialConfig) error {
@@ -109,7 +109,7 @@ func setupSerial(h windows.Handle, c serialConfig) error {
 	return windows.PurgeComm(h, windows.PURGE_RXCLEAR|windows.PURGE_TXCLEAR)
 }
 
-func (s *serialSession) Read(p []byte) (int, error) {
+func (s *Session) Read(p []byte) (int, error) {
 	for {
 		start := time.Now()
 		n, err := s.f.Read(p)
@@ -132,7 +132,7 @@ func (s *serialSession) Read(p []byte) (int, error) {
 	}
 }
 
-func (s *serialSession) sendBreak() error {
+func (s *Session) SendBreak() error {
 	rc, err := s.f.SyscallConn()
 	if err != nil {
 		return err
@@ -152,9 +152,9 @@ func (s *serialSession) sendBreak() error {
 	return berr
 }
 
-// listSerialPorts lists the COM ports Windows knows of, named by their
+// ListPorts lists the COM ports Windows knows of, named by their
 // device ("USB-SERIAL CH340") when Device Manager has a name for them.
-func listSerialPorts() []SerialPort {
+func ListPorts() []SerialPort {
 	var ports []SerialPort
 	seen := map[string]bool{}
 	if k, err := registry.OpenKey(registry.LOCAL_MACHINE, `HARDWARE\DEVICEMAP\SERIALCOMM`, registry.QUERY_VALUE); err == nil {

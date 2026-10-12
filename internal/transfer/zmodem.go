@@ -1,4 +1,4 @@
-package main
+package transfer
 
 import (
 	"bytes"
@@ -73,9 +73,9 @@ var (
 	errZmBadPacket    = errors.New("Zmodem 패킷 오류")
 )
 
-// findZmodemStart returns the index where a ZMODEM session starts in data
+// FindZmodemStart returns the index where a ZMODEM session starts in data
 // (-1 if none) and whether the remote is sending (sz) rather than receiving (rz).
-func findZmodemStart(data []byte) (int, bool) {
+func FindZmodemStart(data []byte) (int, bool) {
 	i := bytes.Index(data, zmSigReceive)
 	j := bytes.Index(data, zmSigSend)
 	switch {
@@ -87,9 +87,9 @@ func findZmodemStart(data []byte) (int, bool) {
 	return -1, false
 }
 
-// partialSigSuffix returns how many trailing bytes of data could be the
+// PartialSigSuffix returns how many trailing bytes of data could be the
 // beginning of a ZMODEM start sequence split across reads.
-func partialSigSuffix(data []byte) int {
+func PartialSigSuffix(data []byte) int {
 	sig := zmSigReceive[:len(zmSigReceive)-1] // "**\x18B0" is shared by both
 	for n := min(len(sig), len(data)); n > 0; n-- {
 		if bytes.Equal(data[len(data)-n:], sig[:n]) {
@@ -133,74 +133,74 @@ func flagHeader(typ, f0 byte) zmHeader {
 	return h
 }
 
-// zmPeer is the byte transport to the remote sz/rz.
-type zmPeer struct {
-	ctx     context.Context
-	in      <-chan []byte
-	buf     []byte
-	write   func([]byte) error
-	escAll  bool // escape every control character (needed over Telnet)
-	timeout time.Duration
+// ZmodemPeer is the byte transport to the remote sz/rz.
+type ZmodemPeer struct {
+	Ctx     context.Context
+	In      <-chan []byte
+	Buf     []byte
+	Write   func([]byte) error
+	EscAll  bool // escape every control character (needed over Telnet)
+	Timeout time.Duration
 	last32  bool // last header was CRC-32, so its data subpackets are too
 }
 
-// zmOptions connects the protocol to the application.
-type zmOptions struct {
+// ZmodemOptions connects the protocol to the application.
+type ZmodemOptions struct {
 	Dir        string // download folder
 	DecodeName func(string) string
 	EncodeName func(string) string
 	Progress   func(XferProgress)
 }
 
-func (p *zmPeer) readByte() (byte, error) {
-	for len(p.buf) == 0 {
-		t := time.NewTimer(p.timeout)
+func (p *ZmodemPeer) readByte() (byte, error) {
+	for len(p.Buf) == 0 {
+		t := time.NewTimer(p.Timeout)
 		select {
-		case c, ok := <-p.in:
+		case c, ok := <-p.In:
 			t.Stop()
 			if !ok {
 				return 0, io.EOF
 			}
-			p.buf = c
+			p.Buf = c
 		case <-t.C:
 			return 0, errZmTimeout
-		case <-p.ctx.Done():
+		case <-p.Ctx.Done():
 			t.Stop()
-			return 0, errCancelled
+			return 0, ErrCancelled
 		}
 	}
-	b := p.buf[0]
-	p.buf = p.buf[1:]
+	b := p.Buf[0]
+	p.Buf = p.Buf[1:]
 	return b, nil
 }
 
 // tryReadByte reads a byte only if one is already available.
-func (p *zmPeer) tryReadByte() (byte, bool) {
-	if len(p.buf) == 0 {
+func (p *ZmodemPeer) tryReadByte() (byte, bool) {
+	if len(p.Buf) == 0 {
 		select {
-		case c, ok := <-p.in:
+		case c, ok := <-p.In:
 			if !ok || len(c) == 0 {
 				return 0, false
 			}
-			p.buf = c
+			p.Buf = c
 		default:
 			return 0, false
 		}
 	}
-	b := p.buf[0]
-	p.buf = p.buf[1:]
+	b := p.Buf[0]
+	p.Buf = p.Buf[1:]
 	return b, true
 }
 
-func (p *zmPeer) unread(b byte) {
-	p.buf = append([]byte{b}, p.buf...)
+func (p *ZmodemPeer) unread(b byte) {
+	p.Buf = append([]byte{b}, p.Buf...)
 }
 
 func isFlowCtl(c byte) bool { return c == 0x11 || c == 0x13 || c == 0x91 || c == 0x93 }
 
 // readEscaped decodes one ZDLE-escaped byte. At a subpacket terminator it
 // returns the terminator and end=true.
-func (p *zmPeer) readEscaped() (c byte, end bool, err error) {
+func (p *ZmodemPeer) readEscaped() (c byte, end bool, err error) {
 	for {
 		if c, err = p.readByte(); err != nil {
 			return 0, false, err
@@ -241,7 +241,7 @@ func (p *zmPeer) readEscaped() (c byte, end bool, err error) {
 }
 
 // readHeader skips noise until a valid header arrives.
-func (p *zmPeer) readHeader() (zmHeader, error) {
+func (p *ZmodemPeer) readHeader() (zmHeader, error) {
 	cans := 0
 	for {
 		c, err := p.readByte()
@@ -289,7 +289,7 @@ func (p *zmPeer) readHeader() (zmHeader, error) {
 	}
 }
 
-func (p *zmPeer) readHexHeader() (zmHeader, error) {
+func (p *ZmodemPeer) readHexHeader() (zmHeader, error) {
 	var digits [14]byte
 	for i := range digits {
 		c, err := p.readByte()
@@ -319,7 +319,7 @@ func (p *zmPeer) readHexHeader() (zmHeader, error) {
 	return zmHeader{typ: raw[0], data: [4]byte(raw[1:5])}, nil
 }
 
-func (p *zmPeer) readBinHeader(use32 bool) (zmHeader, error) {
+func (p *ZmodemPeer) readBinHeader(use32 bool) (zmHeader, error) {
 	n := 7
 	if use32 {
 		n = 9
@@ -347,7 +347,7 @@ func (p *zmPeer) readBinHeader(use32 bool) (zmHeader, error) {
 }
 
 // readData reads one data subpacket and returns it with its terminator.
-func (p *zmPeer) readData(limit int) ([]byte, byte, error) {
+func (p *ZmodemPeer) readData(limit int) ([]byte, byte, error) {
 	data := make([]byte, 0, zmBlock)
 	for {
 		c, end, err := p.readEscaped()
@@ -388,7 +388,7 @@ func (p *zmPeer) readData(limit int) ([]byte, byte, error) {
 }
 
 // esc appends b to dst with ZDLE escaping.
-func (p *zmPeer) esc(dst []byte, b ...byte) []byte {
+func (p *ZmodemPeer) esc(dst []byte, b ...byte) []byte {
 	for _, c := range b {
 		switch {
 		case c == zDLE, c == 0x98, c == 0x10, c == 0x90, isFlowCtl(c), c == '\r', c == 0x8d:
@@ -397,7 +397,7 @@ func (p *zmPeer) esc(dst []byte, b ...byte) []byte {
 			dst = append(dst, zDLE, zRUB0)
 		case c == 0xff:
 			dst = append(dst, zDLE, zRUB1)
-		case p.escAll && c&0x60 == 0:
+		case p.EscAll && c&0x60 == 0:
 			dst = append(dst, zDLE, c^0x40)
 		default:
 			dst = append(dst, c)
@@ -406,7 +406,7 @@ func (p *zmPeer) esc(dst []byte, b ...byte) []byte {
 	return dst
 }
 
-func (p *zmPeer) sendHex(h zmHeader) error {
+func (p *ZmodemPeer) sendHex(h zmHeader) error {
 	raw := append([]byte{h.typ}, h.data[:]...)
 	raw = binary.BigEndian.AppendUint16(raw, crc16(0, raw))
 	out := append([]byte{zPAD, zPAD, zDLE, zHEX}, hex.EncodeToString(raw)...)
@@ -414,10 +414,10 @@ func (p *zmPeer) sendHex(h zmHeader) error {
 	if h.typ != zFIN && h.typ != zACK {
 		out = append(out, 0x11) // XON
 	}
-	return p.write(out)
+	return p.Write(out)
 }
 
-func (p *zmPeer) appendBinHeader(out []byte, h zmHeader, use32 bool) []byte {
+func (p *ZmodemPeer) appendBinHeader(out []byte, h zmHeader, use32 bool) []byte {
 	raw := append([]byte{h.typ}, h.data[:]...)
 	if use32 {
 		out = append(out, zPAD, zDLE, zBIN32)
@@ -429,7 +429,7 @@ func (p *zmPeer) appendBinHeader(out []byte, h zmHeader, use32 bool) []byte {
 	return p.esc(out, raw...)
 }
 
-func (p *zmPeer) appendData(out, data []byte, end byte, use32 bool) []byte {
+func (p *ZmodemPeer) appendData(out, data []byte, end byte, use32 bool) []byte {
 	out = p.esc(out, data...)
 	out = append(out, zDLE, end)
 	if use32 {
@@ -440,16 +440,16 @@ func (p *zmPeer) appendData(out, data []byte, end byte, use32 bool) []byte {
 	return p.esc(out, byte(crc>>8), byte(crc))
 }
 
-// abort tells the remote sz/rz to stop (8 CAN + 10 backspaces, as lrzsz does).
-func (p *zmPeer) abort() {
-	_ = p.write(append(bytes.Repeat([]byte{zDLE}, 8), bytes.Repeat([]byte{8}, 10)...))
+// Abort tells the remote sz/rz to stop (8 CAN + 10 backspaces, as lrzsz does).
+func (p *ZmodemPeer) Abort() {
+	_ = p.Write(append(bytes.Repeat([]byte{zDLE}, 8), bytes.Repeat([]byte{8}, 10)...))
 }
 
 // drainOO consumes the "OO" (over and out) a sender writes after ZFIN.
-func (p *zmPeer) drainOO() {
-	saved := p.timeout
-	p.timeout = 500 * time.Millisecond
-	defer func() { p.timeout = saved }()
+func (p *ZmodemPeer) drainOO() {
+	saved := p.Timeout
+	p.Timeout = 500 * time.Millisecond
+	defer func() { p.Timeout = saved }()
 	for i := 0; i < 2; i++ {
 		c, err := p.readByte()
 		if err != nil {
@@ -464,15 +464,15 @@ func (p *zmPeer) drainOO() {
 
 // ---- receiving (remote sz) ----
 
-func zmReceive(p *zmPeer, o zmOptions) (saved []string, err error) {
+func ZmodemReceive(p *ZmodemPeer, o ZmodemOptions) (saved []string, err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, errZmRemoteCancel) {
-			p.abort()
+			p.Abort()
 		}
 	}()
 
 	flags := byte(zfCANFDX | zfCANOVIO | zfCANFC32)
-	if p.escAll {
+	if p.EscAll {
 		flags |= zfESCCTL
 	}
 	rinit := flagHeader(zRINIT, flags)
@@ -569,8 +569,8 @@ func sanitizeFileName(name string) string {
 	return name
 }
 
-// uniquePath returns dir/name, adding " (n)" before the extension if it exists.
-func uniquePath(dir, name string) string {
+// UniquePath returns dir/name, adding " (n)" before the extension if it exists.
+func UniquePath(dir, name string) string {
 	p := filepath.Join(dir, name)
 	ext := filepath.Ext(name)
 	stem := strings.TrimSuffix(name, ext)
@@ -582,8 +582,8 @@ func uniquePath(dir, name string) string {
 	}
 }
 
-func (p *zmPeer) receiveFile(name string, size int64, o zmOptions) (string, error) {
-	local := uniquePath(o.Dir, name)
+func (p *ZmodemPeer) receiveFile(name string, size int64, o ZmodemOptions) (string, error) {
+	local := UniquePath(o.Dir, name)
 	f, err := os.Create(local)
 	if err != nil {
 		return "", err
@@ -680,10 +680,10 @@ func (p *zmPeer) receiveFile(name string, size int64, o zmOptions) (string, erro
 
 // ---- sending (remote rz) ----
 
-func zmSend(p *zmPeer, files []string, o zmOptions) (err error) {
+func ZmodemSend(p *ZmodemPeer, files []string, o ZmodemOptions) (err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, errZmRemoteCancel) {
-			p.abort()
+			p.Abort()
 		}
 	}()
 
@@ -693,7 +693,7 @@ func zmSend(p *zmPeer, files []string, o zmOptions) (err error) {
 	}
 	use32 := rinit.f0()&zfCANFC32 != 0
 	if rinit.f0()&zfESCCTL != 0 {
-		p.escAll = true
+		p.EscAll = true
 	}
 	window := int64(binary.LittleEndian.Uint16(rinit.data[:2])) // receiver buffer, 0 = unlimited
 	if window == 0 || window > zmWindow {
@@ -726,13 +726,13 @@ func zmSend(p *zmPeer, files []string, o zmOptions) (err error) {
 			return err
 		}
 		if h.typ == zFIN {
-			return p.write([]byte("OO"))
+			return p.Write([]byte("OO"))
 		}
 	}
 	return errZmTimeout
 }
 
-func (p *zmPeer) waitRINIT() (zmHeader, error) {
+func (p *ZmodemPeer) waitRINIT() (zmHeader, error) {
 	for tries := 0; tries < zmRetries; {
 		h, err := p.readHeader()
 		if errors.Is(err, errZmTimeout) {
@@ -753,7 +753,7 @@ func (p *zmPeer) waitRINIT() (zmHeader, error) {
 }
 
 // sendFile offers one file and streams it. Returns the file size.
-func (p *zmPeer) sendFile(local string, use32 bool, window int64, filesLeft int, bytesLeft int64, o zmOptions) (int64, error) {
+func (p *ZmodemPeer) sendFile(local string, use32 bool, window int64, filesLeft int, bytesLeft int64, o ZmodemOptions) (int64, error) {
 	f, err := os.Open(local)
 	if err != nil {
 		return 0, err
@@ -778,7 +778,7 @@ func (p *zmPeer) sendFile(local string, use32 bool, window int64, filesLeft int,
 	o.Progress(prog)
 
 	for tries := 0; ; {
-		if err := p.write(offer); err != nil {
+		if err := p.Write(offer); err != nil {
 			return 0, err
 		}
 		h, err := p.readHeader()
@@ -824,7 +824,7 @@ func (p *zmPeer) sendFile(local string, use32 bool, window int64, filesLeft int,
 	}
 }
 
-func (p *zmPeer) streamFile(f *os.File, pos, size int64, use32 bool, window int64, prog XferProgress, o zmOptions) error {
+func (p *ZmodemPeer) streamFile(f *os.File, pos, size int64, use32 bool, window int64, prog XferProgress, o ZmodemOptions) error {
 	buf := make([]byte, zmBlock)
 	eofSent := false
 
@@ -845,7 +845,7 @@ func (p *zmPeer) streamFile(f *os.File, pos, size int64, use32 bool, window int6
 			}
 			out = p.appendData(out, buf[:n], end, use32)
 			if len(out) >= 32*1024 || end == zCRCW {
-				if err := p.write(out); err != nil {
+				if err := p.Write(out); err != nil {
 					return err
 				}
 				out = out[:0]
@@ -859,7 +859,7 @@ func (p *zmPeer) streamFile(f *os.File, pos, size int64, use32 bool, window int6
 	}
 	sendEOF := func() error {
 		eofSent = true
-		return p.write(p.appendBinHeader(nil, posHeader(zEOF, size), use32))
+		return p.Write(p.appendBinHeader(nil, posHeader(zEOF, size), use32))
 	}
 	next := func() error {
 		if pos >= size {

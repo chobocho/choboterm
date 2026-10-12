@@ -20,10 +20,13 @@ import (
 	"choboterm/internal/config"
 	"choboterm/internal/dbg"
 	"choboterm/internal/i18n"
+	"choboterm/internal/localshell"
 	"choboterm/internal/osutil"
+	"choboterm/internal/serial"
 	"choboterm/internal/sshconn"
 	"choboterm/internal/telnet"
 	"choboterm/internal/terminal"
+	"choboterm/internal/transfer"
 	"choboterm/internal/version"
 )
 
@@ -268,10 +271,10 @@ func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 	if req.Cols <= 0 || req.Rows <= 0 {
 		req.Cols, req.Rows = 80, 24
 	}
-	if cmdline, ok := localCommand(req.Host); ok {
+	if cmdline, ok := localshell.Command(req.Host); ok {
 		return a.connectLocal(tabID, req, cmdline)
 	}
-	if isSerial(req.Host) {
+	if serial.IsPort(req.Host) {
 		return a.connectSerial(tabID, req)
 	}
 	if req.Port <= 0 || req.Port > 65535 {
@@ -327,7 +330,7 @@ func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 	}
 
 	if proto == "ftp" {
-		fs, err := dialFTP(dial, conn)
+		fs, err := transfer.DialFTP(dial, conn)
 		if err != nil {
 			return "", err
 		}
@@ -376,7 +379,7 @@ func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 func (a *App) connectLocal(tabID int, req terminal.ConnectRequest, cmdline string) (string, error) {
 	t := a.getTab(tabID)
 	t.disconnect()
-	sess, err := startPty(cmdline, localHome(), req.Cols, req.Rows)
+	sess, err := localshell.Start(cmdline, localshell.Home(), req.Cols, req.Rows)
 	if err != nil {
 		return "", err
 	}
@@ -506,7 +509,7 @@ func (t *tab) pump(sess terminal.Session) {
 		}
 		data = append(held, data...)
 		held = nil
-		if i, receive := findZmodemStart(data); i >= 0 {
+		if i, receive := transfer.FindZmodemStart(data); i >= 0 {
 			pending = append(pending, t.codec.Decode(data[:i])...)
 			flush()
 			zmIn, zmDone = make(chan []byte, 1024), make(chan []byte, 1)
@@ -514,7 +517,7 @@ func (t *tab) pump(sess terminal.Session) {
 			go t.runZmodem(sess, receive, zmIn, zmDone)
 			return
 		}
-		k := partialSigSuffix(data)
+		k := transfer.PartialSigSuffix(data)
 		held = append([]byte(nil), data[len(data)-k:]...)
 		pending = append(pending, t.codec.Decode(data[:len(data)-k])...)
 	}

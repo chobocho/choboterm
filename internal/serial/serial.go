@@ -1,4 +1,4 @@
-package main
+package serial
 
 import (
 	"errors"
@@ -50,10 +50,10 @@ var (
 	serialFrame = regexp.MustCompile(`(?i)^([5-8])([neo])([12])$`)
 )
 
-// parseSerial reads the Host field of a serial port; port is the Port field,
+// Parse reads the Host field of a serial port; port is the Port field,
 // used as the speed when the Host field gives none (the usual 21/22/23 of a
 // server mean nothing here and give the default speed).
-func parseSerial(host string, port int) (serialConfig, error) {
+func Parse(host string, port int) (serialConfig, error) {
 	f := strings.Fields(host)
 	if len(f) == 0 || !serialName.MatchString(f[0]) {
 		return serialConfig{}, fmt.Errorf("시리얼 포트 이름이 올바르지 않습니다: %s", host)
@@ -88,57 +88,18 @@ func parseSerial(host string, port int) (serialConfig, error) {
 // errSerialGone is a port whose device went away (a USB adapter unplugged).
 var errSerialGone = errors.New("시리얼 장치가 분리되었습니다")
 
-// serialSession is an open serial port. There is no window size to tell the
+// Session is an open serial port. There is no window size to tell the
 // other end, and no keepalive: a device may stay silent for good.
-type serialSession struct {
+type Session struct {
 	f      *os.File
 	closed atomic.Bool
 }
 
-func (s *serialSession) Write(p []byte) (int, error) { return s.f.Write(p) }
+func (s *Session) Write(p []byte) (int, error) { return s.f.Write(p) }
 
-func (s *serialSession) Resize(cols, rows int) error { return nil }
+func (s *Session) Resize(cols, rows int) error { return nil }
 
-func (s *serialSession) Close() error {
+func (s *Session) Close() error {
 	s.closed.Store(true)
 	return s.f.Close()
-}
-
-// connectSerial opens a serial port in the tab.
-func (a *App) connectSerial(tabID int, req terminal.ConnectRequest) (string, error) {
-	c, err := parseSerial(req.Host, req.Port)
-	if err != nil {
-		return "", err
-	}
-	t := a.getTab(tabID)
-	t.disconnect()
-	sess, err := openSerial(c)
-	if err != nil {
-		return "", err
-	}
-	enc := t.codec.Set(req.Encoding)
-	req.Port = c.Baud
-	_ = addHistory(HostEntry{Host: req.Host, Port: c.Baud, Encoding: enc}, nil)
-	t.start(sess, "serial", req)
-	return "serial", nil
-}
-
-// GetSerialPorts lists the serial ports of this PC.
-func (a *App) GetSerialPorts() []SerialPort {
-	return listSerialPorts()
-}
-
-// SendBreak sends a break signal on a tab's serial port (e.g. to enter a
-// router's ROM monitor).
-func (a *App) SendBreak(tabID int) error {
-	t := a.findTab(tabID)
-	if t == nil {
-		return errors.New("연결되어 있지 않습니다")
-	}
-	s, ok := t.session().(*serialSession)
-	if !ok {
-		return errors.New("시리얼 포트에서만 Break를 보낼 수 있습니다")
-	}
-	t.log.mark("Break 신호를 보냈습니다")
-	return s.sendBreak()
 }

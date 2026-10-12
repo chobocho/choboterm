@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package localshell
 
 import (
 	"fmt"
@@ -25,8 +25,8 @@ type ptySession struct {
 	closed   sync.Once
 }
 
-// startPty starts cmdline (with dir as its folder) in a cols x rows console.
-func startPty(cmdline, dir string, cols, rows int) (terminal.Session, error) {
+// Start starts cmdline (with dir as its folder) in a cols x rows console.
+func Start(cmdline, dir string, cols, rows int) (terminal.Session, error) {
 	var inR, inW, outR, outW windows.Handle
 	if err := windows.CreatePipe(&inR, &inW, nil, 0); err != nil {
 		return nil, err

@@ -20,6 +20,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/localshell"
 	"choboterm/internal/sshconn"
 	"choboterm/internal/terminal"
 )
@@ -58,19 +59,14 @@ var errNoDocker = errors.New("docker(또는 podman)를 찾을 수 없습니다")
 
 var containerID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
-// shQuote quotes s as one word for a POSIX shell.
-func shQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
-}
-
 // remoteDocker is a shell command running docker (or podman) with args on a server.
 func remoteDocker(args ...string) string {
 	q := make([]string, len(args))
 	for i, a := range args {
-		q[i] = shQuote(a)
+		q[i] = localshell.ShQuote(a)
 	}
 	script := `d=$(command -v docker || command -v podman) || { echo ` + noDocker + ` >&2; exit 127; }; exec "$d" ` + strings.Join(q, " ")
-	return "sh -c " + shQuote(script)
+	return "sh -c " + localshell.ShQuote(script)
 }
 
 // localDocker finds docker (or podman) on this PC.
@@ -81,32 +77,6 @@ func localDocker() (string, error) {
 		}
 	}
 	return "", errNoDocker
-}
-
-// winQuote quotes an argument for a Windows command line (CommandLineToArgvW rules).
-func winQuote(s string) string {
-	if s != "" && !strings.ContainsAny(s, " \t\"") {
-		return s
-	}
-	var b strings.Builder
-	b.WriteByte('"')
-	slashes := 0
-	for _, c := range s {
-		switch c {
-		case '\\':
-			slashes++
-			continue
-		case '"':
-			b.WriteString(strings.Repeat(`\`, 2*slashes+1))
-		default:
-			b.WriteString(strings.Repeat(`\`, slashes))
-		}
-		slashes = 0
-		b.WriteRune(c)
-	}
-	b.WriteString(strings.Repeat(`\`, 2*slashes))
-	b.WriteByte('"')
-	return b.String()
 }
 
 // dockerError turns docker's error output into a message for the user.
@@ -302,7 +272,7 @@ func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int)
 		if err != nil {
 			return err
 		}
-		if sess, err = startPty(commandLine(exe, args), localHome(), cols, rows); err != nil {
+		if sess, err = localshell.Start(localshell.CommandLine(exe, args), localshell.Home(), cols, rows); err != nil {
 			return err
 		}
 	} else {

@@ -1,6 +1,6 @@
 //go:build linux && !termux
 
-package main
+package serial
 
 import (
 	"io"
@@ -20,11 +20,11 @@ func TestSerialSessionPty(t *testing.T) {
 	name := tty.Name()
 	tty.Close()
 
-	s, err := openSerial(serialConfig{Name: name, Baud: 9600, DataBits: 8, Parity: 'N', StopBits: 1, Flow: "none"})
+	s, err := Open(serialConfig{Name: name, Baud: 9600, DataBits: 8, Parity: 'N', StopBits: 1, Flow: "none"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := openSerial(serialConfig{Name: name, Baud: 9600, DataBits: 8, Parity: 'N', StopBits: 1, Flow: "none"}); err == nil {
+	if _, err := Open(serialConfig{Name: name, Baud: 9600, DataBits: 8, Parity: 'N', StopBits: 1, Flow: "none"}); err == nil {
 		t.Error("a second open of the same port succeeded")
 	}
 	_, _ = s.Write([]byte("show ver\r"))
@@ -38,7 +38,7 @@ func TestSerialSessionPty(t *testing.T) {
 	if string(b[:n]) != "Router>" {
 		t.Errorf("read %q", b[:n])
 	}
-	if err := s.sendBreak(); err != nil {
+	if err := s.SendBreak(); err != nil {
 		t.Errorf("sendBreak: %v", err)
 	}
 

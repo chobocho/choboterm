@@ -1,4 +1,4 @@
-package main
+package transfer
 
 import (
 	"io"
@@ -15,7 +15,7 @@ type sftpFS struct {
 	c *sftp.Client
 }
 
-func newSFTP(client *ssh.Client) (*sftpFS, error) {
+func NewSFTP(client *ssh.Client) (*sftpFS, error) {
 	c, err := sftp.NewClient(client, sftp.UseConcurrentWrites(true))
 	if err != nil {
 		return nil, err

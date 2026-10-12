@@ -13,13 +13,14 @@ import (
 
 	"choboterm/internal/codec"
 	"choboterm/internal/sshconn"
+	"choboterm/internal/testutil"
 )
 
 func TestFileViewOverSFTP(t *testing.T) {
 	root := t.TempDir()
 	big := strings.Repeat("0123456789", 1000)
 	writeFiles(t, root, map[string]string{"small.txt": "안녕", "big.txt": big})
-	client, err := ssh.Dial("tcp", startSFTPServer(t, root), &ssh.ClientConfig{
+	client, err := ssh.Dial("tcp", testutil.StartSFTPServer(t, root), &ssh.ClientConfig{
 		User: "test", HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
@@ -97,7 +98,7 @@ func TestEncodeText(t *testing.T) {
 func TestFileSaveTextOverSFTP(t *testing.T) {
 	root := t.TempDir()
 	writeFiles(t, root, map[string]string{"a.txt": "old"})
-	client, err := ssh.Dial("tcp", startSFTPServer(t, root), &ssh.ClientConfig{
+	client, err := ssh.Dial("tcp", testutil.StartSFTPServer(t, root), &ssh.ClientConfig{
 		User: "test", HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {

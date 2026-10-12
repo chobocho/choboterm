@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"choboterm/internal/dbg"
+	"choboterm/internal/transfer"
 )
 
 //go:embed web_shim.js
@@ -434,7 +435,7 @@ func (p browserPicker) receiveDir() (string, func(bool) string) {
 	dir, err := p.c.tempDir()
 	if err != nil {
 		// Nowhere to stage: fall back to this PC's downloads folder.
-		d := downloadsDir()
+		d := transfer.DownloadsDir()
 		return d, keepPath(d)
 	}
 	return dir, p.finishDir(dir)

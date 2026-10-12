@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"choboterm/internal/localshell"
 	"choboterm/internal/terminal"
 )
 
@@ -56,7 +57,7 @@ func TestLocalCommandLinux(t *testing.T) {
 		"busan":           "",
 		"ssh -p 22 me@sh": "",
 	} {
-		got, ok := localCommand(host)
+		got, ok := localshell.Command(host)
 		if want == "" {
 			if ok {
 				t.Errorf("%q: got %q, want a server", host, got)
@@ -67,7 +68,7 @@ func TestLocalCommandLinux(t *testing.T) {
 			t.Errorf("%q: got %q, want ...%q", host, got, want)
 		}
 	}
-	if got := commandLine("/usr/bin/docker", []string{"exec", "-it", "web", "sh", "-c", dockerShell}); got != "/usr/bin/docker exec -it web sh -c '"+dockerShell+"'" {
+	if got := localshell.CommandLine("/usr/bin/docker", []string{"exec", "-it", "web", "sh", "-c", dockerShell}); got != "/usr/bin/docker exec -it web sh -c '"+dockerShell+"'" {
 		t.Errorf("commandLine: %q", got)
 	}
 }

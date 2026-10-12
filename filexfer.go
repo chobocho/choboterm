@@ -8,37 +8,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"choboterm/internal/i18n"
 	"choboterm/internal/sshconn"
+	"choboterm/internal/transfer"
 )
-
-// RemoteFS is a remote file system reachable over SFTP or FTP.
-// Paths are slash-separated and absolute.
-type RemoteFS interface {
-	Getwd() (string, error)
-	List(dir string) ([]FileEntry, error)
-	Download(remotePath string, w io.Writer) error
-	Upload(remotePath string, r io.Reader, size int64) error
-	// Remove deletes a file, or a folder with everything in it.
-	Remove(p string, isDir bool) error
-	Rename(from, to string) error
-	Mkdir(p string) error
-	Close() error
-}
-
-// resumer is a RemoteFS that can continue a transfer part way (SFTP, FTP;
-// SCP can't).
-type resumer interface {
-	// DownloadFrom sends remotePath from offset on.
-	DownloadFrom(remotePath string, offset int64, w io.Writer) error
-	// UploadFrom writes r at offset of the existing remotePath.
-	UploadFrom(remotePath string, r io.Reader, offset int64) error
-}
 
 // partSuffix marks a download in progress; it is renamed when complete, and
 // kept when the transfer breaks so it can be resumed.
@@ -67,34 +43,10 @@ func localID(p string) string {
 	return fmt.Sprintf("%s|%d|%d", p, st.Size(), st.ModTime().UnixNano())
 }
 
-// FileEntry is one row of the remote file list.
-type FileEntry struct {
-	Name    string `json:"name"`
-	Size    int64  `json:"size"`
-	IsDir   bool   `json:"isDir"`
-	ModTime string `json:"modTime"`
-}
-
-// XferProgress is emitted as "xfer:progress" while a file is transferred.
-type XferProgress struct {
-	Name   string `json:"name"`
-	Done   int64  `json:"done"`
-	Total  int64  `json:"total"`
-	Upload bool   `json:"upload"`
-}
-
-// XferEnd is emitted as "xfer:end" when a transfer finishes, fails or is cancelled.
-type XferEnd struct {
-	OK      bool   `json:"ok"`
-	Message string `json:"message"`
-}
-
-var errCancelled = errors.New("전송이 취소되었습니다")
-
 // fileState holds the remote file system and the running transfer.
 type fileState struct {
 	mu     sync.Mutex // serializes remote operations (FTP allows only one at a time)
-	fs     RemoteFS
+	fs     transfer.RemoteFS
 	proto  string     // "SFTP", "SCP" or "FTP", shown in the file window title
 	cmu    sync.Mutex // guards cancel, which must be reachable while mu is held
 	cancel context.CancelFunc
@@ -106,81 +58,11 @@ func (s *fileState) setCancel(c context.CancelFunc) {
 	s.cmu.Unlock()
 }
 
-func sortEntries(list []FileEntry) {
-	sort.Slice(list, func(i, j int) bool {
-		if list[i].IsDir != list[j].IsDir {
-			return list[i].IsDir
-		}
-		return strings.ToLower(list[i].Name) < strings.ToLower(list[j].Name)
-	})
-}
-
-// progress reports transfer progress (throttled) and aborts on cancel.
-type progress struct {
-	ctx  context.Context
-	emit func(XferProgress)
-	info XferProgress
-	last time.Time
-}
-
-func (p *progress) add(n int) error {
-	p.info.Done += int64(n)
-	if now := time.Now(); now.Sub(p.last) >= 100*time.Millisecond || p.info.Done == p.info.Total {
-		p.last = now
-		p.emit(p.info)
-	}
-	if p.ctx.Err() != nil {
-		return errCancelled
-	}
-	return nil
-}
-
-type progressWriter struct {
-	w io.Writer
-	p *progress
-}
-
-func (pw progressWriter) Write(b []byte) (int, error) {
-	n, err := pw.w.Write(b)
-	if perr := pw.p.add(n); err == nil {
-		err = perr
-	}
-	return n, err
-}
-
-type progressReader struct {
-	r io.Reader
-	p *progress
-}
-
-func (pr progressReader) Read(b []byte) (int, error) {
-	n, err := pr.r.Read(b)
-	if perr := pr.p.add(n); err == nil {
-		err = perr
-	}
-	return n, err
-}
-
-// humanSize is n in B, KB, MB or GB, for messages.
-func humanSize(n int64) string {
-	const unit = 1024
-	if n < unit {
-		return fmt.Sprintf("%d B", n)
-	}
-	v, units := float64(n)/unit, []string{"KB", "MB", "GB", "TB"}
-	i := 0
-	for v >= unit && i < len(units)-1 {
-		v /= unit
-		i++
-	}
-	return fmt.Sprintf("%.1f %s", v, units[i])
-}
-
 // canResume tells whether the tab's file system can continue transfers.
 func (t *tab) canResume() bool {
 	ok := false
-	_ = t.withFS(func(fs RemoteFS) error {
-		_, ok = fs.(resumer)
+	_ = t.withFS(func(fs transfer.RemoteFS) error {
+		_, ok = fs.(transfer.Resumer)
 		return nil
 	})
 	return ok
@@ -194,7 +76,7 @@ func (t *tab) downloadFile(remotePath, local string, size int64, name string) er
 	var offset int64
 	if st, err := os.Stat(part); err == nil && st.Mode().IsRegular() && st.Size() > 0 && st.Size() < size && t.canResume() {
 		msg := fmt.Sprintf("%s\n\n받다 만 파일이 있습니다: %s / %s\n이어서 받을까요? \"처음부터\"는 새로 받습니다.",
-			filepath.Base(local), humanSize(st.Size()), humanSize(size))
+			filepath.Base(local), transfer.HumanSize(st.Size()), transfer.HumanSize(size))
 		if t.app.choose(t.id, "이어받기", msg, "이어받기", "처음부터") {
 			offset = st.Size()
 		}
@@ -207,11 +89,11 @@ func (t *tab) downloadFile(remotePath, local string, size int64, name string) er
 	if err != nil {
 		return err
 	}
-	err = t.transfer(name, size, false, func(fs RemoteFS, p *progress) error {
-		w := progressWriter{f, p}
+	err = t.transfer(name, size, false, func(fs transfer.RemoteFS, p *transfer.Progress) error {
+		w := transfer.ProgressWriter{W: f, P: p}
 		if offset > 0 {
-			p.info.Done = offset
-			return fs.(resumer).DownloadFrom(remotePath, offset, w)
+			p.Info.Done = offset
+			return fs.(transfer.Resumer).DownloadFrom(remotePath, offset, w)
 		}
 		return fs.Download(remotePath, w)
 	})
@@ -226,17 +108,6 @@ func (t *tab) downloadFile(remotePath, local string, size int64, name string) er
 	}
 	_ = os.Remove(local) // the save dialog already asked about replacing it
 	return os.Rename(part, local)
-}
-
-func downloadsDir() string {
-	if home, err := os.UserHomeDir(); err == nil {
-		dir := filepath.Join(home, "Downloads")
-		if st, err := os.Stat(dir); err == nil && st.IsDir() {
-			return dir
-		}
-		return home
-	}
-	return "."
 }
 
 // ---- App bindings (per tab) ----
@@ -262,10 +133,10 @@ func (a *App) FileOpen(tabID int) (FileOpenResult, error) {
 		if sess == nil {
 			return FileOpenResult{}, errors.New("파일 전송은 SSH(SFTP/SCP) 또는 FTP 접속에서 사용할 수 있습니다.\nTelnet에서는 sz / rz (Zmodem)를 사용하세요.")
 		}
-		if fs, err := newSFTP(sess.Client); err == nil {
+		if fs, err := transfer.NewSFTP(sess.Client); err == nil {
 			t.files.fs, t.files.proto = fs, "SFTP"
 		} else {
-			scp, serr := newSCP(sess.Client, t.codec)
+			scp, serr := transfer.NewSCP(sess.Client, t.codec)
 			if serr != nil {
 				return FileOpenResult{}, fmt.Errorf("SFTP를 열 수 없고 (%v), SCP도 사용할 수 없습니다 (%v)", err, serr)
 			}
@@ -277,7 +148,7 @@ func (a *App) FileOpen(tabID int) (FileOpenResult, error) {
 }
 
 // FileList lists a remote directory, folders first.
-func (a *App) FileList(tabID int, dir string) ([]FileEntry, error) {
+func (a *App) FileList(tabID int, dir string) ([]transfer.FileEntry, error) {
 	t := a.findTab(tabID)
 	if t == nil {
 		return nil, errors.New("연결되어 있지 않습니다")
@@ -291,7 +162,7 @@ func (a *App) FileList(tabID int, dir string) ([]FileEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	sortEntries(list)
+	transfer.SortEntries(list)
 	return list, nil
 }
 
@@ -304,7 +175,7 @@ func (a *App) FileDownload(tabID int, remotePath string, size int64) (string, er
 	}
 	local, finish, err := a.picker().saveFile(pickOpts{
 		Title: i18n.Tr("다운로드"),
-		Dir:   downloadsDir(),
+		Dir:   transfer.DownloadsDir(),
 		Name:  path.Base(remotePath),
 	})
 	if err != nil || local == "" {
@@ -395,12 +266,12 @@ func (t *tab) uploadPaths(remoteDir string, paths []string) (int, error) {
 
 	// Files already partly on the server (a broken upload) may be continued.
 	resume := t.canResume()
-	listed := map[string]map[string]FileEntry{} // remote folder → its files, read when needed
+	listed := map[string]map[string]transfer.FileEntry{} // remote folder → its files, read when needed
 	remoteSize := func(p string) int64 {
 		dir := path.Dir(p)
 		if listed[dir] == nil {
-			listed[dir] = map[string]FileEntry{}
-			_ = t.withFS(func(fs RemoteFS) error {
+			listed[dir] = map[string]transfer.FileEntry{}
+			_ = t.withFS(func(fs transfer.RemoteFS) error {
 				list, err := fs.List(dir)
 				for _, e := range list {
 					listed[dir][e.Name] = e
@@ -418,7 +289,7 @@ func (t *tab) uploadPaths(remoteDir string, paths []string) (int, error) {
 	for _, it := range items {
 		if it.dir {
 			// It may already exist; a real problem shows up when its files are sent.
-			_ = t.withFS(func(fs RemoteFS) error { return fs.Mkdir(it.remote) })
+			_ = t.withFS(func(fs transfer.RemoteFS) error { return fs.Mkdir(it.remote) })
 			continue
 		}
 		f, err := os.Open(it.local)
@@ -437,7 +308,7 @@ func (t *tab) uploadPaths(remoteDir string, paths []string) (int, error) {
 		if resume && it.size > 0 && broke != "" && broke == localID(it.local) {
 			if have := remoteSize(it.remote); have > 0 && have < it.size {
 				msg := fmt.Sprintf("%s\n\n서버에 일부만 올라간 파일이 있습니다: %s / %s\n이어서 올릴까요? \"처음부터\"는 새로 올립니다.",
-					path.Base(it.remote), humanSize(have), humanSize(it.size))
+					path.Base(it.remote), transfer.HumanSize(have), transfer.HumanSize(it.size))
 				if t.app.choose(t.id, "이어 올리기", msg, "이어 올리기", "처음부터") {
 					if _, err := f.Seek(have, io.SeekStart); err != nil {
 						f.Close()
@@ -447,12 +318,12 @@ func (t *tab) uploadPaths(remoteDir string, paths []string) (int, error) {
 				}
 			}
 		}
-		err = t.transfer(name, it.size, true, func(fs RemoteFS, p *progress) error {
+		err = t.transfer(name, it.size, true, func(fs transfer.RemoteFS, p *transfer.Progress) error {
 			if offset > 0 {
-				p.info.Done = offset
-				return fs.(resumer).UploadFrom(it.remote, progressReader{f, p}, offset)
+				p.Info.Done = offset
+				return fs.(transfer.Resumer).UploadFrom(it.remote, transfer.ProgressReader{R: f, P: p}, offset)
 			}
-			return fs.Upload(it.remote, progressReader{f, p}, it.size)
+			return fs.Upload(it.remote, transfer.ProgressReader{R: f, P: p}, it.size)
 		})
 		f.Close()
 		brokenUploads.Lock()
@@ -479,7 +350,7 @@ type DownloadResult struct {
 // FileDownloadMany asks for a local folder and downloads entries of dir into
 // it, folders with all their contents. Existing names get " (1)" etc.
 // Dir is "" if the user cancelled the dialog.
-func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (DownloadResult, error) {
+func (a *App) FileDownloadMany(tabID int, dir string, entries []transfer.FileEntry) (DownloadResult, error) {
 	t := a.findTab(tabID)
 	if t == nil {
 		return DownloadResult{}, errors.New("연결되어 있지 않습니다")
@@ -489,7 +360,7 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 	if localDir == "" {
 		d, f, err := a.picker().saveDir(pickOpts{
 			Title: i18n.Tr("저장할 폴더 선택"),
-			Dir:   downloadsDir(),
+			Dir:   transfer.DownloadsDir(),
 		})
 		if err != nil || d == "" {
 			return DownloadResult{}, err
@@ -503,8 +374,8 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 		size          int64
 	}
 	var items []downItem
-	var collect func(fs RemoteFS, remote, local string, e FileEntry) error
-	collect = func(fs RemoteFS, remote, local string, e FileEntry) error {
+	var collect func(fs transfer.RemoteFS, remote, local string, e transfer.FileEntry) error
+	collect = func(fs transfer.RemoteFS, remote, local string, e transfer.FileEntry) error {
 		if !e.IsDir {
 			items = append(items, downItem{remote, local, e.Size})
 			return nil
@@ -523,9 +394,9 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 		}
 		return nil
 	}
-	err := t.withFS(func(fs RemoteFS) error {
+	err := t.withFS(func(fs transfer.RemoteFS) error {
 		for _, e := range entries {
-			if err := collect(fs, path.Join(dir, e.Name), uniquePath(localDir, e.Name), e); err != nil {
+			if err := collect(fs, path.Join(dir, e.Name), transfer.UniquePath(localDir, e.Name), e); err != nil {
 				return err
 			}
 		}
@@ -554,7 +425,7 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 }
 
 // withFS runs fn with the tab's remote file system, one operation at a time.
-func (t *tab) withFS(fn func(RemoteFS) error) error {
+func (t *tab) withFS(fn func(transfer.RemoteFS) error) error {
 	t.files.mu.Lock()
 	defer t.files.mu.Unlock()
 	if t.files.fs == nil {
@@ -573,13 +444,13 @@ func checkName(name string) error {
 
 // FileDelete deletes entries of dir; folders are deleted with their contents.
 // Returns how many were deleted before an error.
-func (a *App) FileDelete(tabID int, dir string, entries []FileEntry) (int, error) {
+func (a *App) FileDelete(tabID int, dir string, entries []transfer.FileEntry) (int, error) {
 	t := a.findTab(tabID)
 	if t == nil {
 		return 0, errors.New("연결되어 있지 않습니다")
 	}
 	count := 0
-	err := t.withFS(func(fs RemoteFS) error {
+	err := t.withFS(func(fs transfer.RemoteFS) error {
 		for _, e := range entries {
 			if err := checkName(e.Name); err != nil {
 				return err
@@ -603,7 +474,7 @@ func (a *App) FileRename(tabID int, dir, from, to string) error {
 	if err := checkName(to); err != nil {
 		return err
 	}
-	return t.withFS(func(fs RemoteFS) error {
+	return t.withFS(func(fs transfer.RemoteFS) error {
 		return fs.Rename(path.Join(dir, from), path.Join(dir, to))
 	})
 }
@@ -617,7 +488,7 @@ func (a *App) FileMkdir(tabID int, dir, name string) error {
 	if err := checkName(name); err != nil {
 		return err
 	}
-	return t.withFS(func(fs RemoteFS) error { return fs.Mkdir(path.Join(dir, name)) })
+	return t.withFS(func(fs transfer.RemoteFS) error { return fs.Mkdir(path.Join(dir, name)) })
 }
 
 // FileCreate creates the empty file name inside dir. It never replaces
@@ -630,7 +501,7 @@ func (a *App) FileCreate(tabID int, dir, name string) error {
 	if err := checkName(name); err != nil {
 		return err
 	}
-	return t.withFS(func(fs RemoteFS) error {
+	return t.withFS(func(fs transfer.RemoteFS) error {
 		list, err := fs.List(dir)
 		if err != nil {
 			return err
@@ -645,7 +516,7 @@ func (a *App) FileCreate(tabID int, dir, name string) error {
 }
 
 // transfer runs one cancellable file transfer with progress events.
-func (t *tab) transfer(name string, size int64, upload bool, run func(RemoteFS, *progress) error) error {
+func (t *tab) transfer(name string, size int64, upload bool, run func(transfer.RemoteFS, *transfer.Progress) error) error {
 	t.files.mu.Lock()
 	defer t.files.mu.Unlock()
 	if t.files.fs == nil {
@@ -659,17 +530,17 @@ func (t *tab) transfer(name string, size int64, upload bool, run func(RemoteFS, 
 		t.files.setCancel(nil)
 	}()
 
-	p := &progress{
-		ctx:  ctx,
-		emit: func(x XferProgress) { t.emit("xfer:progress", x) },
-		info: XferProgress{Name: name, Total: size, Upload: upload},
+	p := &transfer.Progress{
+		Ctx:  ctx,
+		Emit: func(x transfer.XferProgress) { t.emit("xfer:progress", x) },
+		Info: transfer.XferProgress{Name: name, Total: size, Upload: upload},
 	}
-	p.emit(p.info)
+	p.Emit(p.Info)
 	err := run(t.files.fs, p)
 	if err != nil && ctx.Err() != nil {
-		err = errCancelled
+		err = transfer.ErrCancelled
 	}
-	end := XferEnd{OK: err == nil, Message: name}
+	end := transfer.XferEnd{OK: err == nil, Message: name}
 	if err != nil {
 		end.Message = err.Error()
 	}
@@ -735,7 +606,7 @@ func (a *App) FileStartDir(tabID int, dir string) string {
 		return ""
 	}
 	dir = path.Clean(dir)
-	if err := t.withFS(func(fs RemoteFS) error {
+	if err := t.withFS(func(fs transfer.RemoteFS) error {
 		_, err := fs.List(dir)
 		return err
 	}); err != nil {
@@ -757,7 +628,7 @@ func (t *tab) remoteHome() string {
 		}
 	}
 	var home string
-	_ = t.withFS(func(fs RemoteFS) (err error) {
+	_ = t.withFS(func(fs transfer.RemoteFS) (err error) {
 		home, err = fs.Getwd()
 		return err
 	})

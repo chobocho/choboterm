@@ -36,6 +36,7 @@ func UseKnownHosts(t *testing.T, addr string, key ssh.PublicKey) string {
 	}
 	return path
 }
+
 const Config = `
 Host busan
     HostName 10.0.0.5

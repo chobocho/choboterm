@@ -1,6 +1,6 @@
 //go:build linux
 
-package main
+package localshell
 
 import (
 	"errors"
@@ -22,9 +22,9 @@ type ptySession struct {
 	closed sync.Once
 }
 
-// startPty runs cmdline (shell syntax, see commandLine) in a new pseudo
+// Start runs cmdline (shell syntax, see commandLine) in a new pseudo
 // terminal of cols x rows, in dir.
-func startPty(cmdline, dir string, cols, rows int) (terminal.Session, error) {
+func Start(cmdline, dir string, cols, rows int) (terminal.Session, error) {
 	shell := "/bin/sh"
 	if _, err := os.Stat(shell); err != nil {
 		shell = "sh" // Termux keeps shell binaries in $PREFIX/bin, not /bin.

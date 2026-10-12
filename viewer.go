@@ -11,6 +11,7 @@ import (
 
 	"choboterm/internal/codec"
 	"choboterm/internal/i18n"
+	"choboterm/internal/transfer"
 )
 
 // viewLimit is how much of a remote file the text viewer loads.
@@ -18,26 +19,6 @@ var viewLimit = 10 << 20
 
 // imageLimit is the largest remote file the image viewer opens (whole files only).
 var imageLimit = 30 << 20
-
-var errViewLimit = errors.New("view limit reached")
-
-// limitWriter keeps up to max bytes and then stops the download.
-type limitWriter struct {
-	buf  []byte
-	max  int
-	full bool
-}
-
-func (w *limitWriter) Write(b []byte) (int, error) {
-	room := w.max - len(w.buf)
-	if len(b) > room {
-		w.buf = append(w.buf, b[:room]...)
-		w.full = true
-		return room, errViewLimit
-	}
-	w.buf = append(w.buf, b...)
-	return len(b), nil
-}
 
 // ViewResult is the raw content of a remote file for the text viewer.
 // The viewer decodes it itself, so the encoding can be switched without
@@ -52,10 +33,10 @@ type ViewResult struct {
 }
 
 // statRemote finds p in its folder's listing (RemoteFS has no Stat).
-func statRemote(fs RemoteFS, p string) (FileEntry, error) {
+func statRemote(fs transfer.RemoteFS, p string) (transfer.FileEntry, error) {
 	list, err := fs.List(path.Dir(p))
 	if err != nil {
-		return FileEntry{}, err
+		return transfer.FileEntry{}, err
 	}
 	name := path.Base(p)
 	for _, e := range list {
@@ -63,7 +44,7 @@ func statRemote(fs RemoteFS, p string) (FileEntry, error) {
 			return e, nil
 		}
 	}
-	return FileEntry{}, fmt.Errorf("파일이 없습니다: %s", p)
+	return transfer.FileEntry{}, fmt.Errorf("파일이 없습니다: %s", p)
 }
 
 // FileView downloads up to viewLimit bytes of remotePath for the text viewer.
@@ -95,8 +76,8 @@ func (a *App) readRemote(tabID int, remotePath string, size int64, limit int) (V
 	if total > int64(limit) {
 		total = int64(limit)
 	}
-	var st FileEntry
-	if err := t.withFS(func(fs RemoteFS) (err error) {
+	var st transfer.FileEntry
+	if err := t.withFS(func(fs transfer.RemoteFS) (err error) {
 		st, err = statRemote(fs, remotePath)
 		return err
 	}); err != nil {
@@ -105,10 +86,10 @@ func (a *App) readRemote(tabID int, remotePath string, size int64, limit int) (V
 	if st.IsDir {
 		return ViewResult{}, errors.New("폴더는 열 수 없습니다")
 	}
-	w := &limitWriter{max: limit}
-	err := t.transfer(path.Base(remotePath), total, false, func(fs RemoteFS, p *progress) error {
-		err := fs.Download(remotePath, progressWriter{w, p})
-		if w.full {
+	w := &transfer.LimitWriter{Max: limit}
+	err := t.transfer(path.Base(remotePath), total, false, func(fs transfer.RemoteFS, p *transfer.Progress) error {
+		err := fs.Download(remotePath, transfer.ProgressWriter{W: w, P: p})
+		if w.Full {
 			return nil // the rest of the file isn't needed
 		}
 		return err
@@ -117,8 +98,8 @@ func (a *App) readRemote(tabID int, remotePath string, size int64, limit int) (V
 		return ViewResult{}, err
 	}
 	return ViewResult{
-		Data:      base64.StdEncoding.EncodeToString(w.buf),
-		Truncated: w.full,
+		Data:      base64.StdEncoding.EncodeToString(w.Buf),
+		Truncated: w.Full,
 		Size:      st.Size,
 		ModTime:   st.ModTime,
 	}, nil
@@ -163,8 +144,8 @@ func (a *App) FileSaveText(tabID int, req TextSave) (TextSaveResult, error) {
 		return TextSaveResult{Bad: bad}, nil
 	}
 	if !req.IgnoreConflict {
-		var st FileEntry
-		err := t.withFS(func(fs RemoteFS) (err error) {
+		var st transfer.FileEntry
+		err := t.withFS(func(fs transfer.RemoteFS) (err error) {
 			st, err = statRemote(fs, req.Path)
 			return err
 		})
@@ -176,14 +157,14 @@ func (a *App) FileSaveText(tabID int, req TextSave) (TextSaveResult, error) {
 		}
 	}
 	size := int64(len(out))
-	err := t.transfer(path.Base(req.Path), size, true, func(fs RemoteFS, p *progress) error {
-		return fs.Upload(req.Path, progressReader{bytes.NewReader(out), p}, size)
+	err := t.transfer(path.Base(req.Path), size, true, func(fs transfer.RemoteFS, p *transfer.Progress) error {
+		return fs.Upload(req.Path, transfer.ProgressReader{R: bytes.NewReader(out), P: p}, size)
 	})
 	if err != nil {
 		return TextSaveResult{}, err
 	}
 	res := TextSaveResult{Saved: true, Bad: bad, Size: size, Data: base64.StdEncoding.EncodeToString(out)}
-	_ = t.withFS(func(fs RemoteFS) error {
+	_ = t.withFS(func(fs transfer.RemoteFS) error {
 		if st, err := statRemote(fs, req.Path); err == nil {
 			res.Size, res.ModTime = st.Size, st.ModTime
 		}
@@ -216,7 +197,7 @@ type SaveResult struct {
 func (a *App) TextSaveAs(name, text, enc string) (SaveResult, error) {
 	local, finish, err := a.picker().saveFile(pickOpts{
 		Title: i18n.Tr("다른 인코딩으로 저장 (" + enc + ")"),
-		Dir:   downloadsDir(),
+		Dir:   transfer.DownloadsDir(),
 		Name:  name,
 	})
 	if err != nil || local == "" {

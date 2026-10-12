@@ -9,6 +9,8 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"choboterm/internal/sshconn"
+	"choboterm/internal/testutil"
+	"choboterm/internal/transfer"
 )
 
 // listTree returns all files and folders under root as slash paths.
@@ -63,7 +65,7 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 		"d/sub/b.txt": "bb",
 		"x.txt":       "x",
 	})
-	client, err := ssh.Dial("tcp", startSFTPServer(t, root), &ssh.ClientConfig{
+	client, err := ssh.Dial("tcp", testutil.StartSFTPServer(t, root), &ssh.ClientConfig{
 		User: "test", HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
@@ -136,7 +138,7 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 	}
 
 	// Download a folder and a file; the second time the names get " (1)".
-	entries := []FileEntry{{Name: "d", IsDir: true}, {Name: "y.txt", Size: 1}}
+	entries := []transfer.FileEntry{{Name: "d", IsDir: true}, {Name: "y.txt", Size: 1}}
 	for i := 0; i < 2; i++ {
 		r, err := a.FileDownloadMany(1, wd, entries)
 		if err != nil || r.Count != 3 || r.Dir != downloads {
@@ -156,14 +158,14 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 	}
 
 	// Delete folders with their contents and a file.
-	n, err = a.FileDelete(1, wd, []FileEntry{{Name: "d", IsDir: true}, {Name: "new", IsDir: true}, {Name: "y.txt"}, {Name: "empty.txt"}})
+	n, err = a.FileDelete(1, wd, []transfer.FileEntry{{Name: "d", IsDir: true}, {Name: "new", IsDir: true}, {Name: "y.txt"}, {Name: "empty.txt"}})
 	if err != nil || n != 4 {
 		t.Fatalf("delete: %d, %v", n, err)
 	}
 	if got := listTree(t, root); len(got) != 0 {
 		t.Fatalf("remote after delete: %v", got)
 	}
-	if _, err := a.FileDelete(1, wd, []FileEntry{{Name: "missing.txt"}}); err == nil {
+	if _, err := a.FileDelete(1, wd, []transfer.FileEntry{{Name: "missing.txt"}}); err == nil {
 		t.Fatal("deleting a missing file succeeded")
 	}
 }
@@ -171,7 +173,7 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 func TestFileStartDir(t *testing.T) {
 	root := t.TempDir()
 	writeFiles(t, root, map[string]string{"d/sub/a.txt": "a"})
-	client, err := ssh.Dial("tcp", startSFTPServer(t, root), &ssh.ClientConfig{
+	client, err := ssh.Dial("tcp", testutil.StartSFTPServer(t, root), &ssh.ClientConfig{
 		User: "test", HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {

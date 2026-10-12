@@ -14,6 +14,7 @@ import (
 	"choboterm/internal/config"
 	"choboterm/internal/i18n"
 	"choboterm/internal/osutil"
+	"choboterm/internal/transfer"
 )
 
 // sessionLog writes a tab's terminal output to a file while logging is on.
@@ -75,7 +76,7 @@ func (l *sessionLog) start(dir, host string, port int, plain, stamp bool) (strin
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("로그 폴더를 만들 수 없습니다: %w", err)
 	}
-	p := uniquePath(dir, logFileName(host, port, time.Now()))
+	p := transfer.UniquePath(dir, logFileName(host, port, time.Now()))
 	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return "", fmt.Errorf("로그 파일을 만들 수 없습니다: %w", err)

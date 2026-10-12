@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"choboterm/internal/localshell"
 	"choboterm/internal/terminal"
 )
 
@@ -45,7 +46,7 @@ func readUntil(t *testing.T, s terminal.Session, want string) (string, error) {
 }
 
 func TestPtyRunsProgramToEnd(t *testing.T) {
-	s, err := startPty("cmd.exe /c echo hello-pty", "", 80, 24)
+	s, err := localshell.Start("cmd.exe /c echo hello-pty", "", 80, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +58,7 @@ func TestPtyRunsProgramToEnd(t *testing.T) {
 }
 
 func TestPtyInteractiveAndClose(t *testing.T) {
-	s, err := startPty("cmd.exe", "", 80, 24)
+	s, err := localshell.Start("cmd.exe", "", 80, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +143,7 @@ func TestLocalCommand(t *testing.T) {
 		"busan":            "",
 		"ssh -p 22 me@cmd": "",
 	} {
-		got, ok := localCommand(host)
+		got, ok := localshell.Command(host)
 		if want == "" {
 			if ok {
 				t.Errorf("%q: got %q, want a server", host, got)

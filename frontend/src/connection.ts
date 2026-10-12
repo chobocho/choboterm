@@ -9,7 +9,7 @@ import {tr} from './i18n';
 import {settings} from './settings';
 import {closeFiles, forgetFiles, openFiles} from './files';
 import {CloseTab, Connect, Disconnect, DockerOpen, Send, SetEncoding, StartLog, StopLog, TabTheme} from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {terminal} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 import {active, focusActive, Tab, tabs, TabState} from './tabstate';
 import {notice, reconnectHint, toast} from './notify';
@@ -51,7 +51,7 @@ export function setState(t: Tab, state: TabState) {
  * Connects tab t with req; returns the protocol. Throws on failure.
  * keepScreen keeps the old output (automatic reconnect) instead of clearing it.
  */
-export async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = false): Promise<string> {
+export async function connectTab(t: Tab, req: terminal.ConnectRequest, keepScreen = false): Promise<string> {
     cancelRetry(t);
     req.cols = t.term.cols;
     req.rows = t.term.rows;

@@ -6,6 +6,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"choboterm/internal/osutil"
+	"choboterm/internal/transfer"
 )
 
 // fileFilter is one entry of a file dialog's type list, e.g. {"Lua (*.lua)", "*.lua"}.
@@ -152,7 +153,7 @@ func (noPicker) saveDir(pickOpts) (string, func(bool) string, error) {
 	return "", keepPath(""), errNotInBrowser
 }
 func (noPicker) receiveDir() (string, func(bool) string) {
-	d := downloadsDir()
+	d := transfer.DownloadsDir()
 	return d, keepPath(d)
 }
 func (noPicker) folder(pickOpts) (string, error) { return "", errNotInBrowser }

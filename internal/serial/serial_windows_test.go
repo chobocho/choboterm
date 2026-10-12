@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package serial
 
 import (
 	"io"
@@ -13,7 +13,7 @@ import (
 
 // A named pipe stands in for a COM port: both are overlapped handles that
 // os.File runs through the I/O completion port.
-func pipePort(t *testing.T) (*serialSession, *os.File) {
+func pipePort(t *testing.T) (*Session, *os.File) {
 	t.Helper()
 	name, _ := windows.UTF16PtrFromString(`\\.\pipe\choboterm-serial-` + t.Name())
 	srv, err := windows.CreateNamedPipe(name, windows.PIPE_ACCESS_DUPLEX|windows.FILE_FLAG_OVERLAPPED, 0, 1, 4096, 4096, 0, nil)
@@ -26,7 +26,7 @@ func pipePort(t *testing.T) (*serialSession, *os.File) {
 	}
 	other := os.NewFile(uintptr(srv), "server")
 	t.Cleanup(func() { other.Close() })
-	return &serialSession{f: os.NewFile(uintptr(h), "COM")}, other
+	return &Session{f: os.NewFile(uintptr(h), "COM")}, other
 }
 
 func TestSerialSessionReadWrite(t *testing.T) {
@@ -100,8 +100,8 @@ func TestSerialSessionDeviceGone(t *testing.T) {
 }
 
 func TestListSerialPorts(t *testing.T) {
-	for _, p := range listSerialPorts() {
-		if !isSerial(p.Name) {
+	for _, p := range ListPorts() {
+		if !IsPort(p.Name) {
 			t.Errorf("listed %q, which the Host field doesn't take as a serial port", p.Name)
 		}
 	}

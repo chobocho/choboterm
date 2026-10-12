@@ -11,6 +11,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"choboterm/internal/testutil"
+	"choboterm/internal/transfer"
 )
 
 // cmdSession runs a WSL command as if it were a remote shell.
@@ -32,8 +35,8 @@ func TestZmodemThroughPump(t *testing.T) {
 	if bin == "" {
 		t.Skip("CHOBOTERM_LRZSZ not set")
 	}
-	payload := testPayload(200_000, 3)
-	wslRun(t, "rm -rf /tmp/zp && mkdir -p /tmp/zp && cat > /tmp/zp/파일.bin", payload)
+	payload := testutil.Payload(200_000, 3)
+	testutil.WSLRun(t, "rm -rf /tmp/zp && mkdir -p /tmp/zp && cat > /tmp/zp/파일.bin", payload)
 
 	cmd := exec.Command("wsl.exe", "--", "sh", "-c",
 		"echo before; "+bin+"/sz -q /tmp/zp/파일.bin; echo after; sleep 1")
@@ -96,7 +99,7 @@ func TestZmodemCancelThroughPump(t *testing.T) {
 	if bin == "" {
 		t.Skip("CHOBOTERM_LRZSZ not set")
 	}
-	wslRun(t, "rm -rf /tmp/zc && mkdir -p /tmp/zc && head -c 200000000 /dev/urandom > /tmp/zc/big.bin", nil)
+	testutil.WSLRun(t, "rm -rf /tmp/zc && mkdir -p /tmp/zc && head -c 200000000 /dev/urandom > /tmp/zc/big.bin", nil)
 
 	cmd := exec.Command("wsl.exe", "--", "sh", "-c", bin+"/sz -q /tmp/zc/big.bin; echo after-cancel; sleep 1")
 	stdin, _ := cmd.StdinPipe()
@@ -122,7 +125,7 @@ func TestZmodemCancelThroughPump(t *testing.T) {
 			b, _ := base64.StdEncoding.DecodeString(data[1].(string))
 			screen.Write(b)
 		case "xfer:progress":
-			if data[1].(XferProgress).Done > 1_000_000 {
+			if data[1].(transfer.XferProgress).Done > 1_000_000 {
 				select {
 				case progress <- struct{}{}:
 				default:

@@ -3,7 +3,7 @@
 
 import {openSaveSession} from './sessions';
 import {GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts, LookupSSH} from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {localshell, main, serial, sshconn, terminal} from '../wailsjs/go/models';
 import {isLinux} from './platform';
 import {active, DialogState, focusActive, Tab, tabs} from './tabstate';
 import {toast} from './notify';
@@ -58,9 +58,9 @@ type ListEntry = Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | '
 
 let history: main.HostEntry[] = [];
 let sessions: main.SavedSession[] = [];
-let configHosts: main.SSHConfigHost[] = [];
-let localShells: main.LocalShell[] = [];
-let serialPorts: main.SerialPort[] = [];
+let configHosts: sshconn.SSHConfigHost[] = [];
+let localShells: localshell.LocalShell[] = [];
+let serialPorts: serial.SerialPort[] = [];
 let serverPort = ''; // the Port field from before a serial port was typed, put back after
 let entries: ListEntry[] = []; // saved sessions, history, then ~/.ssh/config names, local shells and serial ports not in it
 let visible: ListEntry[] = []; // entries matching what is typed in the Host field
@@ -112,7 +112,7 @@ function updateProto() {
 async function loadEntries() {
     [history, sessions, configHosts, localShells, serialPorts] = await Promise.all([
         GetHistory(), GetSessions(), GetSSHConfigHosts(), GetLocalShells(), GetSerialPorts(),
-    ]).then(r => r.map(x => x ?? []) as [main.HostEntry[], main.SavedSession[], main.SSHConfigHost[], main.LocalShell[], main.SerialPort[]]);
+    ]).then(r => r.map(x => x ?? []) as [main.HostEntry[], main.SavedSession[], sshconn.SSHConfigHost[], localshell.LocalShell[], serial.SerialPort[]]);
     const seen = new Set(history.map(h => h.host));
     const saved = new Set(sessions.map(s => `${s.host}:${s.port}`));
     entries = [...sessions.map(s => ({
@@ -271,7 +271,7 @@ function tipLine(text: string, cls = '') {
 }
 
 /** Explains what the Host field accepts, or what the typed config name stands for. */
-function showTip(r?: main.SSHTarget) {
+function showTip(r?: sshconn.SSHTarget) {
     if (!hostList.hidden) return hideTip();
     hostTip.innerHTML = '';
     if (r?.fromConfig) {
@@ -453,7 +453,7 @@ async function connectDialog(t: Tab) {
     // The user may switch tabs while connecting; results go to tab t.
     const serial = isSerial(d.host);
     try {
-        const protocol = await connectTab(t, main.ConnectRequest.createFrom({
+        const protocol = await connectTab(t, terminal.ConnectRequest.createFrom({
             host: d.host.trim(),
             port: Number(d.port),
             login: serial ? '' : d.login,

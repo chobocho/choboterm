@@ -1,4 +1,4 @@
-package main
+package localshell
 
 import (
 	"os"
@@ -13,18 +13,18 @@ type LocalShell struct {
 	Label string `json:"label"` // for the list: "명령 프롬프트 (cmd)"...
 }
 
-// localCommand returns the command line for a local shell named in the Host
+// Command returns the command line for a local shell named in the Host
 // field ("cmd", "powershell", "wsl", "wsl -d Ubuntu", "pwsh.exe"...), or ok=false
 // for anything else (a server).
-func localCommand(host string) (cmdline string, ok bool) {
+func Command(host string) (cmdline string, ok bool) {
 	name, args, _ := strings.Cut(strings.TrimSpace(host), " ")
 	name = strings.TrimSuffix(strings.ToLower(name), ".exe")
-	for _, s := range localShells {
-		if s.name != name {
+	for _, s := range Shells {
+		if s.Name != name {
 			continue
 		}
-		exe := s.exe
-		if p, err := exec.LookPath(s.exe); err == nil {
+		exe := s.Exe
+		if p, err := exec.LookPath(s.Exe); err == nil {
 			exe = p
 		}
 		cmd := quoteArg(exe)
@@ -39,19 +39,8 @@ func localCommand(host string) (cmdline string, ok bool) {
 	return "", false
 }
 
-// GetLocalShells lists the local shells installed on this PC.
-func (a *App) GetLocalShells() []LocalShell {
-	var list []LocalShell
-	for _, s := range localShells {
-		if _, err := exec.LookPath(s.exe); err == nil {
-			list = append(list, LocalShell{Name: s.name, Label: s.label})
-		}
-	}
-	return list
-}
-
-// localHome is the folder local shells start in.
-func localHome() string {
+// Home is the folder local shells start in.
+func Home() string {
 	if home, err := os.UserHomeDir(); err == nil {
 		return filepath.Clean(home)
 	}

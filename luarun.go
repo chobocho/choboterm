@@ -23,6 +23,7 @@ import (
 	"choboterm/internal/dbg"
 	"choboterm/internal/i18n"
 	"choboterm/internal/osutil"
+	"choboterm/internal/transfer"
 )
 
 const (
@@ -440,7 +441,7 @@ func (a *App) ConsoleOpen() (ConsoleFile, error) {
 func (a *App) ConsoleSave(text string) (string, error) {
 	local, finish, err := a.picker().saveFile(pickOpts{
 		Title:   i18n.Tr("Lua 콘솔 저장"),
-		Dir:     downloadsDir(),
+		Dir:     transfer.DownloadsDir(),
 		Name:    "lua_console_" + time.Now().Format("20060102_150405") + ".txt",
 		Filters: []fileFilter{{Name: i18n.Tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
 	})

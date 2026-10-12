@@ -1,4 +1,4 @@
-package main
+package transfer
 
 import (
 	"fmt"
@@ -23,9 +23,9 @@ type ftpFS struct {
 	stop  chan struct{}
 }
 
-// dialFTP logs in to an FTP server. conn is an already connected control
+// DialFTP logs in to an FTP server. conn is an already connected control
 // socket (from protocol detection) or nil to dial req.Host:req.Port.
-func dialFTP(req terminal.ConnectRequest, conn net.Conn) (*ftpFS, error) {
+func DialFTP(req terminal.ConnectRequest, conn net.Conn) (*ftpFS, error) {
 	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
 	opts := []ftp.DialOption{ftp.DialWithTimeout(10 * time.Second)}
 	if conn != nil {

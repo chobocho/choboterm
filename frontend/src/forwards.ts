@@ -2,7 +2,7 @@
 // Go side and start again on the next connection.
 
 import {ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {main, terminal} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -29,7 +29,7 @@ const HINTS: Record<string, string> = {
 };
 
 let tabId = 0;
-let conn: main.ConnectRequest | undefined;
+let conn: terminal.ConnectRequest | undefined;
 let rules: main.ForwardStatus[] = [];
 let selected = -1;
 let onClose: (() => void) | undefined;
@@ -151,7 +151,7 @@ async function remove() {
 }
 
 /** Opens the window for a connected SSH tab. */
-export async function openForwards(id: number, req: main.ConnectRequest, close: () => void) {
+export async function openForwards(id: number, req: terminal.ConnectRequest, close: () => void) {
     tabId = id;
     conn = req;
     onClose = close;

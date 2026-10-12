@@ -1,6 +1,6 @@
 //go:build linux && !termux
 
-package main
+package serial
 
 import (
 	"errors"
@@ -28,10 +28,10 @@ var serialRates = map[int]uint32{
 	3500000: unix.B3500000, 4000000: unix.B4000000,
 }
 
-// openSerial opens and sets up a serial port. The descriptor stays
+// Open opens and sets up a serial port. The descriptor stays
 // non-blocking, so os.File reads go through the poller and Close ends a read
 // that is waiting for data.
-func openSerial(c serialConfig) (*serialSession, error) {
+func Open(c serialConfig) (*Session, error) {
 	rate, ok := serialRates[c.Baud]
 	if !ok {
 		return nil, fmt.Errorf("지원하지 않는 속도(baud)입니다: %d", c.Baud)
@@ -57,7 +57,7 @@ func openSerial(c serialConfig) (*serialSession, error) {
 		unix.Close(fd)
 		return nil, fmt.Errorf("%s 포트를 설정할 수 없습니다: %w", c.Name, err)
 	}
-	return &serialSession{f: os.NewFile(uintptr(fd), c.Name)}, nil
+	return &Session{f: os.NewFile(uintptr(fd), c.Name)}, nil
 }
 
 // setupSerial puts the port in raw mode with the given line settings.
@@ -96,7 +96,7 @@ func setupSerial(fd int, c serialConfig, rate uint32) error {
 	return unix.IoctlSetInt(fd, unix.TCFLSH, unix.TCIOFLUSH)
 }
 
-func (s *serialSession) Read(p []byte) (int, error) {
+func (s *Session) Read(p []byte) (int, error) {
 	n, err := s.f.Read(p)
 	if s.closed.Load() {
 		return n, io.EOF
@@ -109,7 +109,7 @@ func (s *serialSession) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func (s *serialSession) sendBreak() error {
+func (s *Session) SendBreak() error {
 	rc, err := s.f.SyscallConn()
 	if err != nil {
 		return err
@@ -124,9 +124,9 @@ func (s *serialSession) sendBreak() error {
 	return berr
 }
 
-// listSerialPorts lists USB serial adapters and on-board ports that have a
+// ListPorts lists USB serial adapters and on-board ports that have a
 // device behind them, named by /dev/serial/by-id when it has a name for them.
-func listSerialPorts() []SerialPort {
+func ListPorts() []SerialPort {
 	byID := map[string]string{}
 	if links, _ := filepath.Glob("/dev/serial/by-id/*"); links != nil {
 		for _, l := range links {

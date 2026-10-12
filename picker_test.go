@@ -22,6 +22,7 @@ import (
 
 	"choboterm/internal/codec"
 	"choboterm/internal/config"
+	"choboterm/internal/transfer"
 )
 
 // fakePicker answers dialogs from its fields and records what happened.
@@ -93,11 +94,11 @@ type memFS struct {
 func newMemFS() *memFS { return &memFS{files: map[string][]byte{}} }
 
 func (m *memFS) Getwd() (string, error) { return "/", nil }
-func (m *memFS) List(dir string) ([]FileEntry, error) {
+func (m *memFS) List(dir string) ([]transfer.FileEntry, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	seen := map[string]bool{}
-	var out []FileEntry
+	var out []transfer.FileEntry
 	prefix := strings.TrimSuffix(dir, "/") + "/"
 	for p, b := range m.files {
 		if !strings.HasPrefix(p, prefix) {
@@ -110,7 +111,7 @@ func (m *memFS) List(dir string) ([]FileEntry, error) {
 			continue
 		}
 		seen[name] = true
-		e := FileEntry{Name: name, IsDir: isDir}
+		e := transfer.FileEntry{Name: name, IsDir: isDir}
 		if !isDir {
 			e.Size = int64(len(b))
 		}
@@ -244,7 +245,7 @@ func TestFileDownloadManyThroughPicker(t *testing.T) {
 	fs.files["/d/a.txt"] = []byte("a")
 	fs.files["/d/sub/b.txt"] = []byte("bb")
 
-	res, err := a.FileDownloadMany(1, "/", []FileEntry{{Name: "d", IsDir: true}})
+	res, err := a.FileDownloadMany(1, "/", []transfer.FileEntry{{Name: "d", IsDir: true}})
 	if err != nil || res.Count != 2 || res.Dir != "dir:"+dir {
 		t.Fatalf("download many: %+v %v", res, err)
 	}
@@ -257,12 +258,12 @@ func TestFileDownloadManyThroughPicker(t *testing.T) {
 	// The test hook still skips the dialog.
 	a.hooks.downloadDir = t.TempDir()
 	before := len(p.calls)
-	if _, err := a.FileDownloadMany(1, "/d", []FileEntry{{Name: "a.txt"}}); err != nil || len(p.calls) != before {
+	if _, err := a.FileDownloadMany(1, "/d", []transfer.FileEntry{{Name: "a.txt"}}); err != nil || len(p.calls) != before {
 		t.Fatalf("hook: %v, calls %v", err, p.calls)
 	}
 	a.hooks.downloadDir = ""
 	p.dir = ""
-	if res, err := a.FileDownloadMany(1, "/", []FileEntry{{Name: "d", IsDir: true}}); res.Dir != "" || err != nil {
+	if res, err := a.FileDownloadMany(1, "/", []transfer.FileEntry{{Name: "d", IsDir: true}}); res.Dir != "" || err != nil {
 		t.Fatalf("cancel: %+v %v", res, err)
 	}
 }

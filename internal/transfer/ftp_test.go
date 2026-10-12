@@ -1,4 +1,4 @@
-package main
+package transfer
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ func TestFTPRoundTrip(t *testing.T) {
 	}
 	port, _ := strconv.Atoi(portStr)
 
-	fs, err := dialFTP(terminal.ConnectRequest{Host: host, Port: port, Login: "user", Pass: "pass", Encoding: os.Getenv("CHOBOTERM_FTP_ENCODING")}, nil)
+	fs, err := DialFTP(terminal.ConnectRequest{Host: host, Port: port, Login: "user", Pass: "pass", Encoding: os.Getenv("CHOBOTERM_FTP_ENCODING")}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestFTPRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sortEntries(list)
+	SortEntries(list)
 	if len(list) < 2 || list[0].Name != "sub" || !list[0].IsDir {
 		t.Fatalf("list = %+v", list)
 	}
@@ -82,9 +82,9 @@ func TestFTPRoundTrip(t *testing.T) {
 
 	// Stopping a download early (the text viewer's size limit) must leave the
 	// connection usable.
-	lw := &limitWriter{max: 1000}
-	if err := fs.Download(wd+"/sub/올림.bin", lw); !lw.full || !bytes.Equal(lw.buf, payload[:1000]) {
-		t.Fatalf("early stop: full=%v len=%d, %v", lw.full, len(lw.buf), err)
+	lw := &LimitWriter{Max: 1000}
+	if err := fs.Download(wd+"/sub/올림.bin", lw); !lw.Full || !bytes.Equal(lw.Buf, payload[:1000]) {
+		t.Fatalf("early stop: full=%v len=%d, %v", lw.Full, len(lw.Buf), err)
 	}
 	if _, err := fs.List(wd); err != nil {
 		t.Fatalf("list after early stop: %v", err)

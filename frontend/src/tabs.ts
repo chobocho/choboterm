@@ -15,7 +15,7 @@ import {attachSearch, closeSearch, switchSearch} from './search';
 import {settings} from './settings';
 import {filesOpen, forgetFiles, showFilesFor} from './files';
 import {CloseTab, Resize} from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {terminal} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardSetText} from '../wailsjs/runtime/runtime';
 import {webPage} from './platform';
 import {active, fitPane, focusActive, Group, orderedTabs, panesOf, setActive, SplitDir, Tab, tabs, tabsEl, termsEl} from './tabstate';
@@ -455,7 +455,7 @@ export async function duplicate(t: Tab) {
     n.session = t.session;
     activate(n);
     try {
-        if (await connectTab(n, main.ConnectRequest.createFrom({...t.req})) === 'ftp') await openFilesFor(n);
+        if (await connectTab(n, terminal.ConnectRequest.createFrom({...t.req})) === 'ftp') await openFilesFor(n);
     } catch (e) {
         notice(n, String(e));
     }

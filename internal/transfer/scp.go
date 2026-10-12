@@ -1,4 +1,4 @@
-package main
+package transfer
 
 import (
 	"bufio"
@@ -25,7 +25,7 @@ type scpFS struct {
 	names  *codec.Codec
 }
 
-func newSCP(client *ssh.Client, names *codec.Codec) (*scpFS, error) {
+func NewSCP(client *ssh.Client, names *codec.Codec) (*scpFS, error) {
 	s := &scpFS{client: client, names: names}
 	if _, err := s.run("command -v scp"); err != nil {
 		return nil, errors.New("서버에 scp가 없습니다")
