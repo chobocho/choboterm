@@ -66,6 +66,15 @@ test('the Host field explains itself and lists what it can open', async ({app}) 
     await expect(list).toBeVisible();
     await expect(tip).toBeHidden();
     await expect(list.locator('li', {hasText: '로컬 셸'}).first()).toBeVisible();
+    // ▼ again closes the list; the Host field keeps the focus.
+    await app.page.locator('#hostDrop').click();
+    await expect(list).toBeHidden();
+    await expect(app.host).toBeFocused();
+    // From another field, ▼ opens the list and moves to the Host field.
+    await app.port.click();
+    await app.page.locator('#hostDrop').click();
+    await expect(list).toBeVisible();
+    await expect(app.host).toBeFocused();
     await app.key('Escape'); // closes the list, not the dialog
     await expect(list).toBeHidden();
     await expect(app.overlay).toBeVisible();

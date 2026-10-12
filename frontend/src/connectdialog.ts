@@ -373,6 +373,8 @@ function hideList() {
     filter = '';
 }
 
+// The Host field keeps the focus: losing it would close the list just before the click that closes it.
+hostDrop.addEventListener('mousedown', ev => ev.preventDefault());
 hostDrop.addEventListener('click', () => {
     if (hostList.hidden) {
         showList();
