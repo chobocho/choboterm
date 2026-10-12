@@ -8,44 +8,9 @@ import (
 	"time"
 
 	"choboterm/internal/config"
+	"choboterm/internal/update"
 	"choboterm/internal/version"
 )
-
-func TestNewerVersion(t *testing.T) {
-	cases := []struct {
-		a, b string
-		want bool
-	}{
-		{"0.2.14", "0.2.13", true},
-		{"0.2.10", "0.2.9", true},
-		{"0.3.0", "0.2.99", true},
-		{"1.0", "0.9.9", true},
-		{"0.2.13", "0.2.13", false},
-		{"0.2.12", "0.2.13", false},
-		{"0.2.13.1", "0.2.13", true},
-		{"beta", "0.2.13", false},
-	}
-	for _, c := range cases {
-		if got := newerVersion(c.a, c.b); got != c.want {
-			t.Errorf("newerVersion(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
-		}
-	}
-}
-
-// fakeGitHub serves a latest release with the given tag and counts requests.
-func fakeGitHub(t *testing.T, tag string) *atomic.Int32 {
-	t.Helper()
-	var hits atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits.Add(1)
-		_, _ = w.Write([]byte(`{"tag_name":"` + tag + `","html_url":"https://example.com/rel"}`))
-	}))
-	t.Cleanup(srv.Close)
-	orig := latestReleaseURL
-	latestReleaseURL = srv.URL
-	t.Cleanup(func() { latestReleaseURL = orig })
-	return &hits
-}
 
 func TestCheckUpdateOffByDefault(t *testing.T) {
 	useTempSettings(t)
@@ -98,4 +63,19 @@ func TestCheckUpdateCurrent(t *testing.T) {
 	if info, err := NewApp().CheckUpdate(true); err != nil || !info.Checked || info.Newer {
 		t.Fatalf("same version: %+v %v", info, err)
 	}
+}
+
+// fakeGitHub serves a latest release with the given tag and counts requests.
+func fakeGitHub(t *testing.T, tag string) *atomic.Int32 {
+	t.Helper()
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		_, _ = w.Write([]byte(`{"tag_name":"` + tag + `","html_url":"https://example.com/rel"}`))
+	}))
+	t.Cleanup(srv.Close)
+	orig := update.LatestReleaseURL
+	update.LatestReleaseURL = srv.URL
+	t.Cleanup(func() { update.LatestReleaseURL = orig })
+	return &hits
 }

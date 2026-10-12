@@ -22,6 +22,7 @@ import (
 
 	"choboterm/internal/codec"
 	"choboterm/internal/config"
+	"choboterm/internal/store"
 	"choboterm/internal/transfer"
 )
 
@@ -312,12 +313,12 @@ func TestRunScriptFileCancel(t *testing.T) {
 
 func TestSessionsExportImportThroughPicker(t *testing.T) {
 	sess := filepath.Join(t.TempDir(), "sessions.json")
-	orig := sessionsFile
-	sessionsFile = func() (string, error) { return sess, nil }
-	t.Cleanup(func() { sessionsFile = orig })
+	orig := store.SessionsFile
+	store.SessionsFile = func() (string, error) { return sess, nil }
+	t.Cleanup(func() { store.SessionsFile = orig })
 	p := &fakePicker{}
 	a, _ := pickerApp(t, p)
-	if _, err := a.SaveSession(SavedSession{Name: "web1", Host: "h", Port: 22}, false); err != nil {
+	if _, err := a.SaveSession(store.SavedSession{Name: "web1", Host: "h", Port: 22}, false); err != nil {
 		t.Fatal(err)
 	}
 	out := filepath.Join(t.TempDir(), "export.json")

@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package luahost
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// luaJob holds a script process in a Windows job object, so a script never
+// Job holds a script process in a Windows job object, so a script never
 // outlives the app (the process ends when the job handle closes with it).
 //
 // The job's memory limit only makes allocations past it fail; what the
@@ -21,7 +21,7 @@ import (
 // can also stay stuck at the limit (seen on GitHub's Windows runners), so
 // watch ends the job once the process has reached the limit, like the Linux
 // watcher does.
-type luaJob struct {
+type Job struct {
 	mu    sync.Mutex // guards h against close while watch queries it
 	h     windows.Handle
 	limit uintptr
@@ -29,11 +29,11 @@ type luaJob struct {
 	once  sync.Once
 }
 
-func hideWindow(cmd *exec.Cmd) {
+func HideWindow(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
 }
 
-func newLuaJob(pid int, limitBytes uint64) (*luaJob, error) {
+func NewJob(pid int, limitBytes uint64) (*Job, error) {
 	h, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func newLuaJob(pid int, limitBytes uint64) (*luaJob, error) {
 		windows.CloseHandle(h)
 		return nil, err
 	}
-	j := &luaJob{h: h, limit: uintptr(limitBytes), done: make(chan struct{})}
+	j := &Job{h: h, limit: uintptr(limitBytes), done: make(chan struct{})}
 	go j.watch()
 	return j, nil
 }
@@ -71,7 +71,7 @@ func newLuaJob(pid int, limitBytes uint64) (*luaJob, error) {
 const limitSlack = 1 << 20
 
 // watch ends the job when the process has used all the memory it may.
-func (j *luaJob) watch() {
+func (j *Job) watch() {
 	tick := time.NewTicker(50 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -95,16 +95,16 @@ func (j *luaJob) watch() {
 }
 
 // info reads the job's limits and memory use (j.mu held).
-func (j *luaJob) info() (windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION, error) {
+func (j *Job) info() (windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION, error) {
 	var info windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION
 	err := windows.QueryInformationJobObject(j.h, windows.JobObjectExtendedLimitInformation,
 		uintptr(unsafe.Pointer(&info)), uint32(unsafe.Sizeof(info)), nil)
 	return info, err
 }
 
-// hitMemoryLimit reports whether the process came close to the memory limit,
+// HitMemoryLimit reports whether the process came close to the memory limit,
 // which is the likely reason it ended without saying why.
-func (j *luaJob) hitMemoryLimit() bool {
+func (j *Job) HitMemoryLimit() bool {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	if j.h == 0 {
@@ -114,9 +114,9 @@ func (j *luaJob) hitMemoryLimit() bool {
 	return err == nil && info.PeakProcessMemoryUsed >= j.limit/10*9
 }
 
-// memoryReport describes the process's memory use against the limit (for
+// MemoryReport describes the process's memory use against the limit (for
 // diagnosing a script that didn't end).
-func (j *luaJob) memoryReport() string {
+func (j *Job) MemoryReport() string {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	if j.h == 0 {
@@ -130,7 +130,7 @@ func (j *luaJob) memoryReport() string {
 		info.PeakProcessMemoryUsed>>20, info.PeakJobMemoryUsed>>20, j.limit>>20, info.BasicLimitInformation.LimitFlags)
 }
 
-func (j *luaJob) close() {
+func (j *Job) Close() {
 	j.once.Do(func() {
 		close(j.done)
 		j.mu.Lock()

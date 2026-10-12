@@ -1,8 +1,7 @@
-package main
+package sessionlog
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,19 +10,17 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"choboterm/internal/config"
 	"choboterm/internal/i18n"
-	"choboterm/internal/osutil"
 	"choboterm/internal/transfer"
 )
 
-// sessionLog writes a tab's terminal output to a file while logging is on.
+// Log writes a tab's terminal output to a file while logging is on.
 // It lives as long as the tab, so a reconnect keeps writing to the same file.
-type sessionLog struct {
+type Log struct {
 	mu    sync.Mutex
 	f     *os.File
 	path  string
-	plain *plainText // nil: the output is written as received (with escape codes)
+	plain *PlainText // nil: the output is written as received (with escape codes)
 	stamp bool       // each line starts with the time it began to arrive
 	bol   bool       // raw output: the next byte starts a line
 }
@@ -36,8 +33,8 @@ func logStamp(t time.Time) string {
 	return "[" + t.Format("2006-01-02 15:04:05.000") + "] "
 }
 
-// logsDir is the default folder for session logs.
-func logsDir() string {
+// LogsDir is the default folder for session logs.
+func LogsDir() string {
 	if home, err := os.UserHomeDir(); err == nil {
 		return filepath.Join(home, "Documents", "choboterm", "logs")
 	}
@@ -62,16 +59,16 @@ func logFileName(host string, port int, at time.Time) string {
 	return fmt.Sprintf("%s_%s.log", host, at.Format("20060102_150405"))
 }
 
-// start opens a new log file in dir; stamp puts the time before each line.
+// Start opens a new log file in dir; stamp puts the time before each line.
 // It returns the path, or "" with no error when logging is already on.
-func (l *sessionLog) start(dir, host string, port int, plain, stamp bool) (string, error) {
+func (l *Log) Start(dir, host string, port int, plain, stamp bool) (string, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.f != nil {
 		return "", nil
 	}
 	if dir == "" {
-		dir = logsDir()
+		dir = LogsDir()
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("로그 폴더를 만들 수 없습니다: %w", err)
@@ -84,14 +81,14 @@ func (l *sessionLog) start(dir, host string, port int, plain, stamp bool) (strin
 	l.f, l.path = f, p
 	l.plain = nil
 	if plain {
-		l.plain = &plainText{stamp: stamp}
+		l.plain = &PlainText{stamp: stamp}
 	}
 	l.stamp, l.bol = stamp, true
 	return p, nil
 }
 
-// stop closes the log file and returns its path ("" if logging was off).
-func (l *sessionLog) stop() string {
+// Stop closes the log file and returns its path ("" if logging was off).
+func (l *Log) Stop() string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.f == nil {
@@ -106,21 +103,21 @@ func (l *sessionLog) stop() string {
 	return p
 }
 
-func (l *sessionLog) active() string {
+func (l *Log) Active() string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.path
 }
 
-// write adds terminal output (already decoded to UTF-8) to the log.
-func (l *sessionLog) write(data []byte) {
+// Write adds terminal output (already decoded to UTF-8) to the log.
+func (l *Log) Write(data []byte) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.f == nil || len(data) == 0 {
 		return
 	}
 	if l.plain != nil {
-		data = l.plain.feed(data)
+		data = l.plain.Feed(data)
 	} else if l.stamp {
 		data = l.stampRaw(data)
 	}
@@ -130,7 +127,7 @@ func (l *sessionLog) write(data []byte) {
 }
 
 // stampRaw puts the time at the start of each line of raw output.
-func (l *sessionLog) stampRaw(data []byte) []byte {
+func (l *Log) stampRaw(data []byte) []byte {
 	out := make([]byte, 0, len(data)+32)
 	stamp := ""
 	for len(data) > 0 {
@@ -152,9 +149,9 @@ func (l *sessionLog) stampRaw(data []byte) []byte {
 	return out
 }
 
-// mark writes a line such as "===== 2026-10-03 19:00:00 접속: ... =====",
+// Mark writes a line such as "===== 2026-10-03 19:00:00 접속: ... =====",
 // on a line of its own.
-func (l *sessionLog) mark(msg string) {
+func (l *Log) Mark(msg string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.f == nil {
@@ -171,15 +168,15 @@ func (l *sessionLog) mark(msg string) {
 	l.bol = true
 }
 
-// plainText turns terminal output into readable text: escape sequences and
+// PlainText turns terminal output into readable text: escape sequences and
 // control characters are removed, and carriage returns and backspaces are
 // applied to the current line (so progress bars keep only their last state).
 // A line is written once it ends with a line feed.
-type plainText struct {
+type PlainText struct {
 	stamp   bool      // lines start with the time their first character came
 	started time.Time // when the current line got its first character
 	state   int
-	line    []rune
+	Line    []rune
 	col     int
 	partial []byte // an incomplete UTF-8 sequence at the end of the last chunk
 	params  []byte // CSI parameter bytes
@@ -194,7 +191,7 @@ const (
 	ptStrEsc // ESC inside a string
 )
 
-func (p *plainText) feed(data []byte) []byte {
+func (p *PlainText) Feed(data []byte) []byte {
 	if len(p.partial) > 0 {
 		data = append(p.partial, data...)
 		p.partial = nil
@@ -212,7 +209,7 @@ func (p *plainText) feed(data []byte) []byte {
 	return out
 }
 
-func (p *plainText) rune(r rune, out []byte) []byte {
+func (p *PlainText) rune(r rune, out []byte) []byte {
 	switch p.state {
 	case ptEsc:
 		switch {
@@ -277,23 +274,23 @@ func (p *plainText) rune(r rune, out []byte) []byte {
 }
 
 // put writes r at the cursor, overwriting what is there.
-func (p *plainText) put(r rune) {
+func (p *PlainText) put(r rune) {
 	if p.stamp && p.started.IsZero() {
 		p.started = logNow()
 	}
-	if p.col < len(p.line) {
-		p.line[p.col] = r
+	if p.col < len(p.Line) {
+		p.Line[p.col] = r
 	} else {
-		for len(p.line) < p.col {
-			p.line = append(p.line, ' ')
+		for len(p.Line) < p.col {
+			p.Line = append(p.Line, ' ')
 		}
-		p.line = append(p.line, r)
+		p.Line = append(p.Line, r)
 	}
 	p.col++
 }
 
 // csi applies the few cursor sequences that matter for a single line.
-func (p *plainText) csi(final rune) {
+func (p *PlainText) csi(final rune) {
 	n := 1
 	if _, err := fmt.Sscanf(string(p.params), "%d", &n); err != nil || n < 1 {
 		n = 1
@@ -301,11 +298,11 @@ func (p *plainText) csi(final rune) {
 	switch final {
 	case 'K': // erase in line; only "to the end" matters as the line is not drawn yet
 		if len(p.params) == 0 || string(p.params) == "0" {
-			if p.col < len(p.line) {
-				p.line = p.line[:p.col]
+			if p.col < len(p.Line) {
+				p.Line = p.Line[:p.col]
 			}
 		} else if string(p.params) == "2" {
-			p.line = p.line[:0]
+			p.Line = p.Line[:0]
 		}
 	case 'C': // cursor forward
 		p.col += n
@@ -317,9 +314,9 @@ func (p *plainText) csi(final rune) {
 }
 
 // flush returns the current line with a line break and starts a new one.
-func (p *plainText) flush() []byte {
-	s := strings.TrimRight(string(p.line), " ")
-	p.line, p.col = p.line[:0], 0
+func (p *PlainText) flush() []byte {
+	s := strings.TrimRight(string(p.Line), " ")
+	p.Line, p.col = p.Line[:0], 0
 	if p.stamp {
 		at := p.started
 		if at.IsZero() {
@@ -333,8 +330,8 @@ func (p *plainText) flush() []byte {
 
 // rest returns the unfinished line (e.g. a shell prompt) ended with a line
 // break, or nothing when there is none.
-func (p *plainText) rest() []byte {
-	if len(p.line) == 0 {
+func (p *PlainText) rest() []byte {
+	if len(p.Line) == 0 {
 		p.col = 0
 		return nil
 	}
@@ -342,84 +339,3 @@ func (p *plainText) rest() []byte {
 }
 
 // ---- App bindings ----
-
-// startLog turns logging on for the tab (no-op when it already is).
-func (t *tab) startLog() (string, error) {
-	t.mu.Lock()
-	host, port := t.host, t.port
-	t.mu.Unlock()
-	s := config.Load()
-	p, err := t.log.start(s.LogDir, host, port, !s.LogRaw, s.LogTime)
-	if err != nil || p == "" {
-		return t.log.active(), err
-	}
-	if t.session() != nil {
-		t.log.mark(fmt.Sprintf("로그 시작: %s:%d", host, port))
-	}
-	t.emit("log:changed", p)
-	return p, nil
-}
-
-func (t *tab) stopLog() {
-	if t.log.stop() != "" {
-		t.emit("log:changed", "")
-	}
-}
-
-// StartLog starts writing the tab's output to a new file in the log folder
-// and returns its path.
-func (a *App) StartLog(tabID int) (string, error) {
-	return a.getTab(tabID).startLog()
-}
-
-// StopLog stops logging in a tab.
-func (a *App) StopLog(tabID int) {
-	if t := a.findTab(tabID); t != nil {
-		t.stopLog()
-	}
-}
-
-// LogPath returns the tab's log file, or "" when it isn't logging.
-func (a *App) LogPath(tabID int) string {
-	if t := a.findTab(tabID); t != nil {
-		return t.log.active()
-	}
-	return ""
-}
-
-// ShowLogs opens the tab's log file selected in Explorer (its folder on
-// Linux), or the log folder.
-func (a *App) ShowLogs(tabID int) error {
-	if !a.local() {
-		return errNotInBrowser // Explorer would open on the other PC
-	}
-	if p := a.LogPath(tabID); p != "" {
-		return osutil.ShowFile(p)
-	}
-	dir := config.Load().LogDir
-	if dir == "" {
-		dir = logsDir()
-	}
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-	return osutil.OpenFolder(dir)
-}
-
-// ChooseLogDir asks for the log folder; "" means the dialog was cancelled.
-func (a *App) ChooseLogDir(current string) (string, error) {
-	if current == "" {
-		current = logsDir()
-	}
-	if st, err := os.Stat(current); err != nil || !st.IsDir() {
-		current = ""
-	}
-	dir, err := a.picker().folder(pickOpts{
-		Title: i18n.Tr("로그 폴더 선택"),
-		Dir:   current,
-	})
-	if err != nil {
-		return "", errors.New("폴더를 고르지 못했습니다: " + err.Error())
-	}
-	return dir, nil
-}

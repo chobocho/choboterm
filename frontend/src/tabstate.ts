@@ -8,7 +8,7 @@ import {DockerMode, DockerSource} from './containers';
 import {Highlighter} from './highlight';
 import {attachSearch} from './search';
 import {filesOpen, focusFiles} from './files';
-import {main, terminal} from '../wailsjs/go/models';
+import {store, terminal} from '../wailsjs/go/models';
 import type {ScriptBox} from './luaconsole';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -43,7 +43,7 @@ export interface Tab {
     // A docker exec / logs tab (no req): what to open again on reconnect.
     docker?: {src: DockerSource; id: string; name: string; mode: DockerMode};
     // The saved session req came from: its name is the tab label.
-    session?: main.SavedSession;
+    session?: store.SavedSession;
     // This tab's Connect dialog, while it is open.
     dialog?: DialogState;
     // Created just for a Connect dialog: cancelling the dialog closes it.
@@ -84,7 +84,7 @@ export interface DialogState {
     error: string;
     connecting: boolean;
     resolved: string; // Host text whose ~/.ssh/config values were already filled in
-    session?: main.SavedSession; // the saved session picked from the list
+    session?: store.SavedSession; // the saved session picked from the list
 }
 
 export const tabs = new Map<number, Tab>();

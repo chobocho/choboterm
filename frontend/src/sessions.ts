@@ -2,7 +2,7 @@
 // (☆ Save, Alt+S) or the tab menu, and the session manager (Ctrl+Shift+H).
 
 import {DeleteSession, ExportSessions, GetSessions, ImportPuTTY, ImportSessions, SaveSession} from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {store} from '../wailsjs/go/models';
 import {ask, askOpen} from './dialog';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -25,18 +25,18 @@ export interface SessionDraft {
     encoding: string;
     pass: string;
     jump: string;
-    session?: main.SavedSession;
+    session?: store.SavedSession;
 }
 
 let draft: SessionDraft | undefined;
-let resolve: ((s: main.SavedSession | null) => void) | undefined;
+let resolve: ((s: store.SavedSession | null) => void) | undefined;
 
 export function sessionSaveOpen() {
     return !overlay.hidden;
 }
 
 /** Asks for a name and group and saves d; resolves the saved session, or null if cancelled. */
-export async function openSaveSession(d: SessionDraft): Promise<main.SavedSession | null> {
+export async function openSaveSession(d: SessionDraft): Promise<store.SavedSession | null> {
     finish(null);
     draft = d;
     const s = d.session;
@@ -61,7 +61,7 @@ export async function openSaveSession(d: SessionDraft): Promise<main.SavedSessio
     return new Promise(r => (resolve = r));
 }
 
-function finish(s: main.SavedSession | null) {
+function finish(s: store.SavedSession | null) {
     if (!resolve) return;
     overlay.hidden = true;
     const r = resolve;
@@ -74,7 +74,7 @@ async function save() {
     const d = draft;
     if (!d) return;
     try {
-        const saved = await SaveSession(main.SavedSession.createFrom({
+        const saved = await SaveSession(store.SavedSession.createFrom({
             id: d.session?.id ?? '',
             name: nameInput.value.trim() || d.host,
             group: groupInput.value.trim(),
@@ -129,12 +129,12 @@ const smDup = $<HTMLButtonElement>('smDup');
 const smDel = $<HTMLButtonElement>('smDel');
 const fields = [smName, smGroup, smHost, smPort, smLogin, smJump, smPass, smSavePass, smCode];
 
-let all: main.SavedSession[] = [];
-let shown: main.SavedSession[] = [];
-let current: main.SavedSession | undefined; // selected; id '' = added, not saved yet
+let all: store.SavedSession[] = [];
+let shown: store.SavedSession[] = [];
+let current: store.SavedSession | undefined; // selected; id '' = added, not saved yet
 let dirty = false;
 let saveTimer = 0;
-let onOpen: ((list: main.SavedSession[]) => void) | undefined;
+let onOpen: ((list: store.SavedSession[]) => void) | undefined;
 let onSmClose: (() => void) | undefined;
 
 export function sessionManagerOpen() {
@@ -142,7 +142,7 @@ export function sessionManagerOpen() {
 }
 
 /** Opens the manager; open runs with the sessions to connect after the window closed. */
-export async function openSessionManager(open: (list: main.SavedSession[]) => void, close: () => void) {
+export async function openSessionManager(open: (list: store.SavedSession[]) => void, close: () => void) {
     onOpen = open;
     onSmClose = close;
     smFilter.value = '';
@@ -238,7 +238,7 @@ function fillForm() {
 }
 
 /** Puts x into the form (not while there are unsaved edits, typed during a save). */
-function fillFields(x?: main.SavedSession) {
+function fillFields(x?: store.SavedSession) {
     smName.value = x?.name ?? '';
     smGroup.value = x?.group ?? '';
     smHost.value = x?.host ?? '';
@@ -251,7 +251,7 @@ function fillFields(x?: main.SavedSession) {
     say('');
 }
 
-async function select(x: main.SavedSession | undefined) {
+async function select(x: store.SavedSession | undefined) {
     if (x === current) return;
     await flush();
     if (x?.id === '') {
@@ -279,7 +279,7 @@ async function flush() {
         return;
     }
     try {
-        const saved = await SaveSession(main.SavedSession.createFrom({
+        const saved = await SaveSession(store.SavedSession.createFrom({
             id: x.id,
             name: smName.value.trim(),
             group: smGroup.value.trim(),
@@ -324,7 +324,7 @@ smPass.addEventListener('input', () => (smSavePass.checked = smPass.value !== ''
 
 async function add() {
     await flush();
-    current = main.SavedSession.createFrom({id: '', name: '', group: '', host: '', port: 22, login: '', encoding: 'UTF-8', pass: ''});
+    current = store.SavedSession.createFrom({id: '', name: '', group: '', host: '', port: 22, login: '', encoding: 'UTF-8', pass: ''});
     smFilter.value = '';
     paintList();
     smHost.focus();
@@ -334,7 +334,7 @@ async function duplicate() {
     await flush();
     const x = current;
     if (!x?.id) return;
-    const copy = await SaveSession(main.SavedSession.createFrom({...x, id: '', name: `${x.name} (복사)`}), !!x.pass);
+    const copy = await SaveSession(store.SavedSession.createFrom({...x, id: '', name: `${x.name} (복사)`}), !!x.pass);
     current = undefined;
     await reload(copy.id);
     smName.focus();
@@ -369,7 +369,7 @@ async function openGroup() {
     if (g) run(all.filter(x => x.group === g));
 }
 
-function run(list: main.SavedSession[]) {
+function run(list: store.SavedSession[]) {
     const cb = onOpen;
     closeSessionManager().then(() => cb?.(list));
 }

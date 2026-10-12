@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"choboterm/frontend"
+	"choboterm/internal/luahost"
 	"choboterm/internal/osutil"
 	"choboterm/internal/version"
 )
@@ -16,7 +17,7 @@ const appName = "choboterm V" + version.Version
 func main() {
 	// The same exe runs Lua scripts in a child process (see luahost.go).
 	if len(os.Args) > 1 && os.Args[1] == "--lua-host" {
-		os.Exit(runLuaHost(os.Stdin, os.Stdout))
+		os.Exit(luahost.Run(os.Stdin, os.Stdout))
 	}
 	opts, err := parseArgs(os.Args[1:])
 	if err != nil || opts.help {

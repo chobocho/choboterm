@@ -21,6 +21,7 @@ import (
 
 	"choboterm/internal/codec"
 	"choboterm/internal/localshell"
+	"choboterm/internal/luahost"
 	"choboterm/internal/sshconn"
 	"choboterm/internal/terminal"
 )
@@ -115,7 +116,7 @@ func (a *App) runDocker(src int, args ...string) (string, error) {
 		defer cancel()
 		cmd := exec.CommandContext(ctx, exe, args...)
 		cmd.Stdout, cmd.Stderr = &stdout, &stderr
-		hideWindow(cmd)
+		luahost.HideWindow(cmd)
 		if err := cmd.Run(); err != nil {
 			if ctx.Err() != nil {
 				return "", errors.New("docker가 응답하지 않습니다")

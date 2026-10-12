@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"choboterm/internal/store"
 	"choboterm/internal/terminal"
 )
 
@@ -101,9 +102,9 @@ func TestLiveSSH(t *testing.T) {
 		os.Mkdir(home+"/.ssh", 0o700)
 		os.WriteFile(home+"/.ssh/known_hosts", data, 0o600)
 	}
-	orig := historyFile
-	historyFile = func() (string, error) { return home + "/hosts.json", nil }
-	defer func() { historyFile = orig }()
+	orig := store.HistoryFile
+	store.HistoryFile = func() (string, error) { return home + "/hosts.json", nil }
+	defer func() { store.HistoryFile = orig }()
 
 	var (
 		mu     sync.Mutex

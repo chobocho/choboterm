@@ -6,6 +6,8 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"choboterm/internal/store"
 )
 
 // Without a window (headless web, or a test) no method may reach the Wails
@@ -16,13 +18,13 @@ func TestEveryMethodWithoutWindow(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	isolateSettings(t)
 	sess := filepath.Join(t.TempDir(), "sessions.json")
-	orig := sessionsFile
-	sessionsFile = func() (string, error) { return sess, nil }
-	t.Cleanup(func() { sessionsFile = orig })
+	orig := store.SessionsFile
+	store.SessionsFile = func() (string, error) { return sess, nil }
+	t.Cleanup(func() { store.SessionsFile = orig })
 	hist := filepath.Join(t.TempDir(), "hosts.json")
-	origH := historyFile
-	historyFile = func() (string, error) { return hist, nil }
-	t.Cleanup(func() { historyFile = origH })
+	origH := store.HistoryFile
+	store.HistoryFile = func() (string, error) { return hist, nil }
+	t.Cleanup(func() { store.HistoryFile = origH })
 
 	f := startTestWeb(t, webOptions{})
 	for _, local := range []bool{false, true} {

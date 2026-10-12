@@ -1,15 +1,13 @@
-package main
+package store
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 
 	"choboterm/internal/codec"
-	"choboterm/internal/i18n"
 )
 
 // sessionsExport is the file written by "내보내기". Passwords are never in it:
@@ -39,7 +37,7 @@ type ImportResult struct {
 	Skipped int `json:"skipped"`
 }
 
-func encodeExport(list []SavedSession) ([]byte, error) {
+func EncodeExport(list []SavedSession) ([]byte, error) {
 	out := sessionsExport{Format: exportFormat, Version: 1, Sessions: []exportSession{}}
 	for _, s := range list {
 		out.Sessions = append(out.Sessions, exportSession{
@@ -49,7 +47,7 @@ func encodeExport(list []SavedSession) ([]byte, error) {
 	return json.MarshalIndent(out, "", "  ")
 }
 
-func decodeExport(data []byte) ([]SavedSession, error) {
+func DecodeExport(data []byte) ([]SavedSession, error) {
 	var in sessionsExport
 	if err := json.Unmarshal(data, &in); err != nil || in.Format != exportFormat {
 		return nil, errors.New("choboterm에서 내보낸 세션 파일이 아닙니다")
@@ -63,9 +61,9 @@ func decodeExport(data []byte) ([]SavedSession, error) {
 	return list, nil
 }
 
-// addSessions saves the sessions of an import, leaving out the ones that are
+// AddSessions saves the sessions of an import, leaving out the ones that are
 // already saved (same name, group and connection).
-func addSessions(list []SavedSession) (ImportResult, error) {
+func AddSessions(list []SavedSession) (ImportResult, error) {
 	var r ImportResult
 	key := func(s SavedSession) string {
 		if s.Encoding == "" {
@@ -74,7 +72,7 @@ func addSessions(list []SavedSession) (ImportResult, error) {
 		return fmt.Sprintf("%s\x00%s\x00%s\x00%d\x00%s\x00%s", s.Name, s.Group, s.Host, s.Port, s.Login, s.Encoding)
 	}
 	have := map[string]bool{}
-	for _, s := range loadSessions() {
+	for _, s := range LoadSessions() {
 		have[key(s)] = true
 	}
 	for _, s := range list {
@@ -92,69 +90,13 @@ func addSessions(list []SavedSession) (ImportResult, error) {
 			r.Skipped++
 			continue
 		}
-		if _, err := saveSession(s, false); err != nil {
+		if _, err := SaveSession(s, false); err != nil {
 			return r, err
 		}
 		have[key(s)] = true
 		r.Added++
 	}
 	return r, nil
-}
-
-// ExportSessions asks for a file and writes the saved sessions (without
-// passwords) to it. It returns the path, or "" if the user cancelled.
-func (a *App) ExportSessions() (string, error) {
-	p, finish, err := a.picker().saveFile(pickOpts{
-		Title:   i18n.Tr("세션 내보내기"),
-		Name:    "choboterm-sessions.json",
-		Filters: []fileFilter{{Name: i18n.Tr("세션 파일 (*.json)"), Pattern: "*.json"}},
-	})
-	if err != nil || p == "" {
-		return "", err
-	}
-	data, err := encodeExport(loadSessions())
-	if err == nil {
-		err = os.WriteFile(p, data, 0o644)
-	}
-	if err != nil {
-		finish(false)
-		return "", err
-	}
-	return finish(true), nil
-}
-
-// ImportSessions asks for a file written by ExportSessions and adds its
-// sessions. Cancelled = zero result.
-func (a *App) ImportSessions() (ImportResult, error) {
-	p, release, err := a.picker().openFile(pickOpts{
-		Title:   i18n.Tr("세션 가져오기"),
-		Filters: []fileFilter{{Name: i18n.Tr("세션 파일 (*.json)"), Pattern: "*.json"}},
-	})
-	defer release()
-	if err != nil || p == "" {
-		return ImportResult{}, err
-	}
-	data, err := os.ReadFile(p)
-	if err != nil {
-		return ImportResult{}, err
-	}
-	list, err := decodeExport(data)
-	if err != nil {
-		return ImportResult{}, err
-	}
-	return addSessions(list)
-}
-
-// ImportPuTTY adds the SSH and Telnet sessions saved in PuTTY, in the group "PuTTY".
-func (a *App) ImportPuTTY() (ImportResult, error) {
-	list, err := puttySessions()
-	if err != nil {
-		return ImportResult{}, err
-	}
-	if len(list) == 0 {
-		return ImportResult{}, errors.New("PuTTY에 저장된 SSH / Telnet 세션이 없습니다")
-	}
-	return addSessions(list)
 }
 
 // puttyValues are the settings of one PuTTY session that choboterm uses.

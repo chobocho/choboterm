@@ -310,26 +310,6 @@ export namespace main {
 	        this.protocol = source["protocol"];
 	    }
 	}
-	export class Forward {
-	    type: string;
-	    bindAddr: string;
-	    bindPort: number;
-	    host: string;
-	    port: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new Forward(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.bindAddr = source["bindAddr"];
-	        this.bindPort = source["bindPort"];
-	        this.host = source["host"];
-	        this.port = source["port"];
-	    }
-	}
 	export class ForwardStatus {
 	    type: string;
 	    bindAddr: string;
@@ -358,42 +338,6 @@ export namespace main {
 	        this.standby = source["standby"];
 	    }
 	}
-	export class HostEntry {
-	    host: string;
-	    port: number;
-	    login: string;
-	    encoding: string;
-	    pass: string;
-	    jump: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new HostEntry(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.host = source["host"];
-	        this.port = source["port"];
-	        this.login = source["login"];
-	        this.encoding = source["encoding"];
-	        this.pass = source["pass"];
-	        this.jump = source["jump"];
-	    }
-	}
-	export class ImportResult {
-	    added: number;
-	    skipped: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new ImportResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.added = source["added"];
-	        this.skipped = source["skipped"];
-	    }
-	}
 	export class SaveResult {
 	    path: string;
 	    bad: number;
@@ -406,34 +350,6 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
 	        this.bad = source["bad"];
-	    }
-	}
-	export class SavedSession {
-	    id: string;
-	    name: string;
-	    group: string;
-	    host: string;
-	    port: number;
-	    login: string;
-	    encoding: string;
-	    pass: string;
-	    jump: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new SavedSession(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.name = source["name"];
-	        this.group = source["group"];
-	        this.host = source["host"];
-	        this.port = source["port"];
-	        this.login = source["login"];
-	        this.encoding = source["encoding"];
-	        this.pass = source["pass"];
-	        this.jump = source["jump"];
 	    }
 	}
 	export class TextSave {
@@ -480,26 +396,6 @@ export namespace main {
 	        this.size = source["size"];
 	        this.modTime = source["modTime"];
 	        this.data = source["data"];
-	    }
-	}
-	export class UpdateInfo {
-	    checked: boolean;
-	    current: string;
-	    latest: string;
-	    newer: boolean;
-	    url: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new UpdateInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.checked = source["checked"];
-	        this.current = source["current"];
-	        this.latest = source["latest"];
-	        this.newer = source["newer"];
-	        this.url = source["url"];
 	    }
 	}
 	export class ViewResult {
@@ -617,6 +513,95 @@ export namespace sshconn {
 
 }
 
+export namespace store {
+	
+	export class Forward {
+	    type: string;
+	    bindAddr: string;
+	    bindPort: number;
+	    host: string;
+	    port: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Forward(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.bindAddr = source["bindAddr"];
+	        this.bindPort = source["bindPort"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	    }
+	}
+	export class HostEntry {
+	    host: string;
+	    port: number;
+	    login: string;
+	    encoding: string;
+	    pass: string;
+	    jump: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HostEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.login = source["login"];
+	        this.encoding = source["encoding"];
+	        this.pass = source["pass"];
+	        this.jump = source["jump"];
+	    }
+	}
+	export class ImportResult {
+	    added: number;
+	    skipped: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.added = source["added"];
+	        this.skipped = source["skipped"];
+	    }
+	}
+	export class SavedSession {
+	    id: string;
+	    name: string;
+	    group: string;
+	    host: string;
+	    port: number;
+	    login: string;
+	    encoding: string;
+	    pass: string;
+	    jump: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SavedSession(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.group = source["group"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.login = source["login"];
+	        this.encoding = source["encoding"];
+	        this.pass = source["pass"];
+	        this.jump = source["jump"];
+	    }
+	}
+
+}
+
 export namespace terminal {
 	
 	export class ConnectRequest {
@@ -666,6 +651,31 @@ export namespace transfer {
 	        this.size = source["size"];
 	        this.isDir = source["isDir"];
 	        this.modTime = source["modTime"];
+	    }
+	}
+
+}
+
+export namespace update {
+	
+	export class UpdateInfo {
+	    checked: boolean;
+	    current: string;
+	    latest: string;
+	    newer: boolean;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.checked = source["checked"];
+	        this.current = source["current"];
+	        this.latest = source["latest"];
+	        this.newer = source["newer"];
+	        this.url = source["url"];
 	    }
 	}
 

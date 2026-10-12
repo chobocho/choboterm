@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"choboterm/internal/serial"
+	"choboterm/internal/store"
 	"choboterm/internal/terminal"
 )
 
@@ -21,7 +22,7 @@ func (a *App) connectSerial(tabID int, req terminal.ConnectRequest) (string, err
 	}
 	enc := t.codec.Set(req.Encoding)
 	req.Port = c.Baud
-	_ = addHistory(HostEntry{Host: req.Host, Port: c.Baud, Encoding: enc}, nil)
+	_ = store.AddHistory(store.HostEntry{Host: req.Host, Port: c.Baud, Encoding: enc}, nil)
 	t.start(sess, "serial", req)
 	return "serial", nil
 }
@@ -42,6 +43,6 @@ func (a *App) SendBreak(tabID int) error {
 	if !ok {
 		return errors.New("시리얼 포트에서만 Break를 보낼 수 있습니다")
 	}
-	t.log.mark("Break 신호를 보냈습니다")
+	t.log.Mark("Break 신호를 보냈습니다")
 	return s.SendBreak()
 }

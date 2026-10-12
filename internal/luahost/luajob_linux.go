@@ -1,6 +1,6 @@
 //go:build linux
 
-package main
+package luahost
 
 import (
 	"bytes"
@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-// luaJob watches a script process's memory and kills it past the limit, as
+// Job watches a script process's memory and kills it past the limit, as
 // the Windows job object does. The process also dies with choboterm.
-type luaJob struct {
+type Job struct {
 	pid   int
 	start string // the process's start time, so a reused pid is never killed
 	limit uint64
@@ -25,13 +25,13 @@ type luaJob struct {
 	once  sync.Once
 }
 
-// hideWindow makes the script process end when choboterm does.
-func hideWindow(cmd *exec.Cmd) {
+// HideWindow makes the script process end when choboterm does.
+func HideWindow(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
 }
 
-func newLuaJob(pid int, limitBytes uint64) (*luaJob, error) {
-	j := &luaJob{pid: pid, start: procStart(pid), limit: limitBytes, done: make(chan struct{})}
+func NewJob(pid int, limitBytes uint64) (*Job, error) {
+	j := &Job{pid: pid, start: procStart(pid), limit: limitBytes, done: make(chan struct{})}
 	go j.watch()
 	return j, nil
 }
@@ -68,11 +68,11 @@ func procRSS(pid int) uint64 {
 	return 0
 }
 
-func (j *luaJob) alive() bool {
+func (j *Job) alive() bool {
 	return j.start != "" && procStart(j.pid) == j.start
 }
 
-func (j *luaJob) watch() {
+func (j *Job) watch() {
 	tick := time.NewTicker(20 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -92,17 +92,17 @@ func (j *luaJob) watch() {
 	}
 }
 
-// hitMemoryLimit reports whether the process was killed for its memory.
-func (j *luaJob) hitMemoryLimit() bool { return j.hit.Load() }
+// HitMemoryLimit reports whether the process was killed for its memory.
+func (j *Job) HitMemoryLimit() bool { return j.hit.Load() }
 
 // close stops watching and ends the process if it is still running.
 // memoryReport describes the process's memory use against the limit (for
 // diagnosing a script that didn't end).
-func (j *luaJob) memoryReport() string {
+func (j *Job) MemoryReport() string {
 	return fmt.Sprintf("rss %dMB, limit %dMB, hit %v", procRSS(j.pid)>>20, j.limit>>20, j.hit.Load())
 }
 
-func (j *luaJob) close() {
+func (j *Job) Close() {
 	j.once.Do(func() { close(j.done) })
 	if j.alive() {
 		_ = syscall.Kill(j.pid, syscall.SIGKILL)

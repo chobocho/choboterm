@@ -3,7 +3,7 @@
 // tab; on a server it is an extra session on that tab's connection.
 
 import {DockerAction, DockerList, ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {main, store} from '../wailsjs/go/models';
 import {BrowserOpenURL} from '../wailsjs/runtime/runtime';
 import {ask} from './dialog';
 import {isLinux} from './platform';
@@ -173,7 +173,7 @@ async function openPort() {
             }
             if (!same) {
                 const host = p.ip === '0.0.0.0' ? '127.0.0.1' : p.ip;
-                const st = await ForwardAdd(src.tab, main.Forward.createFrom({type: 'L', bindAddr: '', bindPort: p.port, host, port: p.port}));
+                const st = await ForwardAdd(src.tab, store.Forward.createFrom({type: 'L', bindAddr: '', bindPort: p.port, host, port: p.port}));
                 if (st.error) {
                     await ForwardRemove(src.tab, st.id);
                     error.textContent = `이 PC의 포트 ${p.port}를 열 수 없습니다: ${st.error}. 포트 포워딩 창(Ctrl+Shift+P)에서 다른 포트로 추가하세요.`;

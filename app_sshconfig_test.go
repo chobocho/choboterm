@@ -8,6 +8,7 @@ import (
 
 	"choboterm/internal/sshconn"
 	"choboterm/internal/sshconn/sshtest"
+	"choboterm/internal/store"
 	"choboterm/internal/terminal"
 )
 
@@ -38,9 +39,9 @@ func TestConnectSSHConfigAlias(t *testing.T) {
 	addr, key := startForwardingServer(t)
 	sshtest.UseKnownHosts(t, addr, key)
 	hist := filepath.Join(t.TempDir(), "hosts.json")
-	origHist := historyFile
-	historyFile = func() (string, error) { return hist, nil }
-	defer func() { historyFile = origHist }()
+	origHist := store.HistoryFile
+	store.HistoryFile = func() (string, error) { return hist, nil }
+	defer func() { store.HistoryFile = origHist }()
 	useTempSettings(t)
 
 	host, port, _ := strings.Cut(addr, ":")
@@ -62,7 +63,7 @@ func TestConnectSSHConfigAlias(t *testing.T) {
 	if tb := a.getTab(1); tb.host != "myserver" {
 		t.Errorf("tab host = %q", tb.host)
 	}
-	h := loadHistory()
+	h := store.LoadHistory()
 	if len(h) == 0 || h[0].Host != "myserver" || h[0].Login != "u" {
 		t.Errorf("history: %+v", h)
 	}

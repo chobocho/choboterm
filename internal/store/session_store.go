@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"crypto/rand"
@@ -40,10 +40,10 @@ type storedSession struct {
 	Jump     string `json:"jump,omitempty"`
 }
 
-// serverPrefs are the settings of one server (host:port), shared by every
+// ServerPrefs are the settings of one server (host:port), shared by every
 // session and history entry that connects there. They used to live in the
 // history, where they were lost when the host dropped out of the last 20.
-type serverPrefs struct {
+type ServerPrefs struct {
 	Host     string    `json:"host"`
 	Port     int       `json:"port"`
 	Forwards []Forward `json:"forwards,omitempty"` // SSH port forwarding rules
@@ -52,15 +52,15 @@ type serverPrefs struct {
 
 type sessionsDoc struct {
 	Sessions []storedSession `json:"sessions"`
-	Servers  []serverPrefs   `json:"servers"`
+	Servers  []ServerPrefs   `json:"servers"`
 }
 
 var sessionsMu sync.Mutex
 
-// sessionsFile sits next to hosts.json, so tests that move the history
+// SessionsFile sits next to hosts.json, so tests that move the history
 // move this file too.
-var sessionsFile = func() (string, error) {
-	p, err := historyFile()
+var SessionsFile = func() (string, error) {
+	p, err := HistoryFile()
 	if err != nil {
 		return "", err
 	}
@@ -69,7 +69,7 @@ var sessionsFile = func() (string, error) {
 
 func readSessions() sessionsDoc {
 	var doc sessionsDoc
-	p, err := sessionsFile()
+	p, err := SessionsFile()
 	if err != nil {
 		return doc
 	}
@@ -82,7 +82,7 @@ func readSessions() sessionsDoc {
 }
 
 func writeSessions(doc sessionsDoc) error {
-	p, err := sessionsFile()
+	p, err := SessionsFile()
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func writeSessions(doc sessionsDoc) error {
 		doc.Sessions = []storedSession{}
 	}
 	if doc.Servers == nil {
-		doc.Servers = []serverPrefs{}
+		doc.Servers = []ServerPrefs{}
 	}
 	data, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
@@ -148,7 +148,7 @@ func sortSessions(list []SavedSession) {
 	})
 }
 
-func loadSessions() []SavedSession {
+func LoadSessions() []SavedSession {
 	sessionsMu.Lock()
 	doc := readSessions()
 	sessionsMu.Unlock()
@@ -163,9 +163,9 @@ func loadSessions() []SavedSession {
 	return list
 }
 
-// saveSession adds s (empty ID) or replaces the session with its ID, and
+// SaveSession adds s (empty ID) or replaces the session with its ID, and
 // returns it as saved. The password is kept only if savePass is set.
-func saveSession(s SavedSession, savePass bool) (SavedSession, error) {
+func SaveSession(s SavedSession, savePass bool) (SavedSession, error) {
 	s.Host = strings.TrimSpace(s.Host)
 	s.Name = strings.TrimSpace(s.Name)
 	s.Group = strings.TrimSpace(strings.ReplaceAll(s.Group, "/", " "))
@@ -200,7 +200,7 @@ func saveSession(s SavedSession, savePass bool) (SavedSession, error) {
 	return s, err
 }
 
-func deleteSession(id string) error {
+func DeleteSession(id string) error {
 	return updateSessions(func(doc *sessionsDoc) error {
 		for i := range doc.Sessions {
 			if doc.Sessions[i].ID == id {
@@ -214,19 +214,19 @@ func deleteSession(id string) error {
 
 // ensureServerPrefs returns the prefs of host:port in doc, adding them
 // (from the old place, the history entry) if they are not there yet.
-func ensureServerPrefs(doc *sessionsDoc, host string, port int) *serverPrefs {
+func ensureServerPrefs(doc *sessionsDoc, host string, port int) *ServerPrefs {
 	for i := range doc.Servers {
 		if doc.Servers[i].Host == host && doc.Servers[i].Port == port {
 			return &doc.Servers[i]
 		}
 	}
-	h, _ := historyEntry(host, port)
-	doc.Servers = append(doc.Servers, serverPrefs{Host: host, Port: port, Forwards: h.Forwards, Theme: h.Theme})
+	h, _ := HistoryEntry(host, port)
+	doc.Servers = append(doc.Servers, ServerPrefs{Host: host, Port: port, Forwards: h.Forwards, Theme: h.Theme})
 	return &doc.Servers[len(doc.Servers)-1]
 }
 
-// prefsFor returns what is saved for the server host:port.
-func prefsFor(host string, port int) serverPrefs {
+// PrefsFor returns what is saved for the server host:port.
+func PrefsFor(host string, port int) ServerPrefs {
 	sessionsMu.Lock()
 	doc := readSessions()
 	sessionsMu.Unlock()
@@ -235,29 +235,14 @@ func prefsFor(host string, port int) serverPrefs {
 			return s
 		}
 	}
-	h, _ := historyEntry(host, port)
-	return serverPrefs{Host: host, Port: port, Forwards: h.Forwards, Theme: h.Theme}
+	h, _ := HistoryEntry(host, port)
+	return ServerPrefs{Host: host, Port: port, Forwards: h.Forwards, Theme: h.Theme}
 }
 
-// updatePrefs changes the prefs of the server host:port.
-func updatePrefs(host string, port int, change func(*serverPrefs)) error {
+// UpdatePrefs changes the prefs of the server host:port.
+func UpdatePrefs(host string, port int, change func(*ServerPrefs)) error {
 	return updateSessions(func(doc *sessionsDoc) error {
 		change(ensureServerPrefs(doc, host, port))
 		return nil
 	})
-}
-
-// GetSessions returns the saved sessions, sorted by group and name.
-func (a *App) GetSessions() []SavedSession {
-	return loadSessions()
-}
-
-// SaveSession adds or updates a saved session and returns it as saved.
-func (a *App) SaveSession(s SavedSession, savePass bool) (SavedSession, error) {
-	return saveSession(s, savePass)
-}
-
-// DeleteSession removes a saved session.
-func (a *App) DeleteSession(id string) error {
-	return deleteSession(id)
 }

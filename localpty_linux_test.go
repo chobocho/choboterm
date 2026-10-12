@@ -8,14 +8,15 @@ import (
 	"testing"
 
 	"choboterm/internal/localshell"
+	"choboterm/internal/store"
 	"choboterm/internal/terminal"
 )
 
 func TestConnectLocalShellLinux(t *testing.T) {
-	orig := historyFile
+	orig := store.HistoryFile
 	hist := filepath.Join(t.TempDir(), "hosts.json")
-	historyFile = func() (string, error) { return hist, nil }
-	defer func() { historyFile = orig }()
+	store.HistoryFile = func() (string, error) { return hist, nil }
+	defer func() { store.HistoryFile = orig }()
 	useTempSettings(t)
 
 	a := NewApp()
@@ -36,7 +37,7 @@ func TestConnectLocalShellLinux(t *testing.T) {
 	if msg != "연결이 종료되었습니다" {
 		t.Fatalf("closed: %q", msg)
 	}
-	if h := loadHistory(); len(h) != 1 || h[0].Host != "bash" || h[0].Port != 0 {
+	if h := store.LoadHistory(); len(h) != 1 || h[0].Host != "bash" || h[0].Port != 0 {
 		t.Fatalf("history %+v", h)
 	}
 

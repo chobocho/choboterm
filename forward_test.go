@@ -16,6 +16,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"choboterm/internal/sshconn/sshtest"
+	"choboterm/internal/store"
 	"choboterm/internal/terminal"
 )
 
@@ -250,9 +251,9 @@ func TestPortForwarding(t *testing.T) {
 	addr, key := startForwardingServer(t)
 	sshtest.UseKnownHosts(t, addr, key)
 	hist := filepath.Join(t.TempDir(), "hosts.json")
-	origHist := historyFile
-	historyFile = func() (string, error) { return hist, nil }
-	defer func() { historyFile = origHist }()
+	origHist := store.HistoryFile
+	store.HistoryFile = func() (string, error) { return hist, nil }
+	defer func() { store.HistoryFile = origHist }()
 	useTempSettings(t)
 
 	echo := startEcho(t)
@@ -271,7 +272,7 @@ func TestPortForwarding(t *testing.T) {
 	defer a.CloseTab(1)
 
 	lPort, dPort, rPort := freePort(t), freePort(t), freePort(t)
-	for _, f := range []Forward{
+	for _, f := range []store.Forward{
 		{Type: "L", BindPort: lPort, Host: echoHost, Port: echoPort},
 		{Type: "D", BindPort: dPort},
 		{Type: "R", BindPort: rPort, Host: echoHost, Port: echoPort},
@@ -285,29 +286,29 @@ func TestPortForwarding(t *testing.T) {
 	dialThrough(t, rPort, "remote") // the server listens there and connects back through us
 
 	// The same listening address twice is refused.
-	if _, err := a.ForwardAdd(1, Forward{Type: "L", BindPort: lPort, Host: "x", Port: 1}); err == nil {
+	if _, err := a.ForwardAdd(1, store.Forward{Type: "L", BindPort: lPort, Host: "x", Port: 1}); err == nil {
 		t.Fatal("duplicate rule accepted")
 	}
 	// A port in use is kept with its error, so the user sees why.
 	busy, _ := net.Listen("tcp", "127.0.0.1:0")
 	defer busy.Close()
 	busyPort := busy.Addr().(*net.TCPAddr).Port
-	st, err := a.ForwardAdd(1, Forward{Type: "L", BindPort: busyPort, Host: echoHost, Port: echoPort})
+	st, err := a.ForwardAdd(1, store.Forward{Type: "L", BindPort: busyPort, Host: echoHost, Port: echoPort})
 	if err != nil || st.Error == "" {
 		t.Fatalf("busy port: %+v, %v", st, err)
 	}
-	if _, err := a.ForwardAdd(1, Forward{Type: "L", BindPort: 0, Host: "x", Port: 1}); err == nil {
+	if _, err := a.ForwardAdd(1, store.Forward{Type: "L", BindPort: 0, Host: "x", Port: 1}); err == nil {
 		t.Fatal("bad port accepted")
 	}
 
 	list, _ := a.ForwardList(1)
-	if len(list) != 4 || len(historyForwards(host, port)) != 4 {
-		t.Fatalf("list %+v, saved %+v", list, historyForwards(host, port))
+	if len(list) != 4 || len(store.HistoryForwards(host, port)) != 4 {
+		t.Fatalf("list %+v, saved %+v", list, store.HistoryForwards(host, port))
 	}
 	if err := a.ForwardRemove(1, st.ID); err != nil {
 		t.Fatal(err)
 	}
-	if got := historyForwards(host, port); len(got) != 3 {
+	if got := store.HistoryForwards(host, port); len(got) != 3 {
 		t.Fatalf("saved after remove: %+v", got)
 	}
 
@@ -327,8 +328,8 @@ func TestPortForwarding(t *testing.T) {
 		t.Fatalf("restored %+v", list)
 	}
 	// Reconnecting must not lose the saved rules.
-	if e := loadHistory(); len(e) != 1 || !strings.Contains(e[0].Host, "127.0.0.1") || len(historyForwards(e[0].Host, e[0].Port)) != 3 {
-		t.Fatalf("history %+v, rules %+v", e, historyForwards(host, port))
+	if e := store.LoadHistory(); len(e) != 1 || !strings.Contains(e[0].Host, "127.0.0.1") || len(store.HistoryForwards(e[0].Host, e[0].Port)) != 3 {
+		t.Fatalf("history %+v, rules %+v", e, store.HistoryForwards(host, port))
 	}
 }
 
@@ -336,7 +337,7 @@ func TestForwardOnlyOverSSH(t *testing.T) {
 	a := NewApp()
 	tb := a.getTab(1)
 	tb.sess = newPipeSession()
-	if _, err := a.ForwardAdd(1, Forward{Type: "D", BindPort: 1080}); err == nil {
+	if _, err := a.ForwardAdd(1, store.Forward{Type: "D", BindPort: 1080}); err == nil {
 		t.Fatal("forwarding allowed without SSH")
 	}
 }
@@ -348,9 +349,9 @@ func TestForwardOneTabPerHost(t *testing.T) {
 	addr, key := startForwardingServer(t)
 	sshtest.UseKnownHosts(t, addr, key)
 	hist := filepath.Join(t.TempDir(), "hosts.json")
-	origHist := historyFile
-	historyFile = func() (string, error) { return hist, nil }
-	defer func() { historyFile = origHist }()
+	origHist := store.HistoryFile
+	store.HistoryFile = func() (string, error) { return hist, nil }
+	defer func() { store.HistoryFile = origHist }()
 	useTempSettings(t)
 
 	echo := startEcho(t)
@@ -370,7 +371,7 @@ func TestForwardOneTabPerHost(t *testing.T) {
 	defer a.CloseTab(2)
 
 	lPort := freePort(t)
-	if st, err := a.ForwardAdd(1, Forward{Type: "L", BindPort: lPort, Host: echoHost, Port: echoPort}); err != nil || st.Error != "" || st.Standby {
+	if st, err := a.ForwardAdd(1, store.Forward{Type: "L", BindPort: lPort, Host: echoHost, Port: echoPort}); err != nil || st.Error != "" || st.Standby {
 		t.Fatalf("add: %+v, %v", st, err)
 	}
 	state := func(id int) string {

@@ -23,7 +23,9 @@ import (
 	"choboterm/internal/localshell"
 	"choboterm/internal/osutil"
 	"choboterm/internal/serial"
+	"choboterm/internal/sessionlog"
 	"choboterm/internal/sshconn"
+	"choboterm/internal/store"
 	"choboterm/internal/telnet"
 	"choboterm/internal/terminal"
 	"choboterm/internal/transfer"
@@ -80,7 +82,7 @@ type tab struct {
 	files fileState
 	zm    zmodemState
 	fwd   forwards
-	log   sessionLog
+	log   sessionlog.Log
 	// The Lua script running in the tab, if any (see luarun.go).
 	script atomic.Pointer[scriptRun]
 	dead   error  // why keepalive closed sess (guarded by mu)
@@ -190,7 +192,7 @@ func (a *App) shutdown(ctx context.Context) {
 	a.mu.Unlock()
 	for _, t := range tabs {
 		t.disconnect()
-		t.log.stop()
+		t.log.Stop()
 	}
 }
 
@@ -338,7 +340,7 @@ func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 		t.files.fs, t.files.proto = fs, "FTP"
 		t.files.mu.Unlock()
 		enc := t.codec.Set(req.Encoding)
-		_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, nil)
+		_ = store.AddHistory(store.HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, nil)
 		return proto, nil
 	}
 
@@ -369,7 +371,7 @@ func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 	if proto == "telnet" {
 		savePass = &req.Pass
 	}
-	_ = addHistory(HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc, Jump: req.Jump}, savePass)
+	_ = store.AddHistory(store.HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc, Jump: req.Jump}, savePass)
 	t.start(sess, proto, req)
 	return proto, nil
 }
@@ -385,7 +387,7 @@ func (a *App) connectLocal(tabID int, req terminal.ConnectRequest, cmdline strin
 	}
 	t.codec.Set(codec.UTF8)
 	req.Port = 0
-	_ = addHistory(HostEntry{Host: req.Host, Encoding: codec.UTF8}, nil)
+	_ = store.AddHistory(store.HostEntry{Host: req.Host, Encoding: codec.UTF8}, nil)
 	t.start(sess, "local", req)
 	return "local", nil
 }
@@ -405,8 +407,8 @@ func (t *tab) start(sess terminal.Session, proto string, req terminal.ConnectReq
 	if s, ok := sess.(*sshconn.Session); ok {
 		t.restoreForwards(s, req.Host, req.Port)
 	}
-	if t.log.active() != "" {
-		t.log.mark(fmt.Sprintf("접속: %s %s:%d", proto, req.Host, req.Port))
+	if t.log.Active() != "" {
+		t.log.Mark(fmt.Sprintf("접속: %s %s:%d", proto, req.Host, req.Port))
 	} else if config.Load().LogAuto {
 		_, _ = t.startLog() // a failure must not fail the connection
 	}
@@ -489,7 +491,7 @@ func (t *tab) pump(sess terminal.Session) {
 			} else {
 				dbg.Printf("tab %d emit %d bytes", t.id, len(pending))
 			}
-			t.log.write(pending)
+			t.log.Write(pending)
 			if s := t.script.Load(); s != nil {
 				s.feed(pending)
 			}
@@ -557,7 +559,7 @@ func (t *tab) pump(sess terminal.Session) {
 						msg = "연결이 끊어졌습니다: " + err.Error()
 					}
 					dbg.Printf("tab %d closed: %q lost=%v", t.id, msg, lost)
-					t.log.mark(msg)
+					t.log.Mark(msg)
 					t.emit("term:closed", msg, lost)
 				}
 				return
@@ -640,7 +642,7 @@ func (a *App) CloseTab(tabID int) {
 	a.mu.Unlock()
 	if t != nil {
 		t.disconnect()
-		t.log.stop()
+		t.log.Stop()
 	}
 }
 
@@ -653,14 +655,14 @@ func (t *tab) disconnect() {
 	t.sess = nil
 	t.mu.Unlock()
 	if sess != nil {
-		t.log.mark("연결을 끊었습니다")
+		t.log.Mark("연결을 끊었습니다")
 		_ = sess.Close()
 	}
 }
 
 // GetHistory returns recently used hosts for the Host combo box.
-func (a *App) GetHistory() []HostEntry {
-	return loadHistory()
+func (a *App) GetHistory() []store.HostEntry {
+	return store.LoadHistory()
 }
 
 // hostKeyConfirmer returns the host key question for connections of a tab.

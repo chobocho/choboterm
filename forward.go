@@ -12,65 +12,16 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"choboterm/internal/sshconn"
+	"choboterm/internal/store"
 )
-
-// Forward is one SSH port forwarding rule.
-//
-//	L: this PC listens on Bind, and connections go from the server to Host:Port (ssh -L).
-//	R: the server listens on Bind, and connections go from this PC to Host:Port (ssh -R).
-//	D: this PC listens on Bind as a SOCKS5 proxy that connects from the server (ssh -D).
-type Forward struct {
-	Type     string `json:"type"`
-	BindAddr string `json:"bindAddr"`
-	BindPort int    `json:"bindPort"`
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-}
 
 // ForwardStatus is a rule of a connected tab and how it is doing.
 type ForwardStatus struct {
-	Forward
+	store.Forward
 	ID      int    `json:"id"`
 	Error   string `json:"error"`   // why it isn't listening, or ""
 	Conns   int    `json:"conns"`   // open connections through it
 	Standby bool   `json:"standby"` // another tab to the same server listens for it
-}
-
-// normalize checks f and fills in default bind addresses.
-func (f Forward) normalize() (Forward, error) {
-	switch f.Type {
-	case "L", "D":
-		if f.BindAddr == "" {
-			f.BindAddr = "127.0.0.1"
-		}
-	case "R":
-		if f.BindAddr == "" {
-			f.BindAddr = "localhost"
-		}
-	default:
-		return f, fmt.Errorf("알 수 없는 포워딩 종류: %q", f.Type)
-	}
-	if f.BindPort <= 0 || f.BindPort > 65535 {
-		return f, errors.New("수신 포트가 올바르지 않습니다")
-	}
-	if f.Type == "D" {
-		f.Host, f.Port = "", 0
-		return f, nil
-	}
-	if f.Host == "" {
-		return f, errors.New("대상 호스트를 입력하세요")
-	}
-	if f.Port <= 0 || f.Port > 65535 {
-		return f, errors.New("대상 포트가 올바르지 않습니다")
-	}
-	return f, nil
-}
-
-func (f Forward) bind() string   { return net.JoinHostPort(f.BindAddr, strconv.Itoa(f.BindPort)) }
-func (f Forward) target() string { return net.JoinHostPort(f.Host, strconv.Itoa(f.Port)) }
-
-func (f Forward) same(o Forward) bool {
-	return f.Type == o.Type && f.BindAddr == o.BindAddr && f.BindPort == o.BindPort
 }
 
 // forwardRule is a running (or failed) rule. Of the tabs connected to the
@@ -78,7 +29,7 @@ func (f Forward) same(o Forward) bool {
 // them takes it over when that tab's connection ends.
 type forwardRule struct {
 	id  int
-	f   Forward
+	f   store.Forward
 	ln  net.Listener // nil if it failed to start or is on standby
 	err string
 
@@ -137,7 +88,7 @@ type forwards struct {
 // startForward adds f to the tab's rules and runs it over client, or keeps
 // it on standby. A rule that can't listen (e.g. the port is in use) is still
 // kept, with its error, so the user sees why.
-func (t *tab) startForward(client *ssh.Client, f Forward, standby bool) *forwardRule {
+func (t *tab) startForward(client *ssh.Client, f store.Forward, standby bool) *forwardRule {
 	t.fwd.mu.Lock()
 	t.fwd.nextID++
 	r := &forwardRule{id: t.fwd.nextID, f: f, conns: map[net.Conn]struct{}{}, standby: standby}
@@ -156,9 +107,9 @@ func (t *tab) listenForward(client *ssh.Client, r *forwardRule) {
 		err error
 	)
 	if r.f.Type == "R" {
-		ln, err = client.Listen("tcp", r.f.bind())
+		ln, err = client.Listen("tcp", r.f.Bind())
 	} else {
-		ln, err = net.Listen("tcp", r.f.bind())
+		ln, err = net.Listen("tcp", r.f.Bind())
 	}
 	r.mu.Lock()
 	r.standby = false
@@ -193,9 +144,9 @@ func (t *tab) acceptForward(client *ssh.Client, r *forwardRule, ln net.Listener)
 			)
 			switch r.f.Type {
 			case "L":
-				peer, err = client.Dial("tcp", r.f.target())
+				peer, err = client.Dial("tcp", r.f.Target())
 			case "R":
-				peer, err = net.Dial("tcp", r.f.target())
+				peer, err = net.Dial("tcp", r.f.Target())
 			case "D":
 				peer, err = socks5Connect(c, func(addr string) (net.Conn, error) {
 					return client.Dial("tcp", addr)
@@ -235,7 +186,7 @@ func (t *tab) stopForwards() {
 	rules := t.fwd.rules
 	t.fwd.rules = nil
 	t.fwd.mu.Unlock()
-	var handOver []Forward
+	var handOver []store.Forward
 	for _, r := range rules {
 		if r.running() {
 			handOver = append(handOver, r.f)
@@ -249,7 +200,7 @@ func (t *tab) stopForwards() {
 	next:
 		for _, o := range t.app.sameServerTabs(t) {
 			for _, r := range o.tabRules() {
-				if c := o.sshClient(); c != nil && r.f.same(f) && r.status().Standby {
+				if c := o.sshClient(); c != nil && r.f.Same(f) && r.status().Standby {
 					o.listenForward(c, r)
 					o.emit("fwd:changed")
 					break next
@@ -300,10 +251,10 @@ func (a *App) sameServerTabs(t *tab) []*tab {
 }
 
 // runningElsewhere tells whether another tab to t's server runs a rule like f.
-func (a *App) runningElsewhere(t *tab, f Forward) bool {
+func (a *App) runningElsewhere(t *tab, f store.Forward) bool {
 	for _, o := range a.sameServerTabs(t) {
 		for _, r := range o.tabRules() {
-			if r.f.same(f) && r.running() {
+			if r.f.Same(f) && r.running() {
 				return true
 			}
 		}
@@ -322,10 +273,10 @@ func (t *tab) forwardList() []ForwardStatus {
 }
 
 // forwardConfigs returns the rules as saved in the host history.
-func (t *tab) forwardConfigs() []Forward {
+func (t *tab) forwardConfigs() []store.Forward {
 	t.fwd.mu.Lock()
 	defer t.fwd.mu.Unlock()
-	list := make([]Forward, 0, len(t.fwd.rules))
+	list := make([]store.Forward, 0, len(t.fwd.rules))
 	for _, r := range t.fwd.rules {
 		list = append(list, r.f)
 	}
@@ -427,19 +378,19 @@ func (a *App) ForwardList(tabID int) ([]ForwardStatus, error) {
 
 // ForwardAdd starts a rule on a tab's SSH connection and remembers it for the
 // host, so it starts again on the next connection.
-func (a *App) ForwardAdd(tabID int, f Forward) (ForwardStatus, error) {
+func (a *App) ForwardAdd(tabID int, f store.Forward) (ForwardStatus, error) {
 	t, client, err := a.sshTab(tabID)
 	if err != nil {
 		return ForwardStatus{}, err
 	}
-	if f, err = f.normalize(); err != nil {
+	if f, err = f.Normalize(); err != nil {
 		return ForwardStatus{}, err
 	}
 	a.fwdMu.Lock()
 	defer a.fwdMu.Unlock()
 	for _, o := range t.forwardConfigs() {
-		if o.same(f) {
-			return ForwardStatus{}, fmt.Errorf("이미 같은 수신 주소(%s)의 규칙이 있습니다", f.bind())
+		if o.Same(f) {
+			return ForwardStatus{}, fmt.Errorf("이미 같은 수신 주소(%s)의 규칙이 있습니다", f.Bind())
 		}
 	}
 	r := t.startForward(client, f, false)
@@ -448,7 +399,7 @@ func (a *App) ForwardAdd(tabID int, f Forward) (ForwardStatus, error) {
 	for _, o := range a.sameServerTabs(t) {
 		dup := false
 		for _, c := range o.forwardConfigs() {
-			dup = dup || c.same(f)
+			dup = dup || c.Same(f)
 		}
 		if !dup {
 			o.startForward(nil, f, true)
@@ -471,7 +422,7 @@ func (a *App) ForwardRemove(tabID, id int) error {
 		t.saveForwards()
 		// It is gone for the server: also from the other tabs to it.
 		for _, o := range a.sameServerTabs(t) {
-			if o.removeForward(func(r *forwardRule) bool { return r.f.same(removed.f) }) != nil {
+			if o.removeForward(func(r *forwardRule) bool { return r.f.Same(removed.f) }) != nil {
 				o.emit("fwd:changed")
 			}
 		}
@@ -501,7 +452,7 @@ func (t *tab) saveForwards() {
 	t.mu.Lock()
 	host, port := t.host, t.port
 	t.mu.Unlock()
-	_ = setHistoryForwards(host, port, t.forwardConfigs())
+	_ = store.SetHistoryForwards(host, port, t.forwardConfigs())
 }
 
 // restoreForwards starts the rules saved for the host of a new SSH
@@ -509,8 +460,8 @@ func (t *tab) saveForwards() {
 func (t *tab) restoreForwards(sess *sshconn.Session, host string, port int) {
 	t.app.fwdMu.Lock()
 	defer t.app.fwdMu.Unlock()
-	for _, f := range historyForwards(host, port) {
-		if f, err := f.normalize(); err == nil {
+	for _, f := range store.HistoryForwards(host, port) {
+		if f, err := f.Normalize(); err == nil {
 			t.startForward(sess.Client, f, t.app.runningElsewhere(t, f))
 		}
 	}

@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"choboterm/internal/store"
 	"choboterm/internal/terminal"
 )
 
@@ -113,9 +114,9 @@ func TestDockerLive(t *testing.T) {
 		t.Fatal(err)
 	}
 	hist := filepath.Join(home, "hosts.json")
-	origHist := historyFile
-	historyFile = func() (string, error) { return hist, nil }
-	defer func() { historyFile = origHist }()
+	origHist := store.HistoryFile
+	store.HistoryFile = func() (string, error) { return hist, nil }
+	defer func() { store.HistoryFile = origHist }()
 	useTempSettings(t)
 
 	a := NewApp()
@@ -212,7 +213,7 @@ func TestDockerLive(t *testing.T) {
 
 	// "Open port": a local forward to the published port reaches nginx.
 	lPort := freePort(t)
-	if st, err := a.ForwardAdd(1, Forward{Type: "L", BindPort: lPort, Host: "127.0.0.1", Port: 8080}); err != nil || st.Error != "" {
+	if st, err := a.ForwardAdd(1, store.Forward{Type: "L", BindPort: lPort, Host: "127.0.0.1", Port: 8080}); err != nil || st.Error != "" {
 		t.Fatalf("forward: %+v %v", st, err)
 	}
 	var page string

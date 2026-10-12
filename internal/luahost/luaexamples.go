@@ -1,7 +1,7 @@
-package main
+package luahost
 
-// luaExamples are written to a new scripts folder, as a start.
-var luaExamples = map[string]string{
+// Examples are written to a new scripts folder, as a start.
+var Examples = map[string]string{
 	"예제_자동로그인.lua": `-- 자동 로그인 예제 (Telnet 장비 등)
 -- expect(패턴, 초): 출력에 패턴이 나올 때까지 기다림. 시간이 지나면 nil
 -- send(문자열): 키보드로 입력한 것처럼 보냄 ("\r" = Enter)

@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package store
 
 import (
 	"errors"
@@ -10,8 +10,8 @@ import (
 
 const puttySessionsKey = `Software\SimonTatham\PuTTY\Sessions`
 
-// puttySessions reads the sessions PuTTY saved in the registry.
-func puttySessions() ([]SavedSession, error) {
+// PuttySessions reads the sessions PuTTY saved in the registry.
+func PuttySessions() ([]SavedSession, error) {
 	root, err := registry.OpenKey(registry.CURRENT_USER, puttySessionsKey, registry.READ)
 	if errors.Is(err, registry.ErrNotExist) {
 		return nil, errors.New("PuTTY에 저장된 세션이 없습니다")

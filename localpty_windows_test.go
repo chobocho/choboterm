@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"choboterm/internal/localshell"
+	"choboterm/internal/store"
 	"choboterm/internal/terminal"
 )
 
@@ -79,10 +80,10 @@ func TestPtyInteractiveAndClose(t *testing.T) {
 }
 
 func TestConnectLocalShell(t *testing.T) {
-	orig := historyFile
+	orig := store.HistoryFile
 	hist := filepath.Join(t.TempDir(), "hosts.json")
-	historyFile = func() (string, error) { return hist, nil }
-	defer func() { historyFile = orig }()
+	store.HistoryFile = func() (string, error) { return hist, nil }
+	defer func() { store.HistoryFile = orig }()
 	useTempSettings(t)
 
 	var (
@@ -129,7 +130,7 @@ func TestConnectLocalShell(t *testing.T) {
 	case <-time.After(15 * time.Second):
 		t.Fatal("no term:closed after exit")
 	}
-	if h := loadHistory(); len(h) != 1 || h[0].Host != "cmd" || h[0].Port != 0 {
+	if h := store.LoadHistory(); len(h) != 1 || h[0].Host != "cmd" || h[0].Port != 0 {
 		t.Fatalf("history %+v", h)
 	}
 }

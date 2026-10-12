@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"encoding/base64"
@@ -35,12 +35,12 @@ type storedEntry struct {
 	Theme    string    `json:"theme,omitempty"`
 }
 
-const maxHistory = 20
+const MaxHistory = 20
 
 var historyMu sync.Mutex
 
-// historyFile is the hosts file path; tests may replace it.
-var historyFile = func() (string, error) {
+// HistoryFile is the hosts file path; tests may replace it.
+var HistoryFile = func() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -48,7 +48,7 @@ var historyFile = func() (string, error) {
 	return filepath.Join(dir, "choboterm", "hosts.json"), nil
 }
 
-func loadHistory() []HostEntry {
+func LoadHistory() []HostEntry {
 	historyMu.Lock()
 	defer historyMu.Unlock()
 	stored := readHistory()
@@ -67,7 +67,7 @@ func loadHistory() []HostEntry {
 }
 
 func readHistory() []storedEntry {
-	p, err := historyFile()
+	p, err := HistoryFile()
 	if err != nil {
 		return nil
 	}
@@ -108,10 +108,10 @@ func decryptPass(passEnc string) string {
 	return string(plain)
 }
 
-// addHistory moves e to the top of the list (most recent first).
+// AddHistory moves e to the top of the list (most recent first).
 // If pass is non-nil the saved password is replaced (an empty string removes it);
 // if nil, any password already saved for this host is kept.
-func addHistory(e HostEntry, pass *string) error {
+func AddHistory(e HostEntry, pass *string) error {
 	historyMu.Lock()
 	defer historyMu.Unlock()
 
@@ -134,15 +134,15 @@ func addHistory(e HostEntry, pass *string) error {
 			list = append(list, h)
 		}
 	}
-	if len(list) > maxHistory {
-		list = list[:maxHistory]
+	if len(list) > MaxHistory {
+		list = list[:MaxHistory]
 	}
 
 	return writeHistory(list)
 }
 
 func writeHistory(list []storedEntry) error {
-	p, err := historyFile()
+	p, err := HistoryFile()
 	if err != nil {
 		return err
 	}
@@ -156,8 +156,8 @@ func writeHistory(list []storedEntry) error {
 	return os.WriteFile(p, data, 0o600)
 }
 
-// historyEntry returns what is saved for host:port.
-func historyEntry(host string, port int) (storedEntry, bool) {
+// HistoryEntry returns what is saved for host:port.
+func HistoryEntry(host string, port int) (storedEntry, bool) {
 	historyMu.Lock()
 	defer historyMu.Unlock()
 	for _, h := range readHistory() {
@@ -168,44 +168,12 @@ func historyEntry(host string, port int) (storedEntry, bool) {
 	return storedEntry{}, false
 }
 
-// historyForwards returns the port forwarding rules saved for host:port.
-func historyForwards(host string, port int) []Forward {
-	return prefsFor(host, port).Forwards
+// HistoryForwards returns the port forwarding rules saved for host:port.
+func HistoryForwards(host string, port int) []Forward {
+	return PrefsFor(host, port).Forwards
 }
 
-// setHistoryForwards saves the port forwarding rules of host:port.
-func setHistoryForwards(host string, port int, list []Forward) error {
-	return updatePrefs(host, port, func(p *serverPrefs) { p.Forwards = list })
-}
-
-// TabTheme returns the color theme saved for the server of a tab's
-// connection ("" = the theme in Settings).
-func (a *App) TabTheme(tabID int) string {
-	host, port, ok := a.tabTarget(tabID)
-	if !ok {
-		return ""
-	}
-	return prefsFor(host, port).Theme
-}
-
-// SetTabTheme saves a color theme for the server of a tab's connection
-// ("" = back to the theme in Settings). It reports false if the tab has
-// never been connected, so there is no server to save it for.
-func (a *App) SetTabTheme(tabID int, theme string) (bool, error) {
-	host, port, ok := a.tabTarget(tabID)
-	if !ok {
-		return false, nil
-	}
-	return true, updatePrefs(host, port, func(p *serverPrefs) { p.Theme = theme })
-}
-
-// tabTarget is where a tab's terminal session is (or was last) connected.
-func (a *App) tabTarget(tabID int) (string, int, bool) {
-	t := a.findTab(tabID)
-	if t == nil {
-		return "", 0, false
-	}
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.host, t.port, t.host != ""
+// SetHistoryForwards saves the port forwarding rules of host:port.
+func SetHistoryForwards(host string, port int, list []Forward) error {
+	return UpdatePrefs(host, port, func(p *ServerPrefs) { p.Forwards = list })
 }

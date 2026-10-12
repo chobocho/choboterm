@@ -1,4 +1,4 @@
-package main
+package update
 
 import (
 	"context"
@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"choboterm/internal/config"
-	"choboterm/internal/dbg"
 	"choboterm/internal/version"
 )
 
@@ -28,58 +26,17 @@ type UpdateInfo struct {
 	URL     string `json:"url"`     // the release page
 }
 
-// latestReleaseURL is the GitHub API for the newest release; tests may replace it.
-var latestReleaseURL = "https://api.github.com/repos/chobocho/choboterm/releases/latest"
+// LatestReleaseURL is the GitHub API for the newest release; tests may replace it.
+var LatestReleaseURL = "https://api.github.com/repos/chobocho/choboterm/releases/latest"
 
-// updateEvery is how often the check at start asks GitHub.
-const updateEvery = 24 * time.Hour
+// Every is how often the check at start asks GitHub.
+const Every = 24 * time.Hour
 
-// CheckUpdate looks for a newer release. manual is the "지금 확인" button:
-// it always asks and always reports. Otherwise (at start) it asks only when
-// the check is turned on and hasn't run today, and reports a new version once.
-func (a *App) CheckUpdate(manual bool) (UpdateInfo, error) {
-	info := UpdateInfo{Current: version.Version}
-	s := config.Load()
-	if !manual {
-		if !s.UpdateCheck {
-			return info, nil
-		}
-		if s.Update != nil && time.Since(s.Update.Last) < updateEvery {
-			return info, nil
-		}
-	}
-	latest, url, err := fetchLatestRelease()
-	_ = config.Update(func(cur *config.Settings) {
-		if cur.Update == nil {
-			cur.Update = &config.UpdateState{}
-		}
-		cur.Update.Last = time.Now()
-	})
-	if err != nil {
-		dbg.Printf("update check: %v", err)
-		if manual {
-			return info, fmt.Errorf("새 버전을 확인하지 못했습니다: %w", err)
-		}
-		return info, nil // a check at start fails quietly (offline, proxy...)
-	}
-	info.Checked, info.Latest, info.URL = true, latest, url
-	info.Newer = newerVersion(latest, version.Version)
-	dbg.Printf("update check: current %s, latest %s, newer %v", version.Version, latest, info.Newer)
-	if info.Newer && !manual {
-		if s.Update != nil && s.Update.Notified == latest {
-			info.Newer = false // already told about this one
-		} else {
-			_ = config.Update(func(cur *config.Settings) { cur.Update.Notified = latest })
-		}
-	}
-	return info, nil
-}
-
-// fetchLatestRelease returns the newest release's version ("0.2.14") and page.
-func fetchLatestRelease() (latest, page string, err error) {
+// LatestRelease returns the newest release's version ("0.2.14") and page.
+func LatestRelease() (latest, page string, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, latestReleaseURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, LatestReleaseURL, nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -121,8 +78,8 @@ func parseVersion(v string) []int {
 	return nums
 }
 
-// newerVersion reports whether version a is newer than b ("0.2.10" > "0.2.9").
-func newerVersion(a, b string) bool {
+// Newer reports whether version a is newer than b ("0.2.10" > "0.2.9").
+func Newer(a, b string) bool {
 	x, y := parseVersion(a), parseVersion(b)
 	if x == nil || y == nil {
 		return false

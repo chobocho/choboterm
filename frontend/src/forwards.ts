@@ -2,7 +2,7 @@
 // Go side and start again on the next connection.
 
 import {ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/main/App';
-import {main, terminal} from '../wailsjs/go/models';
+import {main, store, terminal} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -48,7 +48,7 @@ function sshAddr(a: string) {
 }
 
 /** The rule as an ssh option, e.g. "-L 127.0.0.1:8888:localhost:8888". */
-function sshOption(f: main.Forward) {
+function sshOption(f: store.Forward) {
     const bind = `${sshAddr(f.bindAddr)}:${f.bindPort}`;
     return f.type === 'D' ? `-D ${bind}` : `-${f.type} ${bind}:${sshAddr(f.host)}:${f.port}`;
 }
@@ -124,7 +124,7 @@ function paintType() {
 async function add() {
     error.textContent = '';
     try {
-        const st = await ForwardAdd(tabId, main.Forward.createFrom({
+        const st = await ForwardAdd(tabId, store.Forward.createFrom({
             type: type.value,
             bindAddr: bindAddr.value.trim(),
             bindPort: Number(bindPort.value),

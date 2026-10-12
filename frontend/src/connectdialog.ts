@@ -3,7 +3,7 @@
 
 import {openSaveSession} from './sessions';
 import {GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts, LookupSSH} from '../wailsjs/go/main/App';
-import {localshell, main, serial, sshconn, terminal} from '../wailsjs/go/models';
+import {localshell, serial, sshconn, store, terminal} from '../wailsjs/go/models';
 import {isLinux} from './platform';
 import {active, DialogState, focusActive, Tab, tabs} from './tabstate';
 import {toast} from './notify';
@@ -49,15 +49,15 @@ const hostDrop = $<HTMLButtonElement>('hostDrop');
 const hostList = $<HTMLUListElement>('hostList');
 const hostTip = $<HTMLDivElement>('hostTip');
 
-type ListEntry = Pick<main.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'> & {
+type ListEntry = Pick<store.HostEntry, 'host' | 'port' | 'login' | 'encoding' | 'pass'> & {
     jump?: string;
     fromConfig?: boolean;
     label?: string;
-    session?: main.SavedSession;
+    session?: store.SavedSession;
 };
 
-let history: main.HostEntry[] = [];
-let sessions: main.SavedSession[] = [];
+let history: store.HostEntry[] = [];
+let sessions: store.SavedSession[] = [];
 let configHosts: sshconn.SSHConfigHost[] = [];
 let localShells: localshell.LocalShell[] = [];
 let serialPorts: serial.SerialPort[] = [];
@@ -66,7 +66,7 @@ let entries: ListEntry[] = []; // saved sessions, history, then ~/.ssh/config na
 let visible: ListEntry[] = []; // entries matching what is typed in the Host field
 let filter = '';
 let activeIndex = -1;
-let chosen: main.SavedSession | undefined; // saved session the fields came from
+let chosen: store.SavedSession | undefined; // saved session the fields came from
 let resolved = '';
 
 /** Marks whether the Port field now holds a serial port's speed, without changing it. */
@@ -112,7 +112,7 @@ function updateProto() {
 async function loadEntries() {
     [history, sessions, configHosts, localShells, serialPorts] = await Promise.all([
         GetHistory(), GetSessions(), GetSSHConfigHosts(), GetLocalShells(), GetSerialPorts(),
-    ]).then(r => r.map(x => x ?? []) as [main.HostEntry[], main.SavedSession[], sshconn.SSHConfigHost[], localshell.LocalShell[], serial.SerialPort[]]);
+    ]).then(r => r.map(x => x ?? []) as [store.HostEntry[], store.SavedSession[], sshconn.SSHConfigHost[], localshell.LocalShell[], serial.SerialPort[]]);
     const seen = new Set(history.map(h => h.host));
     const saved = new Set(sessions.map(s => `${s.host}:${s.port}`));
     entries = [...sessions.map(s => ({
@@ -535,7 +535,7 @@ form.addEventListener('keydown', ev => {
  * others in new tabs. Each goes through its tab's Connect dialog, which stays
  * open with the error if the connection fails.
  */
-export async function openSessions(list: main.SavedSession[]) {
+export async function openSessions(list: store.SavedSession[]) {
     for (const s of list) {
         await openDialog(list.length > 1 && s !== list[0] ? null : undefined);
         const t = active;

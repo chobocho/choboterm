@@ -22,6 +22,7 @@ import (
 
 	"choboterm/internal/dbg"
 	"choboterm/internal/i18n"
+	"choboterm/internal/luahost"
 	"choboterm/internal/osutil"
 	"choboterm/internal/transfer"
 )
@@ -54,17 +55,17 @@ type scriptRun struct {
 	name    string
 	started time.Time
 	cmd     *exec.Cmd
-	job     *luaJob
+	job     *luahost.Job
 	console bool // a Lua console (REPL) rather than a script
 
-	toHost chan luaMsg   // messages for the host, written by writeLoop
-	sends  chan luaMsg   // send() calls, carried out one at a time by sendLoop
-	ended  chan struct{} // closed when the process is gone
+	toHost chan luahost.LuaMsg // messages for the host, written by writeLoop
+	sends  chan luahost.LuaMsg // send() calls, carried out one at a time by sendLoop
+	ended  chan struct{}    // closed when the process is gone
 
 	mu      sync.Mutex
 	reason  string // why the app stopped it ("" = it ended by itself)
 	stopped bool   // stopped on purpose (by the user, or with the connection), not a failure
-	result  *luaMsg
+	result  *luahost.LuaMsg
 	screens map[int]chan string
 	killed  bool
 }
@@ -81,16 +82,16 @@ func (t *tab) startScript(name, src string) error {
 	if len(src) > luaScriptMaxSrc {
 		return fmt.Errorf("스크립트가 너무 큽니다 (%dKB까지)", luaScriptMaxSrc>>10)
 	}
-	return t.startHost(name, luaMsg{T: "run", Name: name, D: src, Limit: luaMemoryLimit})
+	return t.startHost(name, luahost.LuaMsg{T: "run", Name: name, D: src, Limit: luaMemoryLimit})
 }
 
 // startConsole opens a Lua console in tab t; it counts as the tab's script.
 func (t *tab) startConsole() error {
-	return t.startHost("Lua 콘솔", luaMsg{T: "repl", Limit: luaMemoryLimit})
+	return t.startHost("Lua 콘솔", luahost.LuaMsg{T: "repl", Limit: luaMemoryLimit})
 }
 
 // startHost starts a script host process and gives it first (run or repl).
-func (t *tab) startHost(name string, first luaMsg) error {
+func (t *tab) startHost(name string, first luahost.LuaMsg) error {
 	if t.script.Load() != nil {
 		return errors.New("이 탭에서 이미 스크립트가 실행 중입니다")
 	}
@@ -98,7 +99,7 @@ func (t *tab) startHost(name string, first luaMsg) error {
 	if err != nil {
 		return err
 	}
-	hideWindow(cmd)
+	luahost.HideWindow(cmd)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -111,7 +112,7 @@ func (t *tab) startHost(name string, first luaMsg) error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("스크립트를 시작하지 못했습니다: %w", err)
 	}
-	job, err := newLuaJob(cmd.Process.Pid, luaMemoryLimit)
+	job, err := luahost.NewJob(cmd.Process.Pid, luaMemoryLimit)
 	if err != nil {
 		// Without the job there is no memory limit: don't run it.
 		_ = cmd.Process.Kill()
@@ -120,11 +121,11 @@ func (t *tab) startHost(name string, first luaMsg) error {
 	}
 	s := &scriptRun{
 		t: t, name: name, started: time.Now(), cmd: cmd, job: job,
-		toHost: make(chan luaMsg, luaOutQueue), sends: make(chan luaMsg, 4),
+		toHost: make(chan luahost.LuaMsg, luaOutQueue), sends: make(chan luahost.LuaMsg, 4),
 		ended: make(chan struct{}), screens: map[int]chan string{}, console: first.T == "repl",
 	}
 	if !t.script.CompareAndSwap(nil, s) {
-		job.close()
+		job.Close()
 		_ = cmd.Wait()
 		return errors.New("이 탭에서 이미 스크립트가 실행 중입니다")
 	}
@@ -144,7 +145,7 @@ func (s *scriptRun) feed(data []byte) {
 	for len(data) > 0 {
 		n := min(len(data), luaOutChunk)
 		select {
-		case s.toHost <- luaMsg{T: "out", D: string(data[:n])}:
+		case s.toHost <- luahost.LuaMsg{T: "out", D: string(data[:n])}:
 		default:
 			return
 		}
@@ -160,7 +161,7 @@ func (s *scriptRun) stop(reason string) {
 	}
 	s.mu.Unlock()
 	select {
-	case s.toHost <- luaMsg{T: "stop"}:
+	case s.toHost <- luahost.LuaMsg{T: "stop"}:
 	default:
 	}
 	go func() {
@@ -212,7 +213,7 @@ func (s *scriptRun) writeLoop(w io.WriteCloser) {
 
 // reply answers a call of the host; it may be dropped if the host is gone.
 func (s *scriptRun) reply(id int, d string, err error) {
-	m := luaMsg{T: "ret", ID: id, D: d}
+	m := luahost.LuaMsg{T: "ret", ID: id, D: d}
 	if err != nil {
 		m.Err = err.Error()
 	}
@@ -233,7 +234,7 @@ func (s *scriptRun) readLoop(r io.Reader) {
 	br := bufio.NewReaderSize(r, 64<<10)
 	window, count := time.Now(), 0
 	for {
-		line, err := readLimitedLine(br, luaMaxLine)
+		line, err := luahost.ReadLimitedLine(br, luahost.MaxLine)
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
 				s.fail("스크립트가 너무 긴 메시지를 보내 멈췄습니다")
@@ -247,7 +248,7 @@ func (s *scriptRun) readLoop(r io.Reader) {
 			s.fail("스크립트가 메시지를 너무 많이 보내 멈췄습니다")
 			return
 		}
-		var m luaMsg
+		var m luahost.LuaMsg
 		if json.Unmarshal(line, &m) != nil {
 			s.fail("스크립트가 잘못된 메시지를 보내 멈췄습니다")
 			return
@@ -326,8 +327,8 @@ func (s *scriptRun) screen(id int) {
 // wait reaps the process and reports how the script ended.
 func (s *scriptRun) wait() {
 	err := s.cmd.Wait()
-	memory := s.job.hitMemoryLimit()
-	s.job.close()
+	memory := s.job.HitMemoryLimit()
+	s.job.Close()
 	close(s.ended)
 	s.t.script.CompareAndSwap(s, nil)
 
@@ -345,7 +346,7 @@ func (s *scriptRun) wait() {
 	default:
 		msg = fmt.Sprintf("스크립트가 비정상적으로 끝났습니다 (%v)", err)
 	}
-	if s.result != nil && s.reason != "" && msg == errScriptStopped.Error() {
+	if s.result != nil && s.reason != "" && msg == luahost.ErrScriptStopped.Error() {
 		msg = s.reason
 	}
 	stopped := s.stopped && msg == s.reason
@@ -466,7 +467,7 @@ func (a *App) ConsoleEval(tabID, id int, code string) error {
 		return fmt.Errorf("입력이 너무 깁니다 (%dKB까지)", luaScriptMaxSrc>>10)
 	}
 	select {
-	case s.toHost <- luaMsg{T: "eval", ID: id, D: code}:
+	case s.toHost <- luahost.LuaMsg{T: "eval", ID: id, D: code}:
 		return nil
 	case <-s.ended:
 		return errors.New("Lua 콘솔이 닫혔습니다")
@@ -479,7 +480,7 @@ func (a *App) ConsoleEval(tabID, id int, code string) error {
 func (a *App) ConsoleInterrupt(tabID int) {
 	if s := a.console(tabID); s != nil {
 		select {
-		case s.toHost <- luaMsg{T: "interrupt"}:
+		case s.toHost <- luahost.LuaMsg{T: "interrupt"}:
 		case <-s.ended:
 		case <-time.After(time.Second):
 		}
@@ -514,7 +515,7 @@ func ensureScriptsDir() (string, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
-	for name, src := range luaExamples {
+	for name, src := range luahost.Examples {
 		_ = os.WriteFile(filepath.Join(dir, name), []byte(src), 0o600)
 	}
 	return dir, nil

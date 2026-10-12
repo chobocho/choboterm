@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"choboterm/internal/luahost"
 )
 
 // TestLuaHostHelper is not a test: it is the script host process the
@@ -19,11 +21,11 @@ func TestLuaHostHelper(t *testing.T) {
 	case "":
 		t.Skip("helper process only")
 	case "host":
-		os.Exit(runLuaHost(os.Stdin, os.Stdout))
+		os.Exit(luahost.Run(os.Stdin, os.Stdout))
 	case "garbage":
 		fmt.Println("this is not json")
 	case "longline":
-		fmt.Print(strings.Repeat("x", 2*luaMaxLine))
+		fmt.Print(strings.Repeat("x", 2*luahost.MaxLine))
 	case "noread":
 		// Never reads its input and ignores "stop".
 	}
@@ -100,7 +102,7 @@ func (f *scriptFixture) end(t *testing.T, within time.Duration) string {
 	case <-time.After(within):
 		report := ""
 		if s := f.tab.script.Load(); s != nil && s.job != nil {
-			report = " (" + s.job.memoryReport() + ")"
+			report = " (" + s.job.MemoryReport() + ")"
 		}
 		t.Fatalf("script did not end within %v%s", within, report)
 		return ""
