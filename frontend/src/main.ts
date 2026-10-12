@@ -370,8 +370,15 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
         window.addEventListener('mouseup', up, true);
     });
     term.onSelectionChange(() => dbg(`tab ${t.id} selection ${term.getSelection().length} chars`));
+    // On Android, a long touch can produce a contextmenu event. Treating it as
+    // a right-click here opens the paste prompt and interrupts touch selection.
+    let lastTouchAt = 0;
+    if (import.meta.env.VITE_TERMUX === '1') {
+        pane.addEventListener('touchstart', () => { lastTouchAt = Date.now(); }, {passive: true});
+    }
     pane.addEventListener('contextmenu', ev => {
         ev.preventDefault();
+        if (import.meta.env.VITE_TERMUX === '1' && Date.now() - lastTouchAt < 1500) return;
         // Programs using the mouse (mc, htop...) get the click; Shift+right-click still pastes.
         if (term.modes.mouseTrackingMode !== 'none' && !ev.shiftKey) return;
         pasteClipboard(t);

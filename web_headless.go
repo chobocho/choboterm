@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -19,6 +20,9 @@ func runHeadless(opts cliOptions) int {
 	w, err := startWeb(app, webPage, *o)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "choboterm:", err)
+		if errors.Is(err, syscall.EADDRINUSE) {
+			return 0
+		}
 		return 1
 	}
 	fmt.Printf("choboterm V%s web server (no window)\n\n  %s\n\n", AppVersion, w.URL(false))
