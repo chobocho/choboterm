@@ -1,7 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1010" height="660" viewBox="0 0 1010 660" font-family="'Segoe UI', 'Malgun Gothic', 'Noto Sans', sans-serif" font-size="11" fill="#202124">
+<svg xmlns="http://www.w3.org/2000/svg" width="1010" height="800" viewBox="0 0 1010 800" font-family="'Segoe UI', 'Malgun Gothic', 'Noto Sans', sans-serif" font-size="11" fill="#202124">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#5f6368"/>
+    </marker>
+    <marker id="arrowWeb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#c5221f"/>
     </marker>
     <style>
       .title { font-size: 12px; font-weight: bold; }
@@ -10,13 +13,14 @@
       .note { font-size: 10.5px; fill: #3c4043; }
       .item { fill: #ffffff; stroke-width: 1; }
       .link { stroke: #5f6368; stroke-width: 1.5; fill: none; }
+      .web { stroke: #c5221f; stroke-width: 1.5; fill: none; }
       .new { fill: #c5221f; font-size: 9.5px; font-weight: bold; }
     </style>
   </defs>
 
-  <rect x="0" y="0" width="1010" height="660" rx="10" fill="#ffffff"/>
+  <rect x="0" y="0" width="1010" height="800" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm Architecture</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.15 · <tspan class="new">NEW</tspan> = added in this version</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.16 · <tspan class="new">NEW</tspan> = added in this version (web server)</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -33,7 +37,7 @@
     <rect x="35" y="559" width="240" height="48" rx="5"/>
   </g>
   <text x="47" y="115" class="title">main.ts <tspan class="new">NEW</tspan></text>
-  <text x="47" y="132" class="sub">Tabs · terminal · close question · OSC 52 copy</text>
+  <text x="47" y="132" class="sub">Tabs · terminal · per-page tab ids</text>
   <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">Keyword highlight (xterm decorations)</text>
   <text x="47" y="231" class="title">files.ts</text>
@@ -44,12 +48,12 @@
   <text x="47" y="364" class="sub">Ctrl+Shift+K open/close · input · save</text>
   <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">Docker window (shell · logs · open port)</text>
-  <text x="47" y="463" class="title">sessions · prefs · update.ts</text>
-  <text x="47" y="480" class="sub">Sessions, settings · update check, macros</text>
+  <text x="47" y="463" class="title">prefs.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="480" class="sub">Settings · web server · access token</text>
   <text x="47" y="521" class="title">i18n.ts</text>
   <text x="47" y="538" class="sub">English UI: translates text via dictionary</text>
-  <text x="47" y="579" class="title">help · search · dialog · platform</text>
-  <text x="47" y="596" class="sub">Help, search, confirm dialog, Linux UI fixes</text>
+  <text x="47" y="579" class="title">sessions · help · search · platform</text>
+  <text x="47" y="596" class="sub">Sessions, help, search, platform</text>
 
   <!-- Wails bridge -->
   <line x1="292" y1="160" x2="398" y2="160" class="link" marker-end="url(#arrow)"/>
@@ -65,14 +69,29 @@
   <text x="345" y="230" text-anchor="middle" font-size="12" font-weight="bold" fill="#5f6368">Wails v2</text>
   <text x="345" y="246" text-anchor="middle" class="note">bindings</text>
 
+  <!-- Browser (web server clients) -->
+  <rect x="20" y="645" width="270" height="140" rx="8" fill="#fce8e6" stroke="#c5221f" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="35" y="667" class="head" fill="#a50e0e">Browser (this PC · other PCs) <tspan class="new">NEW</tspan></text>
+  <text x="35" y="687" class="sub">Same page (frontend/dist) + web_shim.js</text>
+  <text x="35" y="705" class="sub">window.go · runtime over one WebSocket</text>
+  <text x="35" y="723" class="sub">Output: binary frames · acknowledged</text>
+  <text x="35" y="741" class="sub">Reconnects and gets only what it missed</text>
+  <text x="35" y="759" class="sub">Files: this PC uses the window's dialogs,</text>
+  <text x="35" y="777" class="sub">other PCs upload · download (.zip)</text>
+
+  <path d="M292,715 L306,715 L306,557 L413,557" class="web" marker-start="url(#arrowWeb)" marker-end="url(#arrowWeb)"/>
+  <text x="313" y="612" class="note" font-weight="bold" fill="#a50e0e">HTTPS</text>
+  <text x="313" y="627" class="note" fill="#a50e0e">WebSocket</text>
+  <text x="313" y="642" class="note" fill="#a50e0e">token login</text>
+
   <!-- Go backend -->
-  <rect x="400" y="60" width="370" height="445" rx="8" fill="#e6f4ea" stroke="#2f8f5b" stroke-width="1.5"/>
+  <rect x="400" y="60" width="370" height="600" rx="8" fill="#e6f4ea" stroke="#2f8f5b" stroke-width="1.5"/>
   <text x="415" y="82" class="head" fill="#1e6b41">Go backend — choboterm.exe</text>
 
   <rect x="415" y="95" width="340" height="75" rx="5" class="item" stroke="#2f8f5b"/>
-  <text x="427" y="114" class="title">app.go — App · tab (one per tab) · close question <tspan class="new">NEW</tspan></text>
+  <text x="427" y="114" class="title">app.go — App · tab (one per tab) <tspan class="new">NEW</tspan></text>
   <text x="427" y="133" class="sub">pump: batches output per 16ms · 256KB, detects Zmodem</text>
-  <text x="427" y="151" class="sub">codec.go UTF-8↔CP949 · sessionlog.go (timestamps) · keepalive</text>
+  <text x="427" y="151" class="sub">emitFor: events only to the tab's owner (window · page)</text>
 
   <g class="item" stroke="#2f8f5b">
     <rect x="415" y="185" width="106" height="62" rx="5"/>
@@ -106,22 +125,33 @@
 
   <rect x="415" y="339" width="340" height="50" rx="5" class="item" stroke="#2f8f5b"/>
   <text x="427" y="358" class="title">docker.go — list · start/stop · exec · logs</text>
-  <text x="427" y="377" class="sub">Server: extra session on SSH · PC: ConPTY/PTY · podman fallback</text>
+  <text x="427" y="377" class="sub">Server: session on SSH · PC: ConPTY/PTY · podman</text>
 
-  <rect x="415" y="399" width="340" height="94" rx="5" class="item" stroke="#2f8f5b"/>
+  <rect x="415" y="399" width="340" height="76" rx="5" class="item" stroke="#2f8f5b"/>
   <text x="427" y="418" class="title">Storage — %AppData% · ~/.config · i18n.go</text>
-  <text x="427" y="437" class="sub">settings.go · session_store.go · history_store.go</text>
-  <text x="427" y="455" class="sub">settings.json · sessions.json · hosts.json (DPAPI · keyring)</text>
-  <text x="427" y="473" class="sub">i18n_en.json: English dictionary shared by UI and Go</text>
-  <text x="427" y="488" class="sub">update.go: update check (GitHub, off by default)</text>
+  <text x="427" y="437" class="sub">settings · sessions · hosts.json (DPAPI · keyring)</text>
+  <text x="427" y="453" class="sub">i18n_en.json: English dictionary shared by UI and Go</text>
+  <text x="427" y="469" class="sub">web-token · web-cert.pem (web server)</text>
+
+  <rect x="415" y="485" width="340" height="114" rx="5" fill="#fff8f7" stroke="#c5221f" stroke-width="1.2"/>
+  <text x="427" y="504" class="title">web.go · web_client.go — web server <tspan class="new">NEW</tspan></text>
+  <text x="427" y="522" class="sub">--web · Settings · --headless (server, no window)</text>
+  <text x="427" y="539" class="sub">An App per page (caller) · tab ids from clientID&lt;&lt;20</text>
+  <text x="427" y="556" class="sub">ack · replay · dedup calls · flow control over 8MB</text>
+  <text x="427" y="573" class="sub">Token cookie · Origin check · TLS for outside (self-signed)</text>
+  <text x="427" y="590" class="sub">Close window → hides while browsers use it · rerun shows it</text>
+
+  <rect x="415" y="606" width="340" height="47" rx="5" fill="#fff8f7" stroke="#c5221f" stroke-width="1.2"/>
+  <text x="427" y="624" class="title">picker.go — file dialogs <tspan class="new">NEW</tspan></text>
+  <text x="427" y="642" class="sub">Window, local browser: Wails · remote: up/download</text>
 
   <!-- Lua host -->
-  <line x1="585" y1="507" x2="585" y2="543" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
-  <text x="597" y="529" class="note">luarun.go ⇄ luahost.go · line-delimited JSON</text>
-  <rect x="400" y="545" width="370" height="80" rx="8" fill="#fff4e5" stroke="#d9822b" stroke-width="1.5" stroke-dasharray="6 4"/>
-  <text x="415" y="567" class="head" fill="#a35a10">Lua runner — choboterm.exe --lua-host</text>
-  <text x="415" y="587" class="sub">Separate process · gopher-lua (Lua 5.1) · send · expect · screen</text>
-  <text x="415" y="605" class="sub">luajob: memory limit (Job Object · Linux /proc)</text>
+  <line x1="585" y1="662" x2="585" y2="698" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="597" y="684" class="note">luarun.go ⇄ luahost.go · JSON lines</text>
+  <rect x="400" y="700" width="370" height="85" rx="8" fill="#fff4e5" stroke="#d9822b" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="415" y="722" class="head" fill="#a35a10">Lua runner — choboterm.exe --lua-host</text>
+  <text x="415" y="742" class="sub">Separate process · gopher-lua (Lua 5.1) · send · expect · screen</text>
+  <text x="415" y="760" class="sub">luajob: memory limit (Job Object · Linux /proc)</text>
 
   <!-- External -->
   <line x1="772" y1="230" x2="808" y2="230" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
@@ -149,7 +179,7 @@
   <text x="825" y="460" class="sub">Docker Desktop · docker</text>
   <text x="825" y="478" class="sub">Serial COM · /dev/ttyUSB</text>
   <!-- Releases -->
-  <rect x="810" y="500" width="180" height="143" rx="8" fill="#f3e8fd" stroke="#8e44ad" stroke-width="1.5"/>
+  <rect x="810" y="500" width="180" height="200" rx="8" fill="#f3e8fd" stroke="#8e44ad" stroke-width="1.5"/>
   <text x="825" y="523" class="head" fill="#6a1b9a">Releases</text>
   <text x="825" y="543" class="sub">Windows: choboterm.exe</text>
   <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
@@ -157,4 +187,7 @@
   <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
   <text x="825" y="615" class="sub">Get via curl · install.sh</text>
   <text x="825" y="633" class="sub">Update check: releases API</text>
+  <text x="825" y="655" class="title" fill="#6a1b9a">Headless web server <tspan class="new">NEW</tspan></text>
+  <text x="825" y="673" class="sub">choboterm-headless(.exe)</text>
+  <text x="825" y="691" class="sub">Static Linux binary · no GTK</text>
 </svg>
