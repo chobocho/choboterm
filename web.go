@@ -62,8 +62,9 @@ type webOptions struct {
 	Grace time.Duration
 }
 
-// webGrace is the default time a disconnected page keeps its tabs.
-const webGrace = 60 * time.Second
+// webGrace is the default time a disconnected page keeps its tabs. Browsers
+// may suspend background pages for a few minutes, so allow time to reconnect.
+const webGrace = 10 * time.Minute
 
 // webWrongTokenDelay slows down guessing the token (tests shorten it).
 var webWrongTokenDelay = time.Second

@@ -33,7 +33,7 @@ Usage: choboterm [options]
   --key FILE       other PCs can connect
   --insecure       plain HTTP even when other PCs can connect (not recommended)
   --open           open the page in this PC's browser
-  --grace DURATION how long a disconnected page keeps its tabs (default 60s)
+  --grace DURATION how long a disconnected page keeps its tabs (default 10m)
   -h, --help       show this help
 
 The page asks for the access token on first use; the URL printed at start
