@@ -48,7 +48,7 @@ func TestBoundMethodsMatchGeneratedBindings(t *testing.T) {
 }
 
 // term:data carries the tab id and the output as a base64 string; the page
-// (main.ts) decodes exactly that.
+// (connection.ts) decodes exactly that.
 func TestTermDataPayloadIsTabIDAndBase64(t *testing.T) {
 	type ev struct {
 		name string

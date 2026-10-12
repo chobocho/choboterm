@@ -5,6 +5,16 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-13 — 화면 E2E 테스트 추가, main.ts 분할</h2>
+<ul>
+  <li>E2E 테스트(frontend/e2e, Playwright) 51개 추가: 테스트마다 창 없는 choboterm(-tags headless)을 빈 포트 · 별도 설정 폴더(APPDATA · USERPROFILE을 임시 폴더로)로 띄우고 이 PC의 Edge로 화면을 조작. 탭, 접속 창, 화면 분할, 탭 메뉴 · 색 테마, 단축키 · 글꼴 크기, Lua 콘솔, 붙여넣기, 테스트용 TCP 서버(Telnet으로 인식)로 끊김 · 자동 재접속 확인. 실행: frontend에서 <code>npm run test:e2e</code></li>
+  <li>다루지 않는 것: SSH · FTP · 시리얼 · 도커(실제 서버 필요), PC 클립보드(사용자가 복사한 내용을 덮어쓰므로 paste 이벤트로만 확인), 창 전용 기능. 명령이 cmd 기준이라 Windows 전용. CI에는 아직 넣지 않음</li>
+  <li>main.ts 2,561줄 → 176줄. 코드는 줄 단위로 그대로 옮김(스크립트로 원본과 대조: 바뀐 것은 <code>active = …</code> → <code>setActive(…)</code>, 버전 대입 → <code>setVersion(v)</code>, 구역 주석뿐). 새 파일: tabstate(공유 상태) · notify · title · look · clipboard · split · shortcuts · luaconsole · connection · connectdialog · tabs · tabmenu · panels. 가장 큰 파일은 connectdialog.ts 545줄</li>
+  <li>tabs ↔ connectdialog ↔ tabmenu ↔ panels는 서로 import함(함수 안에서만 부르므로 로딩 순서 문제 없음). debug.ts는 전처럼 맨 먼저 로드</li>
+  <li>단계마다(공유 상태 · 저수준 → connection → 나머지) tsc · 빌드 · E2E 51개 통과 후 커밋. 일부러 버그를 넣어(retry 표시 안 지움) 테스트가 실패하는 것도 확인. VITE_TERMUX=1 빌드 통과</li>
+  <li>테스트하다 본 기존 동작(고치지 않음): ① 접속 창의 ▼ 버튼은 목록을 열기만 하고 다시 눌러도 닫히지 않음(Host 칸 blur로 닫힌 직후 click이 다시 엶) ② 접속 직후 서버가 바로 보낸 첫 출력이 화면 초기화(term.reset)에 지워질 수 있음(로컬 테스트 서버의 인사말이 매번 사라짐)</li>
+</ul>
+
 <h2>2026-10-12 — 릴리스 정리: V0.2.20만 남김</h2>
 <ul>
   <li>history.html이 30KB에 가까워 이전 기록을 history_20261012_233456.html로 백업하고 새로 시작</li>

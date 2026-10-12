@@ -246,6 +246,14 @@ The download button on the project page (`docs/`, served by GitHub Pages from th
 go test ./...
 ```
 
+The page has end-to-end tests (Windows; Edge and Go must be installed). Each test starts its own headless choboterm with its own settings folder, so the user's settings and a running choboterm are left alone. See `frontend/e2e/README.md`.
+
+```sh
+cd frontend
+npm install
+npm run test:e2e
+```
+
 Tests that need a real server run only when the environment variables are set.
 
 - FTP: a server with `한글파일.txt` (content `hello`) and an empty `sub` folder at the root, accepting login as `user` / `pass`
@@ -324,7 +332,13 @@ Tests that need a real server run only when the environment variables are set.
 | `picker.go` · `raise_windows.go` | File dialogs abstraction (window · browser on this PC · browser elsewhere); bringing a dialog opened for a browser on this PC to the front |
 | `window_windows.go` | Saving and restoring window size and position (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` · `secret_linux.go` | Password encryption (Windows DPAPI; Linux AES-GCM with a key from the keyring) |
-| `frontend/src/main.ts` | Tabs, terminal, connect window, shortcuts |
+| `frontend/src/main.ts` | Start-up, the shortcuts' actions, closing the window |
+| `frontend/src/tabstate.ts` / `tabs.ts` / `split.ts` | The open tabs and the active one; creating · showing · closing tabs, opening the same server again; split panes |
+| `frontend/src/connection.ts` / `connectdialog.ts` | A tab's connection (connect, automatic reconnect, input · output, events from Go); the Connect window |
+| `frontend/src/tabmenu.ts` / `panels.ts` / `shortcuts.ts` | Tab menu and its color themes; opening the settings · sessions · macro · forwarding · containers windows; which keys are the app's |
+| `frontend/src/look.ts` / `clipboard.ts` / `title.ts` / `notify.ts` | Renderer · fonts · colors · translucency; copy and paste; the window title; toast and terminal notices |
+| `frontend/src/luaconsole.ts` | Lua script box and the Lua console |
+| `frontend/e2e/` | End-to-end tests of the page (Playwright, against a headless choboterm): `npm run test:e2e` in `frontend` |
 | `frontend/src/files.ts` | File transfer window (multi-select, drag-and-drop upload, delete · rename · new folder), progress box |
 | `frontend/src/viewer.ts` / `viewer.go` | Text viewer · editor (CodeMirror, automatic / forced encoding, saving to the server · conflict check, converted save) |
 | `frontend/src/dialog.ts` | Confirmation / name input dialogs |

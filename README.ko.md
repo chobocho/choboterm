@@ -246,6 +246,14 @@ Termux에서 Go와 Node.js를 설치(`pkg install golang nodejs`)한 뒤 `./buil
 go test ./...
 ```
 
+화면은 E2E 테스트로 확인합니다(Windows, Edge와 Go 필요). 테스트마다 창 없는 choboterm을 따로 띄우고 설정 폴더도 따로 쓰므로, 사용 중인 설정과 실행 중인 choboterm은 건드리지 않습니다. 자세한 내용은 `frontend/e2e/README.md`를 보세요.
+
+```sh
+cd frontend
+npm install
+npm run test:e2e
+```
+
 실제 서버가 필요한 테스트는 환경변수를 설정했을 때만 실행됩니다.
 
 - FTP: 루트에 `한글파일.txt`(내용 `hello`)와 빈 `sub` 폴더가 있고 `user` / `pass`로 로그인되는 서버
@@ -324,7 +332,13 @@ go test ./...
 | `picker.go` · `raise_windows.go` | 파일 대화상자 추상화(창 · 이 PC의 브라우저 · 다른 PC의 브라우저), 이 PC의 브라우저를 위해 연 대화상자를 앞으로 가져오기 |
 | `window_windows.go` | 창 크기·위치 저장과 복원 (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` · `secret_linux.go` | 비밀번호 암호화 (Windows DPAPI, Linux 키링의 키로 AES-GCM) |
-| `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
+| `frontend/src/main.ts` | 시작, 단축키 동작, 창 닫기 |
+| `frontend/src/tabstate.ts` / `tabs.ts` / `split.ts` | 열린 탭과 활성 탭, 탭 만들기·보이기·닫기와 같은 서버 다시 열기, 화면 분할 |
+| `frontend/src/connection.ts` / `connectdialog.ts` | 탭의 연결(접속, 자동 재접속, 입력·출력, Go에서 오는 이벤트), 접속 창 |
+| `frontend/src/tabmenu.ts` / `panels.ts` / `shortcuts.ts` | 탭 메뉴와 색 테마, 설정·세션·매크로·포워딩·컨테이너 창 열기, 앱이 쓰는 키 판별 |
+| `frontend/src/look.ts` / `clipboard.ts` / `title.ts` / `notify.ts` | 렌더러·글꼴·색·반투명, 복사와 붙여넣기, 창 제목, 토스트와 터미널 안내 |
+| `frontend/src/luaconsole.ts` | Lua 스크립트 상자와 Lua 콘솔 |
+| `frontend/e2e/` | 화면 E2E 테스트(Playwright, 창 없는 choboterm에 접속): `frontend`에서 `npm run test:e2e` |
 | `frontend/src/files.ts` | 파일 전송 창(여러 개 선택, 끌어 놓기 업로드, 삭제·이름 바꾸기·새 폴더), 진행률 상자 |
 | `frontend/src/viewer.ts` / `viewer.go` | 텍스트 뷰어·편집기(CodeMirror, 인코딩 자동 판별·강제 지정, 서버 저장·충돌 확인, 변환 저장) |
 | `frontend/src/dialog.ts` | 확인 / 이름 입력 창 |
