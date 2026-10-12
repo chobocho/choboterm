@@ -1,3 +1,6 @@
+// Package terminal has what the kinds of connection share: the Session a tab
+// reads and writes, the Connect request, the prompts asked while connecting,
+// and telling a server's protocol.
 package terminal
 
 import (

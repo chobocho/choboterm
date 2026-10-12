@@ -259,14 +259,14 @@ npm run test:e2e
 - FTP: 루트에 `한글파일.txt`(내용 `hello`)와 빈 `sub` 폴더가 있고 `user` / `pass`로 로그인되는 서버
 
   ```sh
-  CHOBOTERM_FTP_TEST=127.0.0.1:2121 CHOBOTERM_FTP_ENCODING=EUC-KR go test -run FTP -v
+  CHOBOTERM_FTP_TEST=127.0.0.1:2121 CHOBOTERM_FTP_ENCODING=EUC-KR go test ./... -run FTP -v
   ```
 
 - Zmodem: WSL에 있는 lrzsz `sz` / `rz`와 실제로 주고받습니다. 설치 없이 패키지만 풀어서 쓸 수 있습니다.
 
   ```sh
   wsl -- sh -c 'mkdir -p /tmp/lrzsz && cd /tmp/lrzsz && apt-get download lrzsz && dpkg -x lrzsz_*.deb x'
-  CHOBOTERM_LRZSZ=/tmp/lrzsz/x/usr/bin go test -run Zmodem -v
+  CHOBOTERM_LRZSZ=/tmp/lrzsz/x/usr/bin go test ./... -run Zmodem -v
   ```
 
   Git Bash에서는 `/tmp` 경로가 바뀌지 않도록 `MSYS2_ENV_CONV_EXCL=CHOBOTERM_LRZSZ`도 함께 설정하세요.
@@ -274,26 +274,26 @@ npm run test:e2e
 - 실제 SSH 서버(아무 포트) 접속: 셸 명령, 창 크기 변경, 파일 목록까지 확인합니다. 호스트 키는 임시 known_hosts에 저장됩니다.
 
   ```sh
-  CHOBOTERM_SSH_TEST=host:8022 CHOBOTERM_SSH_USER=user CHOBOTERM_SSH_PASS=secret go test -run LiveSSH -v
+  CHOBOTERM_SSH_TEST=host:8022 CHOBOTERM_SSH_USER=user CHOBOTERM_SSH_PASS=secret go test ./... -run LiveSSH -v
   ```
 
 - SCP 자동 전환: SFTP 없이 명령만 실행하는 테스트 SSH 서버를 띄우고, 명령은 WSL에서 실행합니다(WSL에 `scp`, `ls` 필요).
 
   ```sh
-  CHOBOTERM_WSL=1 go test -run SCPFallback -v
+  CHOBOTERM_WSL=1 go test ./... -run SCPFallback -v
   ```
 
 - 도커: 같은 방식의 테스트 SSH 서버와 WSL의 가짜 `docker` 스크립트로 목록·동작·exec 탭을 확인합니다.
 
   ```sh
-  CHOBOTERM_WSL=1 go test -run DockerRemote -v
+  CHOBOTERM_WSL=1 go test ./... -run DockerRemote -v
   ```
 
 - 실제 Docker: 컨테이너를 만들어 두고(명령은 `docker_live_test.go` 주석 참고) 서버 쪽은 SSH로, "이 PC" 쪽은 PATH의 `docker`로 확인합니다. WSL에 `docker.io`와 `openssh-server`를 설치하면 이 PC 하나로 둘 다 확인할 수 있습니다("이 PC" 쪽은 Windows용 docker CLI에 `DOCKER_HOST`로 WSL의 Docker를 지정).
 
   ```sh
-  CHOBOTERM_DOCKER_SSH=localhost:22 CHOBOTERM_DOCKER_USER=me CHOBOTERM_DOCKER_KEY=~/.ssh/id_ed25519 go test -run DockerLive -v
-  CHOBOTERM_DOCKER_LOCAL=1 go test -run DockerLocalLive -v
+  CHOBOTERM_DOCKER_SSH=localhost:22 CHOBOTERM_DOCKER_USER=me CHOBOTERM_DOCKER_KEY=~/.ssh/id_ed25519 go test ./... -run DockerLive -v
+  CHOBOTERM_DOCKER_LOCAL=1 go test ./... -run DockerLocalLive -v
   ```
 
 ## 아키텍처
@@ -314,24 +314,19 @@ npm run test:e2e
 
 | 파일 | 내용 |
 |---|---|
-| `app.go` | 탭별 접속, 키 입력 전달, 출력 묶음 전송, Zmodem 감지 |
-| `ssh.go` / `telnet.go` / `ftp.go` / `sftp.go` / `scp.go` | 프로토콜 |
-| `detect.go` | 표준이 아닌 포트의 프로토콜 자동 판별 |
-| `forward.go` | SSH 포트 포워딩 (-L / -R / -D SOCKS5) |
-| `localshell*.go` · `localpty_windows.go` · `localpty_linux.go` | 로컬 셸 탭 (Windows: cmd · PowerShell · WSL을 ConPTY로, Linux: bash · zsh 등을 PTY로) |
-| `docker.go` | 도커 컨테이너 목록·동작, `docker exec` / `docker logs` 탭 (서버: 같은 SSH 접속, PC: 로컬 PTY) |
-| `filexfer.go` | 파일 전송 공통 계층(RemoteFS), 진행률, 취소 |
-| `zmodem.go` / `zmodem_app.go` | Zmodem 프로토콜과 앱 연결 |
-| `codec.go` | UTF-8 ↔ CP949 변환 |
-| `history_store.go` | 최근 접속 기록 |
-| `session_store.go` | 저장한 세션, 서버별 설정(색 테마·포트 포워딩) |
-| `session_import.go` / `putty_windows.go` | 세션 가져오기·내보내기, PuTTY 세션 읽기 |
-| `settings.go` | 사용자 설정 (`settings.json`) |
-| `web.go` / `web_client.go` / `web_files.go` / `web_tls.go` / `web_shim.js` | 웹 서버: 로그인·페이지, 페이지별 WebSocket(호출·이벤트·재전송·흐름 제어), 업로드·다운로드, TLS, 브라우저 쪽 `window.go` · `window.runtime` |
-| `web_app.go` / `handoff.go` / `web_headless.go` / `cli.go` / `main_window.go` / `main_headless.go` | 설정 창의 웹 서버, 창 닫기 · 숨기기, 다시 실행하면 떠 있는 창 보이기, 창 없는 실행, 명령행 옵션 |
-| `picker.go` · `raise_windows.go` | 파일 대화상자 추상화(창 · 이 PC의 브라우저 · 다른 PC의 브라우저), 이 PC의 브라우저를 위해 연 대화상자를 앞으로 가져오기 |
-| `window_windows.go` | 창 크기·위치 저장과 복원 (Win32 WINDOWPLACEMENT) |
-| `secret_windows.go` · `secret_linux.go` | 비밀번호 암호화 (Windows DPAPI, Linux 키링의 키로 AES-GCM) |
+| `main.go` · `icon.go` | 진입점: `internal/app`을 시작, 창 아이콘 임베드 |
+| `internal/app/` | 프로그램 본체: `app.go`(탭별 연결, 키 입력 전달, 출력 묶어 보내기, Zmodem 감지), `forward.go`(SSH 포트 포워딩 -L / -R / -D SOCKS5), `filexfer.go` · `viewer.go` · `zmodem_app.go`(파일 전송 창, 텍스트 뷰어, 탭의 Zmodem), `docker.go`(컨테이너 목록·동작, `docker exec` / `docker logs` 탭), `luarun.go`(탭에서 도는 Lua 스크립트), `prompt.go` · `picker.go`(입력 요청, 파일 대화상자: 창 · 이 PC의 브라우저 · 다른 PC의 브라우저), `app_*.go`(그 밖에 화면이 부르는 것) |
+| `internal/app/web*.go` · `handoff.go` · `cli.go` · `main_window.go` · `main_headless.go` · `web_shim.js` | 웹 서버: 로그인·페이지, 페이지별 WebSocket(호출·이벤트·재전송·흐름 제어), 업로드·다운로드, TLS, 브라우저 쪽 `window.go` · `window.runtime`. 설정 창의 웹 서버, 창 닫기 · 숨기기, 다시 실행하면 떠 있는 창 보이기, 창 없는 실행, 명령행 옵션 |
+| `internal/terminal/` | 모든 연결이 함께 쓰는 것: `Session`, 접속 요청, 입력 요청, 비표준 포트의 프로토콜 자동 판별(`detect.go`) |
+| `internal/sshconn/` · `internal/telnet/` · `internal/serial/` · `internal/localshell/` | 연결 종류: SSH(인증, known hosts, 점프 호스트 `sshjump.go`, `~/.ssh/config`), Telnet, 시리얼 포트(Windows: COM 포트 · Linux: termios), 로컬 셸(Windows: cmd · PowerShell · WSL을 ConPTY로, Linux: bash · zsh 등을 PTY로) |
+| `internal/transfer/` | 파일 전송: 공통 계층(RemoteFS)과 SFTP · SCP · FTP, 진행률, Zmodem 프로토콜 |
+| `internal/store/` · `internal/config/` · `internal/secret/` | 최근 접속 기록, 저장한 세션과 서버별 설정(색 테마·포트 포워딩), 세션 가져오기·내보내기와 PuTTY 세션. 사용자 설정(`settings.json`). 비밀번호 암호화(Windows DPAPI, Linux 키링의 키로 AES-GCM) |
+| `internal/luahost/` | Lua 스크립트: 별도 프로세스의 실행기와 메모리 제한(Windows Job Object, Linux는 `/proc` 감시) |
+| `internal/sessionlog/` · `internal/codec/` · `internal/i18n/` · `internal/update/` · `internal/dbg/` · `internal/version/` | 세션 로그, UTF-8 ↔ CP949 변환, Go 쪽 영어 문구, 업데이트 확인, 디버그 로그, 버전 번호 |
+| `internal/osutil/` | OS별 보조 기능: 폴더·URL 열기, 창 없는 프로그램의 콘솔, 대화상자를 앞으로 가져오기, 창 크기·위치 저장과 복원(Win32 WINDOWPLACEMENT) |
+| `frontend/assets*.go` · `frontend/i18n_dict.go` | 빌드한 화면과 영어 사전을 Go 프로그램에 임베드(go:embed는 자기 폴더 아래만 읽을 수 있음) |
+| `internal/app/wire_test.go` · `tools/vet_all.sh` | 화면과 저장 파일이 보는 Go 쪽(바인딩 메서드, JSON 형식, 기본 설정, 이벤트 이름)을 고정하는 테스트, 모든 플랫폼·빌드의 타입 검사 |
+| `internal/testutil/` · `internal/sshconn/sshtest/` | 여러 패키지의 테스트가 함께 쓰는 보조 코드 |
 | `frontend/src/main.ts` | 시작, 단축키 동작, 창 닫기 |
 | `frontend/src/tabstate.ts` / `tabs.ts` / `split.ts` | 열린 탭과 활성 탭, 탭 만들기·보이기·닫기와 같은 서버 다시 열기, 화면 분할 |
 | `frontend/src/connection.ts` / `connectdialog.ts` | 탭의 연결(접속, 자동 재접속, 입력·출력, Go에서 오는 이벤트), 접속 창 |
@@ -340,10 +335,8 @@ npm run test:e2e
 | `frontend/src/luaconsole.ts` | Lua 스크립트 상자와 Lua 콘솔 |
 | `frontend/e2e/` | 화면 E2E 테스트(Playwright, 창 없는 choboterm에 접속): `frontend`에서 `npm run test:e2e` |
 | `frontend/src/files.ts` | 파일 전송 창(여러 개 선택, 끌어 놓기 업로드, 삭제·이름 바꾸기·새 폴더), 진행률 상자 |
-| `frontend/src/viewer.ts` / `viewer.go` | 텍스트 뷰어·편집기(CodeMirror, 인코딩 자동 판별·강제 지정, 서버 저장·충돌 확인, 변환 저장) |
+| `frontend/src/viewer.ts` / `internal/app/viewer.go` | 텍스트 뷰어·편집기(CodeMirror, 인코딩 자동 판별·강제 지정, 서버 저장·충돌 확인, 변환 저장) |
 | `frontend/src/dialog.ts` | 확인 / 이름 입력 창 |
-| `luahost.go` / `luarun.go` | Lua 스크립트: 별도 프로세스의 실행기와 앱 쪽 관리(출력 전달, 입력 보내기 제한, 정지·강제 종료) |
-| `luajob_windows.go` · `luajob_linux.go` | 스크립트 프로세스의 메모리 제한 (Windows Job Object, Linux는 `/proc` 감시) |
 | `build_linux.sh` · `tools/linux/` | Linux 빌드(Ubuntu 22.04 컨테이너)와 tar.gz 묶음(설치 스크립트, 데스크톱 항목) |
 | `frontend/src/platform.ts` | 실행 중인 OS (Linux에서 Windows 전용 항목 숨김), 브라우저에서 열렸는지와 탭 번호 시작값 |
 | `frontend/src/sessions.ts` | 세션 저장 창, 세션 관리 창, 가져오기·내보내기 |
@@ -355,11 +348,9 @@ npm run test:e2e
 | `frontend/src/macros.ts` | 매크로 창, 매크로 단축키, 이스케이프 처리 |
 | `frontend/src/paste.ts` | 여러 줄 붙여넣기 확인 창 |
 | `frontend/src/settings.ts` | 설정 읽기 / 저장 |
-| `frontend/src/i18n.ts` / `i18n.go` / `frontend/src/i18n_en.json` | 영어 화면: 한국어 문구를 사전으로 바꿈(화면은 나타나는 대로, Go는 대화상자·터미널 안내·로그) |
+| `frontend/src/i18n.ts` / `internal/i18n/` / `frontend/src/i18n_en.json` | 영어 화면: 한국어 문구를 사전으로 바꿈(화면은 나타나는 대로, Go는 대화상자·터미널 안내·로그) |
 | `frontend/src/highlight.ts` | 키워드 강조 (xterm 데코레이션) |
 | `frontend/src/imageview.ts` | 이미지 보기 창 |
-| `sshjump.go` | 점프 호스트 (ProxyJump) |
-| `serial*.go` | 시리얼 포트 (Windows: COM 포트 · Linux: termios) |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
 | `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
 

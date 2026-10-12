@@ -1,3 +1,5 @@
+// Package store keeps what is remembered between runs: the connection history,
+// saved sessions and per-server settings, with import and export.
 package store
 
 import (

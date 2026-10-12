@@ -11,7 +11,7 @@ import {Lang, startI18n} from './i18n';
 import {openSearch} from './search';
 import {loadSettings, settings} from './settings';
 import {filesOpen, setActiveTabProvider} from './files';
-import {GetLanguage, GetVersion, Quit, WebHideWindow} from '../wailsjs/go/main/App';
+import {GetLanguage, GetVersion, Quit, WebHideWindow} from '../wailsjs/go/app/App';
 import {Environment, EventsOn, WindowUnminimise} from '../wailsjs/runtime/runtime';
 import {setPlatform} from './platform';
 import {checkUpdate} from './update';

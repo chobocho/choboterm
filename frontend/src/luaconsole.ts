@@ -2,7 +2,7 @@
 
 import {dbg} from './debug';
 import {saveSettings, settings} from './settings';
-import {ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, ScriptScreen, StartConsole, StopScript} from '../wailsjs/go/main/App';
+import {ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, ScriptScreen, StartConsole, StopScript} from '../wailsjs/go/app/App';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 import {active, focusActive, Tab, tabs} from './tabstate';
 import {toast} from './notify';

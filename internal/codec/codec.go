@@ -1,3 +1,5 @@
+// Package codec converts terminal text between the server's character set
+// (UTF-8 or EUC-KR) and UTF-8.
 package codec
 
 import (

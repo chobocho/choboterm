@@ -1,7 +1,7 @@
 // Questions the Go side asks while logging in: a key passphrase, a one-time
 // code, keyboard-interactive prompts. Prompts arriving while one is shown wait their turn.
 
-import {AnswerPrompt} from '../wailsjs/go/main/App';
+import {AnswerPrompt} from '../wailsjs/go/app/App';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 
 // Matches Prompt / PromptField in prompt.go (sent as an event, so not generated).

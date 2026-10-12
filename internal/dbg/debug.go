@@ -1,3 +1,5 @@
+// Package dbg is the debug log (debug.log next to the program), written only
+// when it is turned on.
 package dbg
 
 import (

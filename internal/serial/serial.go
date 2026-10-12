@@ -1,3 +1,4 @@
+// Package serial opens serial ports as terminal sessions.
 package serial
 
 import (

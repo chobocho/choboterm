@@ -1,3 +1,5 @@
+// Package telnet is the Telnet session: option negotiation and the automatic
+// login.
 package telnet
 
 import (

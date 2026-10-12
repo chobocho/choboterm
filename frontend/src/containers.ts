@@ -2,8 +2,8 @@
 // SSH server or of this PC (Docker Desktop). A shell or a log opens in a new
 // tab; on a server it is an extra session on that tab's connection.
 
-import {DockerAction, DockerList, ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/main/App';
-import {main, store} from '../wailsjs/go/models';
+import {DockerAction, DockerList, ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/app/App';
+import {app, store} from '../wailsjs/go/models';
 import {BrowserOpenURL} from '../wailsjs/runtime/runtime';
 import {ask} from './dialog';
 import {isLinux} from './platform';
@@ -38,10 +38,10 @@ export interface DockerSource {
 export type DockerMode = 'shell' | 'logs';
 
 let sources: DockerSource[] = [];
-let list: main.Container[] = [];
+let list: app.Container[] = [];
 let selected = -1;
 let loading = 0; // the latest DockerList call; older answers are dropped
-let onOpen: ((src: DockerSource, c: main.Container, mode: DockerMode) => void) | undefined;
+let onOpen: ((src: DockerSource, c: app.Container, mode: DockerMode) => void) | undefined;
 let onClose: (() => void) | undefined;
 
 export function containersOpen() {
@@ -103,7 +103,7 @@ async function refresh() {
     td.colSpan = 4;
     td.className = 'empty';
     td.textContent = '불러오는 중...';
-    let got: main.Container[];
+    let got: app.Container[];
     try {
         got = (await DockerList(current().tab, all.checked)) ?? [];
     } catch (e) {

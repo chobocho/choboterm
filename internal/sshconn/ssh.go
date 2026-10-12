@@ -1,3 +1,5 @@
+// Package sshconn connects SSH sessions: authentication (keys, the agent,
+// prompts), known hosts, jump hosts and ~/.ssh/config.
 package sshconn
 
 import (

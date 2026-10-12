@@ -1,3 +1,5 @@
+// Package localshell runs a shell of this PC (cmd, PowerShell, WSL, bash...)
+// in a pseudo console.
 package localshell
 
 import (

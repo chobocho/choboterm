@@ -14,7 +14,7 @@ import {tr} from './i18n';
 import {attachSearch, closeSearch, switchSearch} from './search';
 import {settings} from './settings';
 import {filesOpen, forgetFiles, showFilesFor} from './files';
-import {CloseTab, Resize} from '../wailsjs/go/main/App';
+import {CloseTab, Resize} from '../wailsjs/go/app/App';
 import {terminal} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardSetText} from '../wailsjs/runtime/runtime';
 import {webPage} from './platform';

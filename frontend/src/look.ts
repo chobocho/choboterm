@@ -6,7 +6,7 @@ import {ambiguousFontReady, fontFamily, NARROW, WIDE} from './cjkwidth';
 import {loadRules} from './highlight';
 import {saveSettings, settings} from './settings';
 import {themeByName} from './themes';
-import {SetTabTheme, TabTheme} from '../wailsjs/go/main/App';
+import {SetTabTheme, TabTheme} from '../wailsjs/go/app/App';
 import {isLinux} from './platform';
 import {active, fitPane, Tab, tabs, termsEl} from './tabstate';
 import {notice, toast} from './notify';

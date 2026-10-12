@@ -1,3 +1,4 @@
+// Package config is the user's settings (settings.json).
 package config
 
 import (

@@ -5,7 +5,7 @@ import {expandMacro, openMacros} from './macros';
 import {openForwards} from './forwards';
 import {DockerSource, openContainers} from './containers';
 import {openSessionManager} from './sessions';
-import {RunScript} from '../wailsjs/go/main/App';
+import {RunScript} from '../wailsjs/go/app/App';
 import {config} from '../wailsjs/go/models';
 import {active, focusActive, Tab} from './tabstate';
 import {toast} from './notify';

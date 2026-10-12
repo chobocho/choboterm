@@ -259,14 +259,14 @@ Tests that need a real server run only when the environment variables are set.
 - FTP: a server with `한글파일.txt` (content `hello`) and an empty `sub` folder at the root, accepting login as `user` / `pass`
 
   ```sh
-  CHOBOTERM_FTP_TEST=127.0.0.1:2121 CHOBOTERM_FTP_ENCODING=EUC-KR go test -run FTP -v
+  CHOBOTERM_FTP_TEST=127.0.0.1:2121 CHOBOTERM_FTP_ENCODING=EUC-KR go test ./... -run FTP -v
   ```
 
 - Zmodem: transfers files for real with lrzsz `sz` / `rz` in WSL. You can just extract the package without installing it.
 
   ```sh
   wsl -- sh -c 'mkdir -p /tmp/lrzsz && cd /tmp/lrzsz && apt-get download lrzsz && dpkg -x lrzsz_*.deb x'
-  CHOBOTERM_LRZSZ=/tmp/lrzsz/x/usr/bin go test -run Zmodem -v
+  CHOBOTERM_LRZSZ=/tmp/lrzsz/x/usr/bin go test ./... -run Zmodem -v
   ```
 
   In Git Bash, also set `MSYS2_ENV_CONV_EXCL=CHOBOTERM_LRZSZ` so the `/tmp` path is not converted.
@@ -274,26 +274,26 @@ Tests that need a real server run only when the environment variables are set.
 - Connecting to a real SSH server (any port): checks shell commands, window resizing and file listing. The host key is saved to a temporary known_hosts.
 
   ```sh
-  CHOBOTERM_SSH_TEST=host:8022 CHOBOTERM_SSH_USER=user CHOBOTERM_SSH_PASS=secret go test -run LiveSSH -v
+  CHOBOTERM_SSH_TEST=host:8022 CHOBOTERM_SSH_USER=user CHOBOTERM_SSH_PASS=secret go test ./... -run LiveSSH -v
   ```
 
 - Automatic SCP fallback: starts a test SSH server that only runs commands without SFTP, and runs the commands in WSL (`scp` and `ls` required in WSL).
 
   ```sh
-  CHOBOTERM_WSL=1 go test -run SCPFallback -v
+  CHOBOTERM_WSL=1 go test ./... -run SCPFallback -v
   ```
 
 - Docker: checks the list, actions and exec tabs with the same kind of test SSH server and a fake `docker` script in WSL.
 
   ```sh
-  CHOBOTERM_WSL=1 go test -run DockerRemote -v
+  CHOBOTERM_WSL=1 go test ./... -run DockerRemote -v
   ```
 
 - Real Docker: create the containers first (see the comments in `docker_live_test.go` for the commands), then the server side is checked over SSH and the "This PC" side with `docker` on the PATH. With `docker.io` and `openssh-server` installed in WSL, a single PC can check both (for the "This PC" side, point the Windows docker CLI at WSL's Docker with `DOCKER_HOST`).
 
   ```sh
-  CHOBOTERM_DOCKER_SSH=localhost:22 CHOBOTERM_DOCKER_USER=me CHOBOTERM_DOCKER_KEY=~/.ssh/id_ed25519 go test -run DockerLive -v
-  CHOBOTERM_DOCKER_LOCAL=1 go test -run DockerLocalLive -v
+  CHOBOTERM_DOCKER_SSH=localhost:22 CHOBOTERM_DOCKER_USER=me CHOBOTERM_DOCKER_KEY=~/.ssh/id_ed25519 go test ./... -run DockerLive -v
+  CHOBOTERM_DOCKER_LOCAL=1 go test ./... -run DockerLocalLive -v
   ```
 
 ## Architecture
@@ -314,24 +314,19 @@ Tests that need a real server run only when the environment variables are set.
 
 | File | Contents |
 |---|---|
-| `app.go` | Per-tab connections, key input forwarding, batched output, Zmodem detection |
-| `ssh.go` / `telnet.go` / `ftp.go` / `sftp.go` / `scp.go` | Protocols |
-| `detect.go` | Automatic protocol detection on non-standard ports |
-| `forward.go` | SSH port forwarding (-L / -R / -D SOCKS5) |
-| `localshell*.go` · `localpty_windows.go` · `localpty_linux.go` | Local shell tabs (Windows: cmd · PowerShell · WSL via ConPTY; Linux: bash · zsh etc. via PTY) |
-| `docker.go` | Docker container list and actions, `docker exec` / `docker logs` tabs (server: same SSH connection; PC: local PTY) |
-| `filexfer.go` | Common file transfer layer (RemoteFS), progress, cancellation |
-| `zmodem.go` / `zmodem_app.go` | Zmodem protocol and its app integration |
-| `codec.go` | UTF-8 ↔ CP949 conversion |
-| `history_store.go` | Recent connection history |
-| `session_store.go` | Saved sessions, per-server settings (color theme · port forwarding) |
-| `session_import.go` / `putty_windows.go` | Session import · export, reading PuTTY sessions |
-| `settings.go` | User settings (`settings.json`) |
-| `web.go` / `web_client.go` / `web_files.go` / `web_tls.go` / `web_shim.js` | Web server: login and page, one WebSocket per page (calls, events, replay, flow control), uploads and downloads, TLS, the browser side's `window.go` / `window.runtime` |
-| `web_app.go` / `handoff.go` / `web_headless.go` / `cli.go` / `main_window.go` / `main_headless.go` | The web server in Settings, closing or hiding the window, showing the running one when started again, running without the window, command line options |
-| `picker.go` · `raise_windows.go` | File dialogs abstraction (window · browser on this PC · browser elsewhere); bringing a dialog opened for a browser on this PC to the front |
-| `window_windows.go` | Saving and restoring window size and position (Win32 WINDOWPLACEMENT) |
-| `secret_windows.go` · `secret_linux.go` | Password encryption (Windows DPAPI; Linux AES-GCM with a key from the keyring) |
+| `main.go` · `icon.go` | Entry point: starts `internal/app`; embeds the window icon |
+| `internal/app/` | The program itself: `app.go` (per-tab connections, key input forwarding, batched output, Zmodem detection), `forward.go` (SSH port forwarding -L / -R / -D SOCKS5), `filexfer.go` · `viewer.go` · `zmodem_app.go` (file transfer window, text viewer, Zmodem in a tab), `docker.go` (container list and actions, `docker exec` / `docker logs` tabs), `luarun.go` (Lua scripts in a tab), `prompt.go` · `picker.go` (prompts; file dialogs for the window · a browser on this PC · a browser elsewhere), `app_*.go` (the rest of what the page calls) |
+| `internal/app/web*.go` · `handoff.go` · `cli.go` · `main_window.go` · `main_headless.go` · `web_shim.js` | Web server: login and page, one WebSocket per page (calls, events, replay, flow control), uploads and downloads, TLS, the browser side's `window.go` / `window.runtime`; the web server in Settings, closing or hiding the window, showing the running one when started again, running without the window, command line options |
+| `internal/terminal/` | What every kind of connection shares: `Session`, the Connect request, prompts, automatic protocol detection on non-standard ports (`detect.go`) |
+| `internal/sshconn/` · `internal/telnet/` · `internal/serial/` · `internal/localshell/` | The kinds of session: SSH (authentication, known hosts, jump hosts in `sshjump.go`, `~/.ssh/config`), Telnet, serial ports (Windows: COM ports · Linux: termios), local shells (Windows: cmd · PowerShell · WSL via ConPTY; Linux: bash · zsh etc. via PTY) |
+| `internal/transfer/` | File transfer: the common layer (RemoteFS) over SFTP · SCP · FTP, progress, the Zmodem protocol |
+| `internal/store/` · `internal/config/` · `internal/secret/` | Recent connection history, saved sessions and per-server settings (color theme · port forwarding), session import · export and PuTTY sessions; user settings (`settings.json`); password encryption (Windows DPAPI; Linux AES-GCM with a key from the keyring) |
+| `internal/luahost/` | Lua scripts: the runner in a separate process and its memory limit (Windows Job Object; Linux watches `/proc`) |
+| `internal/sessionlog/` · `internal/codec/` · `internal/i18n/` · `internal/update/` · `internal/dbg/` · `internal/version/` | Session log; UTF-8 ↔ CP949 conversion; English text of the Go side; update check; debug log; the version number |
+| `internal/osutil/` | OS-specific helpers: opening folders and URLs, the console of the windowless program, bringing a dialog to the front, saving and restoring window size and position (Win32 WINDOWPLACEMENT) |
+| `frontend/assets*.go` · `frontend/i18n_dict.go` | Embed the built page and the English dictionary into the Go program (go:embed only reaches files below its own folder) |
+| `internal/app/wire_test.go` · `tools/vet_all.sh` | Pin what the page and the saved files see of the Go side (bound methods, JSON shapes, default settings, event names); type-check every platform and build from one PC |
+| `internal/testutil/` · `internal/sshconn/sshtest/` | Helpers shared by the tests of several packages |
 | `frontend/src/main.ts` | Start-up, the shortcuts' actions, closing the window |
 | `frontend/src/tabstate.ts` / `tabs.ts` / `split.ts` | The open tabs and the active one; creating · showing · closing tabs, opening the same server again; split panes |
 | `frontend/src/connection.ts` / `connectdialog.ts` | A tab's connection (connect, automatic reconnect, input · output, events from Go); the Connect window |
@@ -340,10 +335,8 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/luaconsole.ts` | Lua script box and the Lua console |
 | `frontend/e2e/` | End-to-end tests of the page (Playwright, against a headless choboterm): `npm run test:e2e` in `frontend` |
 | `frontend/src/files.ts` | File transfer window (multi-select, drag-and-drop upload, delete · rename · new folder), progress box |
-| `frontend/src/viewer.ts` / `viewer.go` | Text viewer · editor (CodeMirror, automatic / forced encoding, saving to the server · conflict check, converted save) |
+| `frontend/src/viewer.ts` / `internal/app/viewer.go` | Text viewer · editor (CodeMirror, automatic / forced encoding, saving to the server · conflict check, converted save) |
 | `frontend/src/dialog.ts` | Confirmation / name input dialogs |
-| `luahost.go` / `luarun.go` | Lua scripts: the runner in a separate process and the app-side manager (output forwarding, input send limits, stop · force kill) |
-| `luajob_windows.go` · `luajob_linux.go` | Memory limit for the script process (Windows Job Object; Linux watches `/proc`) |
 | `build_linux.sh` · `tools/linux/` | Linux build (Ubuntu 22.04 container) and tar.gz packaging (install script, desktop entry) |
 | `frontend/src/platform.ts` | Current OS (hides Windows-only items on Linux), whether the page runs in a browser and where its tab ids start |
 | `frontend/src/sessions.ts` | Save-session window, Sessions window, import · export |
@@ -355,11 +348,9 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/macros.ts` | Macro window, macro shortcuts, escape handling |
 | `frontend/src/paste.ts` | Multi-line paste confirmation dialog |
 | `frontend/src/settings.ts` | Loading / saving settings |
-| `frontend/src/i18n.ts` / `i18n.go` / `frontend/src/i18n_en.json` | English UI: replaces Korean text using the dictionary (UI as text appears; Go for dialogs, terminal messages, logs) |
+| `frontend/src/i18n.ts` / `internal/i18n/` / `frontend/src/i18n_en.json` | English UI: replaces Korean text using the dictionary (UI as text appears; Go for dialogs, terminal messages, logs) |
 | `frontend/src/highlight.ts` | Keyword highlighting (xterm decorations) |
 | `frontend/src/imageview.ts` | Image viewer window |
-| `sshjump.go` | Jump host (ProxyJump) |
-| `serial*.go` | Serial port (Windows: COM ports · Linux: termios) |
 | `frontend/src/cjkwidth.ts` | Double-width character handling in EUC-KR mode |
 | `tools/make_icon.py` | App icon generation (`build/appicon.png`, `build/windows/icon.ico`) |
 

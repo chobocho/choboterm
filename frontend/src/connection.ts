@@ -8,7 +8,7 @@ import {containersTabClosed} from './containers';
 import {tr} from './i18n';
 import {settings} from './settings';
 import {closeFiles, forgetFiles, openFiles} from './files';
-import {CloseTab, Connect, Disconnect, DockerOpen, Send, SetEncoding, StartLog, StopLog, TabTheme} from '../wailsjs/go/main/App';
+import {CloseTab, Connect, Disconnect, DockerOpen, Send, SetEncoding, StartLog, StopLog, TabTheme} from '../wailsjs/go/app/App';
 import {terminal} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 import {active, focusActive, Tab, tabs, TabState} from './tabstate';

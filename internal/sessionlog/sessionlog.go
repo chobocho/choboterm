@@ -1,3 +1,5 @@
+// Package sessionlog writes a tab's output to a log file, as received or as
+// plain text.
 package sessionlog
 
 import (

@@ -13,7 +13,7 @@ import {
     FileUploadPaths,
     FileImage,
     FileView,
-} from '../wailsjs/go/main/App';
+} from '../wailsjs/go/app/App';
 import {transfer} from '../wailsjs/go/models';
 import {EventsOn, OnFileDrop} from '../wailsjs/runtime/runtime';
 import {ask, askText} from './dialog';

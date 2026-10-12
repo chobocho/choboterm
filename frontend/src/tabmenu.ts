@@ -3,7 +3,7 @@
 import {openSaveSession} from './sessions';
 import {settings} from './settings';
 import {themeByName, THEMES} from './themes';
-import {RunScriptFile, ShowScripts, StopScript, SendBreak, ShowLogs} from '../wailsjs/go/main/App';
+import {RunScriptFile, ShowScripts, StopScript, SendBreak, ShowLogs} from '../wailsjs/go/app/App';
 import {active, focusActive, panesOf, Tab, tabs} from './tabstate';
 import {notice, toast} from './notify';
 import {chooseTheme} from './look';

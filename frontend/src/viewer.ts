@@ -14,7 +14,7 @@ import {
 } from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap, indentLess, insertTab} from '@codemirror/commands';
 import {highlightSelectionMatches, search, searchKeymap} from '@codemirror/search';
-import {FileSaveText, TextSaveAs} from '../wailsjs/go/main/App';
+import {FileSaveText, TextSaveAs} from '../wailsjs/go/app/App';
 import {ask} from './dialog';
 import {formatSize} from './files';
 import {setViewerOpen} from './viewer-state';

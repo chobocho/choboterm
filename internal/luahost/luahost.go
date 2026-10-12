@@ -1,3 +1,5 @@
+// Package luahost runs Lua scripts in a process of their own (choboterm --lua-
+// host) and limits what they may use.
 package luahost
 
 // The Lua script host: choboterm.exe started again as "choboterm.exe --lua-host".
@@ -68,7 +70,7 @@ type luaHost struct {
 	pmu    sync.Mutex
 	prints []string
 
-	evals      chan LuaMsg           // console input waiting to run
+	evals      chan LuaMsg        // console input waiting to run
 	evalCancel context.CancelFunc // stops the running eval (guarded by mu)
 }
 

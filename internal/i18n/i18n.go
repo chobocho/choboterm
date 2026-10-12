@@ -1,3 +1,5 @@
+// Package i18n puts what the Go side shows (dialogs, notices in the terminal,
+// log lines) into the screen language.
 package i18n
 
 // English screen, Go side. Most text reaches the page and is translated

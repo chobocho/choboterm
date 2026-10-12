@@ -2,7 +2,7 @@
 // while the tab is the active one.
 
 import {openSaveSession} from './sessions';
-import {GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts, LookupSSH} from '../wailsjs/go/main/App';
+import {GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts, LookupSSH} from '../wailsjs/go/app/App';
 import {localshell, serial, sshconn, store, terminal} from '../wailsjs/go/models';
 import {isLinux} from './platform';
 import {active, DialogState, focusActive, Tab, tabs} from './tabstate';

@@ -1,7 +1,7 @@
 // Update check: asks the Go side (which asks GitHub) whether a newer release
 // is out. At start it only runs when turned on in the settings.
 
-import {CheckUpdate} from '../wailsjs/go/main/App';
+import {CheckUpdate} from '../wailsjs/go/app/App';
 import {BrowserOpenURL} from '../wailsjs/runtime/runtime';
 import {ask} from './dialog';
 

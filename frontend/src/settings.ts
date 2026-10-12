@@ -1,6 +1,6 @@
 // User preferences, stored by the Go side in %AppData%\choboterm\settings.json.
 
-import {GetSettings, SaveSettings} from '../wailsjs/go/main/App';
+import {GetSettings, SaveSettings} from '../wailsjs/go/app/App';
 import {config} from '../wailsjs/go/models';
 
 export let settings: config.Settings = config.Settings.createFrom({

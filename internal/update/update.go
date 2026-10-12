@@ -1,3 +1,4 @@
+// Package update asks GitHub for the latest release.
 package update
 
 import (

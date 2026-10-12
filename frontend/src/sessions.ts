@@ -1,7 +1,7 @@
 // Saved sessions: the "Save session" window, opened from the Connect dialog
 // (☆ Save, Alt+S) or the tab menu, and the session manager (Ctrl+Shift+H).
 
-import {DeleteSession, ExportSessions, GetSessions, ImportPuTTY, ImportSessions, SaveSession} from '../wailsjs/go/main/App';
+import {DeleteSession, ExportSessions, GetSessions, ImportPuTTY, ImportSessions, SaveSession} from '../wailsjs/go/app/App';
 import {store} from '../wailsjs/go/models';
 import {ask, askOpen} from './dialog';
 

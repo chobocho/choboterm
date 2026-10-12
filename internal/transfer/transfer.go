@@ -1,3 +1,5 @@
+// Package transfer moves files: the remote file systems (SFTP, SCP over a
+// shell, FTP), Zmodem, and progress.
 package transfer
 
 import (

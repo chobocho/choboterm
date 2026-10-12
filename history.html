@@ -5,6 +5,17 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-13 — Go 소스를 폴더(패키지)별로 정리</h2>
+<ul>
+  <li>루트에 있던 Go 파일 146개(package main 하나)를 패키지로 나눔. 루트에는 진입점 <code>main.go</code>(app.Main 호출)와 <code>icon.go</code>(창 아이콘 임베드)만 남음</li>
+  <li>구조: <code>internal/app</code>(App · 탭 · 화면이 부르는 메서드 · 웹 서버 · 창), <code>terminal</code>(Session · 접속 요청 · 프로토콜 판별), <code>sshconn</code> · <code>telnet</code> · <code>serial</code> · <code>localshell</code>(연결 종류), <code>transfer</code>(SFTP · SCP · FTP · Zmodem), <code>store</code> · <code>config</code> · <code>secret</code>(기록 · 세션 · 설정 · 암호화), <code>luahost</code>, <code>sessionlog</code>, <code>codec</code>, <code>i18n</code>, <code>update</code>, <code>dbg</code>, <code>version</code>, <code>osutil</code>, 테스트 공용 <code>testutil</code> · <code>sshconn/sshtest</code>. 화면과 영어 사전 임베드는 <code>frontend</code> 패키지(go:embed는 자기 폴더 아래만 읽음)</li>
+  <li>먼저 만든 안전망: <code>wire_test.go</code>(화면이 부를 수 있는 메서드 73개와 시그니처, JSON 태그가 있는 모든 구조체, 기본 설정을 testdata/wire.golden과 비교 + Go가 보내는 이벤트 이름 = 화면이 듣는 이름), <code>tools/vet_all.sh</code>(Windows · Linux · macOS · Termux, 창/headless 6개 구성 타입 검사). 골든 파일은 처음부터 끝까지 한 글자도 바뀌지 않음</li>
+  <li>방법: 코드는 손으로 옮기지 않고 임시 도구(go/types 기반, 6개 빌드 구성 모두 분석)로 파일 단위 이동 → 다른 패키지에서 쓰는 이름만 내보내고(대문자) 참조 · import를 고침. 옮길 코드가 남는 코드에 의존하면 거부하고, App에 내보낸 메서드가 생기면(= 화면 · 브라우저가 부를 수 있게 됨) 거부하도록 함. 화면이 부르는 App 메서드는 로직과 분리해 <code>app_*.go</code>에 둠</li>
+  <li>단계마다(패키지 묶음별 커밋 7개) vet_all · go test 통과 확인, 화면 타입은 생성 파일을 갱신해 tsc로 확인. Go 테스트 함수 166개 이름 목록이 전후 동일. 마지막에 E2E 53개 통과, <code>wails build</code>로 창 프로그램 빌드 후 별도 설정 폴더로 잠깐 실행해 디버그 로그로 창 모드 바인딩 동작 확인</li>
+  <li>함께 바뀐 것: ① 버전은 이제 <code>internal/version/version.go</code>의 <code>Version</code>에서 올림(build_linux.sh · README 반영) ② Wails 생성 파일이 <code>wailsjs/go/main</code> → <code>wailsjs/go/app</code>, 타입 이름공간이 main → app · config · store · terminal · transfer 등 패키지 이름으로 바뀌어 화면 코드의 import와 타입 참조를 맞춤(web_shim.js의 window.go.main → window.go.app) ③ README의 실서버 테스트 명령은 <code>go test ./... -run …</code>으로</li>
+  <li>남긴 것: 웹 서버(web*.go)는 App과 서로 참조해서 internal/app 안에 그대로 둠(나누려면 인터페이스를 새로 설계해야 해서 동작 변경 위험). Linux 창 빌드(cgo)는 이 PC에서 타입 검사만 했고 실제 빌드는 CI에 맡김</li>
+</ul>
+
 <h2>2026-10-13 — 접속 창 ▼ 버튼, 접속 직후 첫 출력 사라짐 수정</h2>
 <ul>
   <li>접속 창 ▼ 버튼: 다시 눌러도 목록이 닫히지 않던 문제 수정. 버튼 mousedown에서 포커스 이동을 막아(Host 칸 blur → 목록 닫힘 → click이 다시 엶) click이 열기 · 닫기를 번갈아 하게 함</li>

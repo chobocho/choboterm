@@ -1,10 +1,10 @@
 // Settings window (Ctrl+Shift+O or the ⚙ button).
 
 import {saveSettings, settings} from './settings';
-import {ChooseLogDir, WebNewToken, WebOpen, WebStart, WebStatus, WebStop} from '../wailsjs/go/main/App';
+import {ChooseLogDir, WebNewToken, WebOpen, WebStart, WebStatus, WebStop} from '../wailsjs/go/app/App';
 import {ClipboardSetText} from '../wailsjs/runtime/runtime';
 import {webPage} from './platform';
-import {config, main} from '../wailsjs/go/models';
+import {app, config} from '../wailsjs/go/models';
 import {FONTS} from './cjkwidth';
 import {paletteOf, themeByName, THEMES} from './themes';
 import {checkUpdate} from './update';
@@ -80,7 +80,7 @@ glassGpu.addEventListener('change', paintTranslucency);
 
 // ---- Web server (window only; takes effect at once, not on OK) ----
 
-function paintWeb(info: main.WebInfo) {
+function paintWeb(info: app.WebInfo) {
     webAddr.value = info.addr;
     webStart.textContent = info.running ? '다시 시작' : '켜기';
     webStop.disabled = !info.running;
@@ -95,7 +95,7 @@ function paintWeb(info: main.WebInfo) {
 }
 
 /** Runs a web server action and shows the resulting state (or the error). */
-async function webDo(action: () => Promise<main.WebInfo | void>) {
+async function webDo(action: () => Promise<app.WebInfo | void>) {
     for (const b of [webStart, webStop]) b.disabled = true;
     try {
         const info = await action();

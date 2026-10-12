@@ -1,8 +1,8 @@
 // SSH port forwarding window (Ctrl+Shift+P). Rules are saved per host by the
 // Go side and start again on the next connection.
 
-import {ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/main/App';
-import {main, store, terminal} from '../wailsjs/go/models';
+import {ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/app/App';
+import {app, store, terminal} from '../wailsjs/go/models';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -30,7 +30,7 @@ const HINTS: Record<string, string> = {
 
 let tabId = 0;
 let conn: terminal.ConnectRequest | undefined;
-let rules: main.ForwardStatus[] = [];
+let rules: app.ForwardStatus[] = [];
 let selected = -1;
 let onClose: (() => void) | undefined;
 
@@ -38,7 +38,7 @@ export function forwardsOpen() {
     return !overlay.hidden;
 }
 
-function bindText(f: main.ForwardStatus) {
+function bindText(f: app.ForwardStatus) {
     return `${f.bindAddr}:${f.bindPort}`;
 }
 
