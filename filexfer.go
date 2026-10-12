@@ -12,8 +12,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // RemoteFS is a remote file system reachable over SFTP or FTP.
@@ -301,19 +299,20 @@ func (a *App) FileDownload(tabID int, remotePath string, size int64) (string, er
 	if t == nil {
 		return "", errors.New("연결되어 있지 않습니다")
 	}
-	local, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:            tr("다운로드"),
-		DefaultDirectory: downloadsDir(),
-		DefaultFilename:  path.Base(remotePath),
+	local, finish, err := a.picker().saveFile(pickOpts{
+		Title: tr("다운로드"),
+		Dir:   downloadsDir(),
+		Name:  path.Base(remotePath),
 	})
 	if err != nil || local == "" {
 		return "", err
 	}
 
 	if err := t.downloadFile(remotePath, local, size, path.Base(remotePath)); err != nil {
+		finish(false)
 		return "", err
 	}
-	return local, nil
+	return finish(true), nil
 }
 
 // FileUpload asks for local files and uploads them into remoteDir.
@@ -323,9 +322,8 @@ func (a *App) FileUpload(tabID int, remoteDir string) (int, error) {
 	if t == nil {
 		return 0, errors.New("연결되어 있지 않습니다")
 	}
-	files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: tr("업로드할 파일 선택"),
-	})
+	files, release, err := a.picker().openFiles(pickOpts{Title: tr("업로드할 파일 선택")})
+	defer release()
 	if err != nil || len(files) == 0 {
 		return 0, err
 	}
@@ -335,6 +333,9 @@ func (a *App) FileUpload(tabID int, remoteDir string) (int, error) {
 // FileUploadPaths uploads local files and folders (with their contents) into
 // remoteDir, e.g. ones dropped on the file window. Returns the number of files.
 func (a *App) FileUploadPaths(tabID int, remoteDir string, paths []string) (int, error) {
+	if a.caller != nil {
+		defer a.caller.releaseStaged(paths) // files a browser dropped (see web_files.go)
+	}
 	t := a.findTab(tabID)
 	if t == nil {
 		return 0, errors.New("연결되어 있지 않습니다")
@@ -481,15 +482,16 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 		return DownloadResult{}, errors.New("연결되어 있지 않습니다")
 	}
 	localDir := a.hooks.downloadDir
+	finish := keepPath(localDir)
 	if localDir == "" {
-		d, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-			Title:            tr("저장할 폴더 선택"),
-			DefaultDirectory: downloadsDir(),
+		d, f, err := a.picker().saveDir(pickOpts{
+			Title: tr("저장할 폴더 선택"),
+			Dir:   downloadsDir(),
 		})
 		if err != nil || d == "" {
 			return DownloadResult{}, err
 		}
-		localDir = d
+		localDir, finish = d, f
 	}
 
 	// Collect the files first, so progress can say "(3/10)".
@@ -527,6 +529,7 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 		return nil
 	})
 	if err != nil {
+		finish(false)
 		return DownloadResult{}, err
 	}
 
@@ -537,10 +540,13 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 			name = fmt.Sprintf("(%d/%d) %s", res.Count+1, len(items), name)
 		}
 		if err := t.downloadFile(it.remote, it.local, it.size, name); err != nil {
+			// The files that did arrive stay, as in the folder of a native dialog.
+			res.Dir = finish(res.Count > 0)
 			return res, err
 		}
 		res.Count++
 	}
+	res.Dir = finish(true)
 	return res, nil
 }
 

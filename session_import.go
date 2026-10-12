@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // sessionsExport is the file written by "내보내기". Passwords are never in it:
@@ -103,28 +101,33 @@ func addSessions(list []SavedSession) (ImportResult, error) {
 // ExportSessions asks for a file and writes the saved sessions (without
 // passwords) to it. It returns the path, or "" if the user cancelled.
 func (a *App) ExportSessions() (string, error) {
-	p, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           tr("세션 내보내기"),
-		DefaultFilename: "choboterm-sessions.json",
-		Filters:         []runtime.FileFilter{{DisplayName: tr("세션 파일 (*.json)"), Pattern: "*.json"}},
+	p, finish, err := a.picker().saveFile(pickOpts{
+		Title:   tr("세션 내보내기"),
+		Name:    "choboterm-sessions.json",
+		Filters: []fileFilter{{Name: tr("세션 파일 (*.json)"), Pattern: "*.json"}},
 	})
 	if err != nil || p == "" {
 		return "", err
 	}
 	data, err := encodeExport(loadSessions())
+	if err == nil {
+		err = os.WriteFile(p, data, 0o644)
+	}
 	if err != nil {
+		finish(false)
 		return "", err
 	}
-	return p, os.WriteFile(p, data, 0o644)
+	return finish(true), nil
 }
 
 // ImportSessions asks for a file written by ExportSessions and adds its
 // sessions. Cancelled = zero result.
 func (a *App) ImportSessions() (ImportResult, error) {
-	p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+	p, release, err := a.picker().openFile(pickOpts{
 		Title:   tr("세션 가져오기"),
-		Filters: []runtime.FileFilter{{DisplayName: tr("세션 파일 (*.json)"), Pattern: "*.json"}},
+		Filters: []fileFilter{{Name: tr("세션 파일 (*.json)"), Pattern: "*.json"}},
 	})
+	defer release()
 	if err != nil || p == "" {
 		return ImportResult{}, err
 	}

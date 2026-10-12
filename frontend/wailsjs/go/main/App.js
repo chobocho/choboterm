@@ -269,3 +269,23 @@ export function TabTheme(arg1) {
 export function TextSaveAs(arg1, arg2, arg3) {
   return window['go']['main']['App']['TextSaveAs'](arg1, arg2, arg3);
 }
+
+export function WebNewToken() {
+  return window['go']['main']['App']['WebNewToken']();
+}
+
+export function WebOpen() {
+  return window['go']['main']['App']['WebOpen']();
+}
+
+export function WebStart(arg1) {
+  return window['go']['main']['App']['WebStart'](arg1);
+}
+
+export function WebStatus() {
+  return window['go']['main']['App']['WebStatus']();
+}
+
+export function WebStop() {
+  return window['go']['main']['App']['WebStop']();
+}

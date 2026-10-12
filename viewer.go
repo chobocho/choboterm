@@ -8,8 +8,6 @@ import (
 	"os"
 	"path"
 	"strings"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // viewLimit is how much of a remote file the text viewer loads.
@@ -213,17 +211,18 @@ type SaveResult struct {
 // TextSaveAs asks for a local file and writes text to it in encoding enc.
 // Path is "" if the user cancelled the dialog.
 func (a *App) TextSaveAs(name, text, enc string) (SaveResult, error) {
-	local, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:            tr("다른 인코딩으로 저장 (" + enc + ")"),
-		DefaultDirectory: downloadsDir(),
-		DefaultFilename:  name,
+	local, finish, err := a.picker().saveFile(pickOpts{
+		Title: tr("다른 인코딩으로 저장 (" + enc + ")"),
+		Dir:   downloadsDir(),
+		Name:  name,
 	})
 	if err != nil || local == "" {
 		return SaveResult{}, err
 	}
 	out, bad := encodeText(text, enc)
 	if err := os.WriteFile(local, out, 0o644); err != nil {
+		finish(false)
 		return SaveResult{}, err
 	}
-	return SaveResult{Path: local, Bad: bad}, nil
+	return SaveResult{Path: finish(true), Bad: bad}, nil
 }

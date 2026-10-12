@@ -2207,3 +2207,18 @@ body.linux select {
 button {
     white-space: nowrap;
 }
+
+/* In a browser (web server): what only the choboterm window can do. */
+body.web .window-only {
+    display: none !important;
+}
+
+.prefs .dirrow[hidden] {
+    display: none;
+}
+
+#pWebState {
+    display: block;
+    white-space: pre-line;
+    word-break: break-all;
+}

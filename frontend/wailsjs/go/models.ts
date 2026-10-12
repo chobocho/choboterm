@@ -379,6 +379,20 @@ export namespace main {
 	        this.label = source["label"];
 	    }
 	}
+	export class WebSettings {
+	    enabled: boolean;
+	    addr: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WebSettings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.addr = source["addr"];
+	    }
+	}
 	export class UpdateState {
 	    // Go type: time
 	    last: any;
@@ -457,6 +471,7 @@ export namespace main {
 	    updateCheck: boolean;
 	    window?: WindowState;
 	    update?: UpdateState;
+	    web?: WebSettings;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -488,6 +503,7 @@ export namespace main {
 	        this.updateCheck = source["updateCheck"];
 	        this.window = this.convertValues(source["window"], WindowState);
 	        this.update = this.convertValues(source["update"], UpdateState);
+	        this.web = this.convertValues(source["web"], WebSettings);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -593,6 +609,33 @@ export namespace main {
 	        this.modTime = source["modTime"];
 	    }
 	}
+	export class WebInfo {
+	    running: boolean;
+	    enabled: boolean;
+	    addr: string;
+	    url: string;
+	    tls: boolean;
+	    fingerprint: string;
+	    remote: boolean;
+	    clients: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new WebInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.running = source["running"];
+	        this.enabled = source["enabled"];
+	        this.addr = source["addr"];
+	        this.url = source["url"];
+	        this.tls = source["tls"];
+	        this.fingerprint = source["fingerprint"];
+	        this.remote = source["remote"];
+	        this.clients = source["clients"];
+	    }
+	}
+	
 
 }
 

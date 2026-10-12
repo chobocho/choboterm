@@ -135,3 +135,13 @@ export function StopScript(arg1:number):Promise<void>;
 export function TabTheme(arg1:number):Promise<string>;
 
 export function TextSaveAs(arg1:string,arg2:string,arg3:string):Promise<main.SaveResult>;
+
+export function WebNewToken():Promise<main.WebInfo>;
+
+export function WebOpen():Promise<void>;
+
+export function WebStart(arg1:string):Promise<main.WebInfo>;
+
+export function WebStatus():Promise<main.WebInfo>;
+
+export function WebStop():Promise<void>;

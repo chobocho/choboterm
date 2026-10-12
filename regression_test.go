@@ -153,12 +153,16 @@ func TestPromptCarriesTab(t *testing.T) {
 			shown <- data[0].(Prompt)
 		}
 	}
-	go a.choose(9, "t", "m", "yes", "no")
+	done := make(chan bool)
+	go func() { done <- a.choose(9, "t", "m", "yes", "no") }()
 	p := <-shown
 	if p.Tab != 9 || p.OK != "yes" || p.Cancel != "no" || len(p.Fields) != 0 {
 		t.Fatalf("prompt %+v", p)
 	}
-	a.AnswerPrompt(p.ID, nil, false)
+	a.AnswerPrompt(p.ID, nil, true)
+	if !<-done {
+		t.Fatal("answered yes, got no")
+	}
 }
 
 // An unanswered prompt times out as cancelled and tells the page to close it.

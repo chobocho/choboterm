@@ -61,9 +61,19 @@ type ConnectRequest struct {
 	Rows     int    `json:"rows"`
 }
 
-// App struct
+// App is what the page calls (the methods Wails binds). The desktop window
+// uses the App made by NewApp; each web client (see web.go) calls through its
+// own App that shares the same appState, so a method can tell who called it
+// (caller) and, for example, open the file dialog on the right screen.
 type App struct {
-	ctx   context.Context
+	*appState
+	caller *webClient // nil: the desktop window (or a test)
+}
+
+// appState is the state shared by the window and every web client.
+// It must have no exported methods: they would become Wails bindings.
+type appState struct {
+	ctx   context.Context // the Wails window; nil without one (tests, headless web)
 	mu    sync.Mutex
 	tabs  map[int]*tab
 	hooks testHooks
@@ -72,6 +82,12 @@ type App struct {
 	fwdMu sync.Mutex
 	shown sync.Once
 	quit  atomic.Bool // the user agreed to close the window (see beforeClose)
+	// web is the web server while it runs (see web.go).
+	web atomic.Pointer[webServer]
+	// webStart is the web server to start with the window (main's --web
+	// or Settings > Web); nil = none.
+	webStart *webOptions
+	hidden   atomic.Bool // the window was closed but hides for the browsers (see hideForWeb)
 }
 
 // tab is one connection with its own terminal tab in the frontend.
@@ -99,17 +115,23 @@ type testHooks struct {
 	downloadDir string
 	confirmKey  func(host, fingerprint string) bool
 	prompt      func(Prompt) ([]string, bool)
+	picker      picker // replaces the file dialogs
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{tabs: make(map[int]*tab)}
+	return &App{appState: &appState{tabs: make(map[int]*tab)}}
 }
 
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	if a.webStart != nil {
+		if err := a.startWebServer(*a.webStart); err != nil {
+			debugf("web: %v", err)
+		}
+	}
 }
 
 // domReady shows the window at its saved position the first time the page loads.
@@ -129,18 +151,22 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	if w, ok := currentWindowState(); ok && w.valid() {
 		_ = updateSettings(func(s *Settings) { s.Window = &w })
 	}
-	if !a.quit.Load() && a.connected() {
+	if !a.quit.Load() && a.windowTabsConnected() {
 		a.emit("app:close")
 		return true
 	}
-	return false
+	// Browsers are still using the web server: hide instead of quitting.
+	return a.hideForWeb(ctx)
 }
 
-// connected reports whether any tab has a connection open.
-func (a *App) connected() bool {
+// connectedWhere reports whether a tab whose id passes keep has a connection open.
+func (a *App) connectedWhere(keep func(id int) bool) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	for _, t := range a.tabs {
+	for id, t := range a.tabs {
+		if !keep(id) {
+			continue
+		}
 		if t.session() != nil {
 			return true
 		}
@@ -157,13 +183,19 @@ func (a *App) connected() bool {
 	return false
 }
 
-// Quit closes the window without asking again.
+// Quit closes the window without asking again. A web page can't quit the app.
 func (a *App) Quit() {
+	if a.caller != nil || a.ctx == nil {
+		return
+	}
 	a.quit.Store(true)
 	runtime.Quit(a.ctx)
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	if w := a.web.Load(); w != nil {
+		w.stop()
+	}
 	a.mu.Lock()
 	tabs := a.tabs
 	a.tabs = make(map[int]*tab)
@@ -193,17 +225,44 @@ func (a *App) findTab(id int) *tab {
 	return a.tabs[id]
 }
 
-// emit sends an event to the frontend (replaceable in tests).
+// emit sends an event to the desktop window (replaceable in tests).
 func (a *App) emit(name string, data ...interface{}) {
+	a.emitFor(0, name, data...)
+}
+
+// emitFor sends an event to the page that owns tab tabID: the desktop window
+// for the window's tabs (and tab 0), otherwise the web client (see clientOf).
+func (a *App) emitFor(tabID int, name string, data ...interface{}) {
 	if a.hooks.emit != nil {
 		a.hooks.emit(name, data...)
 		return
 	}
-	runtime.EventsEmit(a.ctx, name, data...)
+	if c := clientOf(tabID); c != windowClient {
+		if w := a.web.Load(); w != nil {
+			w.event(c, name, data)
+		}
+		return
+	}
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, name, data...)
+	}
 }
 
 func (t *tab) emit(name string, data ...interface{}) {
-	t.app.emit(name, append([]interface{}{t.id}, data...)...)
+	t.app.emitFor(t.id, name, append([]interface{}{t.id}, data...)...)
+}
+
+// emitOutput shows terminal output in the tab: a term:data event with the
+// bytes in base64 for the window, a binary message for a web client.
+// out may be reused by the caller once this returns.
+func (t *tab) emitOutput(out []byte) {
+	if c := clientOf(t.id); c != windowClient && t.app.hooks.emit == nil {
+		if w := t.app.web.Load(); w != nil {
+			w.output(c, t.id, out)
+		}
+		return
+	}
+	t.emit("term:data", base64.StdEncoding.EncodeToString(out))
 }
 
 func (t *tab) session() Session {
@@ -284,7 +343,7 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 			return "", err
 		}
 		target := net.JoinHostPort(dial.Host, strconv.Itoa(req.Port))
-		if jumps, conn, err = dialJumps(hops, target, a.confirmHostKey, a.asker(tabID)); err != nil {
+		if jumps, conn, err = dialJumps(hops, target, a.hostKeyConfirmer(tabID), a.asker(tabID)); err != nil {
 			return "", err
 		}
 	}
@@ -317,7 +376,7 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 		if dial.Login == "" {
 			dial.Login = configGet(cfg, req.Host, "User")
 		}
-		sess, err = dialSSH(dial, a.confirmHostKey, a.asker(tabID), conn, sshIdentityFiles(cfg, req.Host, dial.Login))
+		sess, err = dialSSH(dial, a.hostKeyConfirmer(tabID), a.asker(tabID), conn, sshIdentityFiles(cfg, req.Host, dial.Login))
 		if err != nil {
 			closeClients(jumps)
 		} else {
@@ -457,7 +516,7 @@ func (t *tab) pump(sess Session) {
 			if s := t.script.Load(); s != nil {
 				s.feed(pending)
 			}
-			t.emit("term:data", base64.StdEncoding.EncodeToString(pending))
+			t.emitOutput(pending)
 			pending = pending[:0]
 		}
 	}
@@ -627,10 +686,21 @@ func (a *App) GetHistory() []HostEntry {
 	return loadHistory()
 }
 
+// hostKeyConfirmer returns the host key question for connections of a tab.
+func (a *App) hostKeyConfirmer(tabID int) func(host, fingerprint string) bool {
+	return func(host, fingerprint string) bool { return a.confirmHostKey(tabID, host, fingerprint) }
+}
+
 // confirmHostKey asks the user whether to trust an unknown SSH host key.
-func (a *App) confirmHostKey(host, fingerprint string) bool {
+func (a *App) confirmHostKey(tabID int, host, fingerprint string) bool {
 	if a.hooks.confirmKey != nil {
 		return a.hooks.confirmKey(host, fingerprint)
+	}
+	if a.caller != nil || a.ctx == nil {
+		// A web page: ask in the page, like other questions while connecting.
+		return a.choose(tabID, tr("알 수 없는 호스트"),
+			tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
+				host, fingerprint)), "Yes", "No")
 	}
 	res, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
 		Type:  runtime.QuestionDialog,

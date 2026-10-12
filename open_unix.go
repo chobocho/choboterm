@@ -12,3 +12,6 @@ func openFolder(dir string) error { return exec.Command("xdg-open", dir).Start()
 
 // showFile shows the folder of file p.
 func showFile(p string) error { return openFolder(filepath.Dir(p)) }
+
+// openURL opens url in the default browser.
+func openURL(url string) error { return exec.Command("xdg-open", url).Start() }
