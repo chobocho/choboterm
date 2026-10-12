@@ -40,6 +40,11 @@ func main() {
 	webPage = page
 
 	if opts.headless || headlessBuild {
+		if len(opts.unknown) > 0 {
+			attachConsole()
+			fmt.Fprintf(os.Stderr, "choboterm: unknown option %q\n%s", opts.unknown[0], usage)
+			os.Exit(2)
+		}
 		os.Exit(runHeadless(opts))
 	}
 	runWindow(opts)

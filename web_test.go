@@ -821,13 +821,18 @@ func TestParseArgs(t *testing.T) {
 		{[]string{"--cert", "c.pem"}, cliOptions{}, true},
 		{[]string{"--grace"}, cliOptions{}, true},
 		{[]string{"--grace", "-1s"}, cliOptions{}, true},
-		{[]string{"--bogus"}, cliOptions{}, true},
 	}
 	for _, c := range cases {
 		got, err := parseArgs(c.args)
-		if (err != nil) != c.err || (!c.err && got != c.want) {
+		if (err != nil) != c.err || (!c.err && fmt.Sprint(got) != fmt.Sprint(c.want)) {
 			t.Errorf("%v: %+v %v", c.args, got, err)
 		}
+	}
+	// Arguments that aren't ours are kept aside, not errors: the window
+	// ignores them as before (wails dev passes -assetdir etc.).
+	got, err := parseArgs([]string{"-assetdir", "x", "--web"})
+	if err != nil || !got.web || fmt.Sprint(got.unknown) != "[-assetdir x]" {
+		t.Fatalf("unknown args: %+v %v", got, err)
 	}
 	if o := (cliOptions{}).webOptions(); o != nil {
 		t.Fatal("webOptions without --web")

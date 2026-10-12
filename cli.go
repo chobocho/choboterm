@@ -19,6 +19,9 @@ type cliOptions struct {
 	open     bool          // open the page in this PC's browser
 	grace    time.Duration // how long a disconnected page keeps its tabs
 	help     bool
+	// unknown are arguments that aren't ours. The window ignores them, as it
+	// always did (wails dev passes its own -flags); --headless refuses them.
+	unknown []string
 }
 
 const usage = `
@@ -82,7 +85,7 @@ func parseArgs(args []string) (cliOptions, error) {
 		case "-h", "--help", "-help", "/?":
 			o.help = true
 		default:
-			return o, fmt.Errorf("unknown option %q", arg)
+			o.unknown = append(o.unknown, arg)
 		}
 		if err != nil {
 			return o, err

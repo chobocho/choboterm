@@ -1,5 +1,7 @@
 #!/bin/bash
-# Builds the Linux release: release/choboterm-linux-amd64.tar.gz.
+# Builds the Linux release: release/choboterm-linux-amd64.tar.gz, and
+# release/choboterm-headless-linux-amd64 (the web server without the window:
+# a static binary that needs no GTK/WebKit, for servers).
 #
 # The binary is built in an Ubuntu 22.04 container (tools/linux/Dockerfile) so
 # it runs on older distributions too; --native builds with this machine's Go
@@ -31,6 +33,7 @@ if [ "${1:-}" = "--native" ]; then
     go test ./...
     echo "[3/4] build (native)"
     CGO_ENABLED=1 go build -tags "$tags" -ldflags "$ldflags" -o "build/bin/choboterm" .
+    CGO_ENABLED=0 go build -tags headless -trimpath -ldflags "$ldflags" -o "build/bin/choboterm-headless" .
 else
     echo "[2/4] build environment (docker image choboterm-linux-build)"
     docker build -q -t choboterm-linux-build tools/linux >/dev/null
@@ -43,6 +46,7 @@ else
     echo "[3/4] test and build (Ubuntu 22.04)"
     run go test ./...
     run env CGO_ENABLED=1 go build -tags "$tags" -ldflags "$ldflags" -o build/bin/choboterm .
+    run env CGO_ENABLED=0 go build -tags headless -trimpath -ldflags "$ldflags" -o build/bin/choboterm-headless .
 fi
 
 echo "[4/4] package"
@@ -55,4 +59,5 @@ install -m 755 tools/linux/install.sh "$stage/$name/"
 mkdir -p release
 tar -C "$stage" -czf "release/$name.tar.gz" "$name"
 rm -rf "$stage"
-echo "done: release/$name.tar.gz (V$version)"
+install -m 755 build/bin/choboterm-headless "release/choboterm-headless-linux-amd64"
+echo "done: release/$name.tar.gz, release/choboterm-headless-linux-amd64 (V$version)"
