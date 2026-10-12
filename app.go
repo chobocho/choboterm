@@ -433,6 +433,9 @@ func (t *tab) start(sess Session, proto string, req ConnectRequest) {
 	t.host, t.port = req.Host, req.Port
 	t.mu.Unlock()
 
+	// The page clears the tab's screen for the new session now, not when
+	// Connect returns: the session's first output can get there before that.
+	t.emit("term:open", t.codec.Name())
 	go t.pump(sess)
 	go t.keepAlive(sess, time.Duration(loadSettings().KeepAlive)*time.Second)
 	if s, ok := sess.(*sshSession); ok {

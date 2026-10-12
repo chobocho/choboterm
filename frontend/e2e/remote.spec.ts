@@ -20,6 +20,32 @@ test('a server on an unusual port: label, tooltip, title, input and output', asy
     await expect(app.menuItem('forwards')).toHaveClass(/\bdisabled\b/); // SSH only
 });
 
+test('what the server sends at once is not lost when the screen is cleared', async ({app, server}) => {
+    await app.connect('127.0.0.1', server.port);
+    await expect(app.screen).toContainText('fake-host login:');
+    await expect(app.screen).not.toContainText('Ctrl+Shift+T: 새 탭'); // the welcome text is gone
+
+    // Connecting again clears the old output and shows the new greeting.
+    await expect(app.screen).toContainText(server.say('old output'));
+    await app.openMenu();
+    await app.menuItem('reconnect').click();
+    await expect.poll(() => server.accepted).toBe(2);
+    await expect(app.screen).not.toContainText('old output');
+    await expect(app.screen).toContainText('fake-host login:');
+});
+
+test('a failed connection leaves the screen as it was', async ({app, server}) => {
+    await app.connect('127.0.0.1', server.port);
+    await expect(app.screen).toContainText(server.say('still here'));
+    await server.close();
+    await expect(app.activeTab).not.toHaveClass(/\bon\b/);
+    await app.key('Escape'); // the automatic reconnect
+    await app.openMenu();
+    await app.menuItem('reconnect').click();
+    await expect(app.screen).toContainText('still here');
+    await expect(app.activeTab).not.toHaveClass(/\bon\b/);
+});
+
 test('Ctrl+Shift+E switches the encoding', async ({app, server}) => {
     await app.connect('127.0.0.1', server.port);
     await app.key('Control+Shift+E');

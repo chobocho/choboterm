@@ -67,6 +67,8 @@ export interface Tab {
     // The GPU (WebGL) renderer, while it draws this tab instead of the DOM renderer.
     webgl?: WebglAddon;
     webglLoading?: boolean;
+    // Connecting with a clear screen: it is cleared when the new session opens (term:open).
+    fresh?: boolean;
     // Color theme chosen for this tab's server; undefined: the one in Settings.
     theme?: string;
 }

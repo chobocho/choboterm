@@ -85,6 +85,40 @@ func TestTermDataPayloadIsTabIDAndBase64(t *testing.T) {
 	}
 }
 
+// A session's first output can reach the page before Connect returns, so the
+// page clears the screen for the new session at term:open (connection.ts):
+// it comes before the session's output, with the tab id and the encoding.
+func TestTermOpenComesBeforeTheSessionsOutput(t *testing.T) {
+	isolateSettings(t)
+	type ev struct {
+		name string
+		data []interface{}
+	}
+	got := make(chan ev, 16)
+	a := NewApp()
+	a.hooks.emit = func(name string, data ...interface{}) { got <- ev{name, data} }
+	sess := newPipeSession()
+	tb := a.getTab(7)
+	enc := tb.codec.Set("EUC-KR")
+	tb.start(sess, "telnet", ConnectRequest{Host: "example", Port: 2323})
+	defer sess.out.Close()
+	sess.out.Write([]byte("login: "))
+
+	for i, want := range []string{"term:open", "term:data"} {
+		select {
+		case e := <-got:
+			if e.name != want {
+				t.Fatalf("event %d is %s %v, want %s", i, e.name, e.data, want)
+			}
+			if want == "term:open" && !reflect.DeepEqual(e.data, []interface{}{7, enc}) {
+				t.Fatalf("term:open carries %v, want the tab id and %q", e.data, enc)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("no %s", want)
+		}
+	}
+}
+
 // Every tab event starts with the tab id, followed by the event's own values.
 func TestTabEmitPrependsTabID(t *testing.T) {
 	var got []interface{}

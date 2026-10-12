@@ -56,7 +56,14 @@ export async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = 
     req.cols = t.term.cols;
     req.rows = t.term.rows;
     forgetFiles(t.id); // a reconnect replaces the old connection's file window
-    const protocol = await Connect(t.id, req);
+    t.fresh = !keepScreen;
+    let protocol: string;
+    try {
+        protocol = await Connect(t.id, req);
+    } catch (e) {
+        t.fresh = false; // the screen stays as it was
+        throw e;
+    }
     if (!tabs.has(t.id)) {
         CloseTab(t.id); // the tab was closed while connecting
         throw new Error('탭이 닫혔습니다');
@@ -64,7 +71,7 @@ export async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = 
     t.req = req;
     t.proto = protocol;
     if (protocol === 'local') req.encoding = 'UTF-8'; // the pseudo console speaks UTF-8 only
-    if (!keepScreen) t.term.reset();
+    freshScreen(t, req.encoding || 'UTF-8'); // FTP: no session opened
     applyEncoding(t, req.encoding || 'UTF-8');
     if (protocol === 'ftp') {
         setState(t, 'ftp');
@@ -199,6 +206,25 @@ export async function sendInput(t: Tab, data: string) {
     }
 }
 
+/**
+ * Clears t's screen for the session being opened, once. A session's first
+ * output can arrive before the call that opened it returns, so the screen is
+ * cleared when the Go side says the session starts (term:open), not after
+ * the call: the output would be cleared with it.
+ */
+function freshScreen(t: Tab, encoding: string) {
+    if (!t.fresh) return;
+    t.fresh = false;
+    t.term.reset();
+    applyEncoding(t, encoding);
+}
+
+// A session starts in the tab; its output follows. encoding: the one it is read with.
+EventsOn('term:open', (id: number, encoding: string) => {
+    const t = tabs.get(id);
+    if (t) freshScreen(t, encoding);
+});
+
 // The window gets the output in base64; a browser gets the bytes (web_shim.js).
 EventsOn('term:data', (id: number, data: string | Uint8Array) => {
     const t = tabs.get(id);
@@ -260,13 +286,19 @@ export async function startDocker(t: Tab) {
     }
     cancelRetry(t);
     forgetFiles(t.id);
-    await DockerOpen(t.id, d.src.tab, d.id, d.mode, `${d.name}@${d.src.label}`, t.term.cols, t.term.rows);
+    t.fresh = true;
+    try {
+        await DockerOpen(t.id, d.src.tab, d.id, d.mode, `${d.name}@${d.src.label}`, t.term.cols, t.term.rows);
+    } catch (e) {
+        t.fresh = false;
+        throw e;
+    }
     if (!tabs.has(t.id)) {
         CloseTab(t.id); // the tab was closed while opening
         return;
     }
     t.proto = 'docker';
-    t.term.reset();
+    freshScreen(t, 'UTF-8');
     applyEncoding(t, 'UTF-8');
     setState(t, 'on');
     applyLook(t);

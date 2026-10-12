@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-13 — 접속 창 ▼ 버튼, 접속 직후 첫 출력 사라짐 수정</h2>
+<ul>
+  <li>접속 창 ▼ 버튼: 다시 눌러도 목록이 닫히지 않던 문제 수정. 버튼 mousedown에서 포커스 이동을 막아(Host 칸 blur → 목록 닫힘 → click이 다시 엶) click이 열기 · 닫기를 번갈아 하게 함</li>
+  <li>접속 직후 서버가 바로 보낸 첫 출력이 지워지던 문제 수정. 원인: Go는 Connect가 끝나기 전에 출력 전달을 시작하는데(tab.start), 화면은 Connect가 돌아온 뒤에 term.reset()을 해서 먼저 도착한 출력까지 지움. 수정: tab.start가 출력보다 먼저 <code>term:open</code>(탭 번호, 인코딩) 이벤트를 보내고, 화면은 그때 지움(connection.ts의 freshScreen). FTP처럼 세션이 없으면 전처럼 Connect 뒤에 지움. 도커 탭도 같은 방식. 접속 실패 시에는 화면을 그대로 둠</li>
+  <li>테스트: E2E 2개 추가(인사말이 남는지 · 다시 연결하면 옛 출력은 지워지고 새 인사말이 보이는지, 접속 실패 시 화면 유지) + ▼ 버튼 확인 추가 → 53개 통과. Go 테스트 TestTermOpenComesBeforeTheSessionsOutput 추가, go test 통과. 고치기 전에는 새 테스트가 실패함을 먼저 확인</li>
+  <li>창(Wails) 모드에서는 직접 확인하지 않음: 테스트는 브라우저(웹 모드)로만 돎</li>
+</ul>
+
 <h2>2026-10-13 — 화면 E2E 테스트 추가, main.ts 분할</h2>
 <ul>
   <li>E2E 테스트(frontend/e2e, Playwright) 51개 추가: 테스트마다 창 없는 choboterm(-tags headless)을 빈 포트 · 별도 설정 폴더(APPDATA · USERPROFILE을 임시 폴더로)로 띄우고 이 PC의 Edge로 화면을 조작. 탭, 접속 창, 화면 분할, 탭 메뉴 · 색 테마, 단축키 · 글꼴 크기, Lua 콘솔, 붙여넣기, 테스트용 TCP 서버(Telnet으로 인식)로 끊김 · 자동 재접속 확인. 실행: frontend에서 <code>npm run test:e2e</code></li>
