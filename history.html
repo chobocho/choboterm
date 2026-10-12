@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-13 — V0.2.21 릴리스</h2>
+<ul>
+  <li>버전 0.2.20 → 0.2.21: <code>internal/version/version.go</code>, <code>wails.json</code>, README(한·영) 제목과 릴리스 절차 예시, release.yml 주석</li>
+  <li>아키텍처 그림(docs/architecture.svg · architecture_en.svg)을 새 구조에 맞춤: Go 쪽 이름을 패키지(app · sshconn · telnet · terminal · localshell · transfer · serial · store · config · secret · i18n · luahost)로, 화면 쪽 첫 칸을 main · tabs · connection으로. NEW 표시는 이번에 바뀐 곳(Go 패키지 · 화면 모듈)으로 옮기고 V0.2.18 때의 표시는 지움. Edge로 그려서 글자가 칸을 넘지 않는지 확인</li>
+  <li>V0.2.20 이후 들어간 것: 접속 창 ▼ 버튼 닫힘, 접속 직후 첫 출력 유지, main.ts 분할, Go 패키지 정리, E2E 테스트</li>
+  <li>v0.2.21 태그를 푸시해 GitHub Actions(release 워크플로)로 발행하고, 이전 릴리스 V0.2.20은 삭제(태그는 유지)</li>
+</ul>
+
 <h2>2026-10-13 — Go 소스를 폴더(패키지)별로 정리</h2>
 <ul>
   <li>루트에 있던 Go 파일 146개(package main 하나)를 패키지로 나눔. 루트에는 진입점 <code>main.go</code>(app.Main 호출)와 <code>icon.go</code>(창 아이콘 임베드)만 남음</li>

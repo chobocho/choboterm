@@ -20,7 +20,7 @@
 
   <rect x="0" y="0" width="1010" height="800" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm Architecture</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.18 · <tspan class="new">NEW</tspan> = added in this version (web server)</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.21 · <tspan class="new">NEW</tspan> = changed in this version (Go packages · page modules)</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -36,8 +36,8 @@
     <rect x="35" y="501" width="240" height="48" rx="5"/>
     <rect x="35" y="559" width="240" height="48" rx="5"/>
   </g>
-  <text x="47" y="115" class="title">main.ts <tspan class="new">NEW</tspan></text>
-  <text x="47" y="132" class="sub">Tabs · terminal · per-page tab ids</text>
+  <text x="47" y="115" class="title">main · tabs · connection <tspan class="new">NEW</tspan></text>
+  <text x="47" y="132" class="sub">Tabs · terminal · main.ts split into modules</text>
   <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">Keyword highlight (xterm decorations)</text>
   <text x="47" y="231" class="title">files.ts</text>
@@ -48,7 +48,7 @@
   <text x="47" y="364" class="sub">Ctrl+Shift+K open/close · input · save</text>
   <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">Docker window (shell · logs · open port)</text>
-  <text x="47" y="463" class="title">prefs.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="463" class="title">prefs.ts</text>
   <text x="47" y="480" class="sub">Settings · web server · access token</text>
   <text x="47" y="521" class="title">i18n.ts</text>
   <text x="47" y="538" class="sub">English UI: translates text via dictionary</text>
@@ -71,7 +71,7 @@
 
   <!-- Browser (web server clients) -->
   <rect x="20" y="645" width="270" height="140" rx="8" fill="#fce8e6" stroke="#c5221f" stroke-width="1.5" stroke-dasharray="6 4"/>
-  <text x="35" y="667" class="head" fill="#a50e0e">Browser (this PC · other PCs) <tspan class="new">NEW</tspan></text>
+  <text x="35" y="667" class="head" fill="#a50e0e">Browser (this PC · other PCs)</text>
   <text x="35" y="687" class="sub">Same page (frontend/dist) + web_shim.js</text>
   <text x="35" y="705" class="sub">window.go · runtime over one WebSocket</text>
   <text x="35" y="723" class="sub">Output: binary frames · acknowledged</text>
@@ -86,10 +86,10 @@
 
   <!-- Go backend -->
   <rect x="400" y="60" width="370" height="600" rx="8" fill="#e6f4ea" stroke="#2f8f5b" stroke-width="1.5"/>
-  <text x="415" y="82" class="head" fill="#1e6b41">Go backend — choboterm.exe</text>
+  <text x="415" y="82" class="head" fill="#1e6b41">Go backend — choboterm.exe · internal/… <tspan class="new">NEW</tspan></text>
 
   <rect x="415" y="95" width="340" height="75" rx="5" class="item" stroke="#2f8f5b"/>
-  <text x="427" y="114" class="title">app.go — App · tab (one per tab) <tspan class="new">NEW</tspan></text>
+  <text x="427" y="114" class="title">app — App · tab (one per tab)</text>
   <text x="427" y="133" class="sub">pump: batches output per 16ms · 256KB, detects Zmodem</text>
   <text x="427" y="151" class="sub">emitFor: events only to the tab's owner (window · page)</text>
 
@@ -98,13 +98,13 @@
     <rect x="532" y="185" width="106" height="62" rx="5"/>
     <rect x="649" y="185" width="106" height="62" rx="5"/>
   </g>
-  <text x="468" y="204" text-anchor="middle" class="title">ssh.go</text>
-  <text x="468" y="220" text-anchor="middle" class="sub">sshauth · forward</text>
-  <text x="468" y="236" text-anchor="middle" class="sub">sshjump · openPty</text>
-  <text x="585" y="204" text-anchor="middle" class="title">telnet.go</text>
-  <text x="585" y="220" text-anchor="middle" class="sub">detect.go</text>
+  <text x="468" y="204" text-anchor="middle" class="title">sshconn</text>
+  <text x="468" y="220" text-anchor="middle" class="sub">sshauth · sshjump</text>
+  <text x="468" y="236" text-anchor="middle" class="sub">ssh config · PTY</text>
+  <text x="585" y="204" text-anchor="middle" class="title">telnet · terminal</text>
+  <text x="585" y="220" text-anchor="middle" class="sub">Session · detect</text>
   <text x="585" y="236" text-anchor="middle" class="sub">(protocol detect)</text>
-  <text x="702" y="204" text-anchor="middle" class="title">localpty</text>
+  <text x="702" y="204" text-anchor="middle" class="title">localshell</text>
   <text x="702" y="220" text-anchor="middle" class="sub">Win: ConPTY</text>
   <text x="702" y="236" text-anchor="middle" class="sub">Linux: PTY</text>
 
@@ -113,13 +113,13 @@
     <rect x="588" y="262" width="79" height="62" rx="5"/>
     <rect x="676" y="262" width="79" height="62" rx="5"/>
   </g>
-  <text x="427" y="281" class="title">filexfer.go — RemoteFS</text>
-  <text x="427" y="297" class="sub">sftp · scp · ftp · viewer.go</text>
+  <text x="427" y="281" class="title">transfer — RemoteFS</text>
+  <text x="427" y="297" class="sub">sftp · scp · ftp · app/filexfer</text>
   <text x="427" y="313" class="sub">Progress · cancel · resume</text>
-  <text x="627" y="281" text-anchor="middle" class="title">zmodem.go</text>
-  <text x="627" y="297" text-anchor="middle" class="sub">zmodem_app</text>
+  <text x="627" y="281" text-anchor="middle" class="title">Zmodem</text>
+  <text x="627" y="297" text-anchor="middle" class="sub">transfer · app</text>
   <text x="627" y="313" text-anchor="middle" class="sub">rz / sz</text>
-  <text x="715" y="281" text-anchor="middle" class="title">serial.go</text>
+  <text x="715" y="281" text-anchor="middle" class="title">serial</text>
   <text x="715" y="297" text-anchor="middle" class="sub">Win: COM</text>
   <text x="715" y="313" text-anchor="middle" class="sub">Linux: tty</text>
 
@@ -128,13 +128,13 @@
   <text x="427" y="377" class="sub">Server: session on SSH · PC: ConPTY/PTY · podman</text>
 
   <rect x="415" y="399" width="340" height="76" rx="5" class="item" stroke="#2f8f5b"/>
-  <text x="427" y="418" class="title">Storage — %AppData% · ~/.config · i18n.go</text>
+  <text x="427" y="418" class="title">store · config · secret · i18n — storage</text>
   <text x="427" y="437" class="sub">settings · sessions · hosts.json (DPAPI · keyring)</text>
   <text x="427" y="453" class="sub">i18n_en.json: English dictionary shared by UI and Go</text>
   <text x="427" y="469" class="sub">web-token · web-cert.pem (web server)</text>
 
   <rect x="415" y="485" width="340" height="114" rx="5" fill="#fff8f7" stroke="#c5221f" stroke-width="1.2"/>
-  <text x="427" y="504" class="title">web.go · web_client.go — web server <tspan class="new">NEW</tspan></text>
+  <text x="427" y="504" class="title">app/web*.go — web server</text>
   <text x="427" y="522" class="sub">--web · Settings · --headless (server, no window)</text>
   <text x="427" y="539" class="sub">An App per page (caller) · tab ids from clientID&lt;&lt;20</text>
   <text x="427" y="556" class="sub">ack · replay · dedup calls · flow control over 8MB</text>
@@ -142,16 +142,16 @@
   <text x="427" y="590" class="sub">Close window → quit all / window only · rerun shows it</text>
 
   <rect x="415" y="606" width="340" height="47" rx="5" fill="#fff8f7" stroke="#c5221f" stroke-width="1.2"/>
-  <text x="427" y="624" class="title">picker.go — file dialogs <tspan class="new">NEW</tspan></text>
+  <text x="427" y="624" class="title">app/picker.go — file dialogs</text>
   <text x="427" y="642" class="sub">Window, local browser: Wails · remote: up/download</text>
 
   <!-- Lua host -->
   <line x1="585" y1="662" x2="585" y2="698" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
-  <text x="597" y="684" class="note">luarun.go ⇄ luahost.go · JSON lines</text>
+  <text x="597" y="684" class="note">app/luarun.go ⇄ luahost · JSON lines</text>
   <rect x="400" y="700" width="370" height="85" rx="8" fill="#fff4e5" stroke="#d9822b" stroke-width="1.5" stroke-dasharray="6 4"/>
   <text x="415" y="722" class="head" fill="#a35a10">Lua runner — choboterm.exe --lua-host</text>
   <text x="415" y="742" class="sub">Separate process · gopher-lua (Lua 5.1) · send · expect · screen</text>
-  <text x="415" y="760" class="sub">luajob: memory limit (Job Object · Linux /proc)</text>
+  <text x="415" y="760" class="sub">luahost/luajob: memory limit (Job Object · Linux /proc)</text>
 
   <!-- External -->
   <line x1="772" y1="230" x2="808" y2="230" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
@@ -183,11 +183,11 @@
   <text x="825" y="523" class="head" fill="#6a1b9a">Releases</text>
   <text x="825" y="543" class="sub">Windows: choboterm.exe</text>
   <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
-  <text x="825" y="579" class="sub">Built in Ubuntu 22.04 container</text>
+  <text x="825" y="579" class="sub">Built by GitHub Actions (release)</text>
   <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
   <text x="825" y="615" class="sub">Get via curl · install.sh</text>
   <text x="825" y="633" class="sub">Update check: releases API</text>
-  <text x="825" y="655" class="title" fill="#6a1b9a">Headless web server <tspan class="new">NEW</tspan></text>
+  <text x="825" y="655" class="title" fill="#6a1b9a">Headless web server</text>
   <text x="825" y="673" class="sub">choboterm-headless(.exe)</text>
   <text x="825" y="691" class="sub">Static Linux binary · no GTK</text>
 </svg>
