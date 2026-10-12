@@ -539,7 +539,7 @@
   "최근 · ssh config · 로컬 셸 · 시리얼": "Recent · ssh config · local shells · serial",
   "업데이트": "Updates",
   "시작할 때 새 버전 확인": "Check for a new version at start",
-  "(하루 한 번 GitHub에 물어봄, 끄면 아무것도 보내지 않음)": "(asks GitHub once a day; nothing is sent when off)",
+  "(하루 한 번 GitHub 확인, 끄면 아무것도 안 보냄)": "(checks GitHub daily; nothing sent when off)",
   "지금 확인": "Check now",
   "확인하는 중...": "Checking...",
   "최신 버전입니다 (V{})": "Up to date (V{})",

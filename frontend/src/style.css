@@ -2228,3 +2228,16 @@ body.web .window-only {
     white-space: pre-line;
     word-break: break-all;
 }
+
+/* A check box whose grey note stays on the same line: the note is a bit
+   smaller and, if a font still runs wider, ends in "…" (full text on hover). */
+.prefs label.check.oneline {
+    white-space: nowrap;
+}
+
+.prefs label.check.oneline .hint {
+    font-size: 11px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
