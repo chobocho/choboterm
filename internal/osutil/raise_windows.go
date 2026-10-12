@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package osutil
 
 import (
 	"os"
@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	procEnumWindows         = user32.NewProc("EnumWindows")
-	procGetClassNameW       = user32.NewProc("GetClassNameW")
-	procIsWindowVisible     = user32.NewProc("IsWindowVisible")
-	procSetForegroundWindow = user32.NewProc("SetForegroundWindow")
-	procKeybdEvent          = user32.NewProc("keybd_event")
+	procEnumWindows         = User32.NewProc("EnumWindows")
+	procGetClassNameW       = User32.NewProc("GetClassNameW")
+	procIsWindowVisible     = User32.NewProc("IsWindowVisible")
+	procSetForegroundWindow = User32.NewProc("SetForegroundWindow")
+	procKeybdEvent          = User32.NewProc("keybd_event")
 )
 
 const (
@@ -26,11 +26,11 @@ const (
 	dialogClassName = "#32770" // common file dialogs and message boxes
 )
 
-// raiseDialogSoon brings the next dialog of this process to the front.
+// RaiseDialogSoon brings the next dialog of this process to the front.
 // It is for a dialog opened for a browser on this PC: the browser has the
 // focus, and Windows only lets the foreground process take it, so the
 // dialog would otherwise just flash in the taskbar behind the browser.
-func raiseDialogSoon() {
+func RaiseDialogSoon() {
 	go func() {
 		pid := uint32(os.Getpid())
 		for i := 0; i < 60; i++ { // up to 3 seconds for the dialog to appear

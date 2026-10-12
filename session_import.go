@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/i18n"
 )
 
 // sessionsExport is the file written by "내보내기". Passwords are never in it:
@@ -104,9 +105,9 @@ func addSessions(list []SavedSession) (ImportResult, error) {
 // passwords) to it. It returns the path, or "" if the user cancelled.
 func (a *App) ExportSessions() (string, error) {
 	p, finish, err := a.picker().saveFile(pickOpts{
-		Title:   tr("세션 내보내기"),
+		Title:   i18n.Tr("세션 내보내기"),
 		Name:    "choboterm-sessions.json",
-		Filters: []fileFilter{{Name: tr("세션 파일 (*.json)"), Pattern: "*.json"}},
+		Filters: []fileFilter{{Name: i18n.Tr("세션 파일 (*.json)"), Pattern: "*.json"}},
 	})
 	if err != nil || p == "" {
 		return "", err
@@ -126,8 +127,8 @@ func (a *App) ExportSessions() (string, error) {
 // sessions. Cancelled = zero result.
 func (a *App) ImportSessions() (ImportResult, error) {
 	p, release, err := a.picker().openFile(pickOpts{
-		Title:   tr("세션 가져오기"),
-		Filters: []fileFilter{{Name: tr("세션 파일 (*.json)"), Pattern: "*.json"}},
+		Title:   i18n.Tr("세션 가져오기"),
+		Filters: []fileFilter{{Name: i18n.Tr("세션 파일 (*.json)"), Pattern: "*.json"}},
 	})
 	defer release()
 	if err != nil || p == "" {

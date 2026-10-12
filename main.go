@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"os"
 
+	"choboterm/frontend"
+	"choboterm/internal/osutil"
 	"choboterm/internal/version"
 )
 
@@ -18,7 +20,7 @@ func main() {
 	}
 	opts, err := parseArgs(os.Args[1:])
 	if err != nil || opts.help {
-		attachConsole()
+		osutil.AttachConsole()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "choboterm:", err)
 		}
@@ -28,7 +30,7 @@ func main() {
 		}
 		return
 	}
-	page, err := fs.Sub(assets, assetDir)
+	page, err := fs.Sub(frontend.Assets, frontend.AssetDir)
 	if err != nil {
 		panic(err) // embedded at build time
 	}
@@ -36,7 +38,7 @@ func main() {
 
 	if opts.headless || headlessBuild {
 		if len(opts.unknown) > 0 {
-			attachConsole()
+			osutil.AttachConsole()
 			fmt.Fprintf(os.Stderr, "choboterm: unknown option %q\n%s", opts.unknown[0], usageText())
 			os.Exit(2)
 		}

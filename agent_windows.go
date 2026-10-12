@@ -13,6 +13,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"choboterm/internal/osutil"
 )
 
 // platformAgentSources: the OpenSSH for Windows agent service and PuTTY's Pageant.
@@ -26,7 +28,7 @@ func platformAgentSources() []agentSource {
 }
 
 var (
-	procSendMessageW = user32.NewProc("SendMessageW")
+	procSendMessageW = osutil.User32.NewProc("SendMessageW")
 	pageantSeq       atomic.Uint32
 )
 
@@ -55,7 +57,7 @@ type pageantConn struct {
 
 func dialPageant() (io.ReadWriteCloser, error) {
 	name, _ := windows.UTF16PtrFromString("Pageant")
-	hwnd, _, _ := procFindWindowExW.Call(0, 0, uintptr(unsafe.Pointer(name)), uintptr(unsafe.Pointer(name)))
+	hwnd, _, _ := osutil.ProcFindWindowExW.Call(0, 0, uintptr(unsafe.Pointer(name)), uintptr(unsafe.Pointer(name)))
 	if hwnd == 0 {
 		return nil, errors.New("Pageant가 실행 중이 아닙니다")
 	}

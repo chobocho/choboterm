@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"choboterm/internal/config"
 	"choboterm/internal/dbg"
 	"choboterm/internal/version"
 )
@@ -17,12 +18,6 @@ import (
 // The update check asks GitHub for the latest release and tells the user
 // when it is newer than this build. It only runs when the user turned it on
 // in the settings (or pressed "지금 확인"); nothing is downloaded or installed.
-
-// UpdateState is what the Go side remembers between checks.
-type UpdateState struct {
-	Last     time.Time `json:"last"`     // when GitHub was last asked
-	Notified string    `json:"notified"` // the newest version already shown to the user
-}
 
 // UpdateInfo is the result of a check.
 type UpdateInfo struct {
@@ -44,7 +39,7 @@ const updateEvery = 24 * time.Hour
 // the check is turned on and hasn't run today, and reports a new version once.
 func (a *App) CheckUpdate(manual bool) (UpdateInfo, error) {
 	info := UpdateInfo{Current: version.Version}
-	s := loadSettings()
+	s := config.Load()
 	if !manual {
 		if !s.UpdateCheck {
 			return info, nil
@@ -54,9 +49,9 @@ func (a *App) CheckUpdate(manual bool) (UpdateInfo, error) {
 		}
 	}
 	latest, url, err := fetchLatestRelease()
-	_ = updateSettings(func(cur *Settings) {
+	_ = config.Update(func(cur *config.Settings) {
 		if cur.Update == nil {
-			cur.Update = &UpdateState{}
+			cur.Update = &config.UpdateState{}
 		}
 		cur.Update.Last = time.Now()
 	})
@@ -74,7 +69,7 @@ func (a *App) CheckUpdate(manual bool) (UpdateInfo, error) {
 		if s.Update != nil && s.Update.Notified == latest {
 			info.Newer = false // already told about this one
 		} else {
-			_ = updateSettings(func(cur *Settings) { cur.Update.Notified = latest })
+			_ = config.Update(func(cur *config.Settings) { cur.Update.Notified = latest })
 		}
 	}
 	return info, nil

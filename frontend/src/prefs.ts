@@ -4,7 +4,7 @@ import {saveSettings, settings} from './settings';
 import {ChooseLogDir, WebNewToken, WebOpen, WebStart, WebStatus, WebStop} from '../wailsjs/go/main/App';
 import {ClipboardSetText} from '../wailsjs/runtime/runtime';
 import {webPage} from './platform';
-import {main} from '../wailsjs/go/models';
+import {config, main} from '../wailsjs/go/models';
 import {FONTS} from './cjkwidth';
 import {paletteOf, themeByName, THEMES} from './themes';
 import {checkUpdate} from './update';
@@ -246,7 +246,7 @@ function apply() {
         s.updateCheck = updateCheck.checked;
         s.language = language.value;
         s.logDir = logDir.value.trim();
-        s.highlight = main.Highlight.createFrom({
+        s.highlight = config.Highlight.createFrom({
             on: hlOn.checked,
             red: hlRed.value.trim(),
             yellow: hlYellow.value.trim(),

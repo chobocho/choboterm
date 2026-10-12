@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"choboterm/frontend"
 )
 
 // cliOptions are the command line options.
@@ -45,7 +47,7 @@ const termuxUsage = `  --no-token       disable browser token login (Termux buil
 `
 
 func usageText() string {
-	if termuxBuild {
+	if frontend.Termux {
 		return strings.Replace(usage, "  -h, --help", termuxUsage+"  -h, --help", 1)
 	}
 	return usage
@@ -84,7 +86,7 @@ func parseArgs(args []string) (cliOptions, error) {
 		case "--insecure", "-insecure":
 			o.insecure = true
 		case "--no-token":
-			if !termuxBuild {
+			if !frontend.Termux {
 				return o, fmt.Errorf("--no-token is only supported in the Termux build")
 			}
 			o.noToken, o.web = true, true

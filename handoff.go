@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"choboterm/internal/config"
 	"choboterm/internal/dbg"
 )
 
@@ -53,7 +54,7 @@ func (w *webServer) handleShow(rw http.ResponseWriter, r *http.Request) {
 
 // readWebToken returns the access token if there is one (never makes one).
 func readWebToken() string {
-	p, err := settingsFile()
+	p, err := config.File()
 	if err != nil {
 		return ""
 	}

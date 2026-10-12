@@ -1,4 +1,4 @@
-package main
+package i18n
 
 import "golang.org/x/sys/windows"
 

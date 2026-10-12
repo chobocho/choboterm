@@ -10,6 +10,10 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+
+	"choboterm/frontend"
+	"choboterm/internal/config"
+	"choboterm/internal/osutil"
 )
 
 // headlessBuild is true in a build without the window (-tags headless).
@@ -30,7 +34,7 @@ func runWindow(opts cliOptions) {
 	web := opts.webOptions()
 	if !opts.web {
 		web = nil
-		if s := loadSettings().Web; s != nil && s.Enabled {
+		if s := config.Load().Web; s != nil && s.Enabled {
 			web = &webOptions{Addr: s.Addr}
 		}
 	}
@@ -46,7 +50,7 @@ func runWindow(opts cliOptions) {
 	// The window starts hidden and is shown once it is moved to where it was
 	// last time (see App.domReady), so it doesn't jump on screen.
 	start := options.Normal
-	if w := loadSettings().Window; w != nil && w.Maximized {
+	if w := config.Load().Window; w != nil && w.Maximized {
 		start = options.Maximised
 	}
 
@@ -56,7 +60,7 @@ func runWindow(opts cliOptions) {
 		Width:  900,
 		Height: 600,
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets: frontend.Assets,
 		},
 		// The window is see-through wherever the page is, so translucency
 		// (Settings) can be switched on and off without a restart. The page
@@ -69,7 +73,7 @@ func runWindow(opts cliOptions) {
 		OnBeforeClose:    app.beforeClose,
 		OnShutdown:       app.shutdown,
 		Windows: &windows.Options{
-			WindowClassName:      windowClass,
+			WindowClassName:      osutil.WindowClass,
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 			// No blur: Acrylic turns solid gray whenever the window is inactive.

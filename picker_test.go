@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/config"
 )
 
 // fakePicker answers dialogs from its fields and records what happened.
@@ -167,9 +168,9 @@ func pickerApp(t *testing.T, p *fakePicker) (*App, *memFS) {
 func isolateSettings(t *testing.T) {
 	t.Helper()
 	file := filepath.Join(t.TempDir(), "settings.json")
-	orig := settingsFile
-	settingsFile = func() (string, error) { return file, nil }
-	t.Cleanup(func() { settingsFile = orig })
+	orig := config.File
+	config.File = func() (string, error) { return file, nil }
+	t.Cleanup(func() { config.File = orig })
 }
 
 func TestFileDownloadThroughPicker(t *testing.T) {

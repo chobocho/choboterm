@@ -23,6 +23,8 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+
+	"choboterm/internal/config"
 )
 
 // moduleRoot is the folder with go.mod, wherever this test's package is.
@@ -188,7 +190,7 @@ func jsonStructs(t *testing.T, root string) []string {
 
 func TestWireSurface(t *testing.T) {
 	root := moduleRoot(t)
-	defaults, err := json.MarshalIndent(defaultSettings(), "", "  ")
+	defaults, err := json.MarshalIndent(config.Default(), "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,10 +1,12 @@
-package main
+package config
 
 import (
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"time"
 )
 
 // Settings are the user preferences kept in %AppData%\choboterm\settings.json.
@@ -106,11 +108,11 @@ type WindowState struct {
 	Maximized bool `json:"maximized"`
 }
 
-func (w WindowState) valid() bool {
+func (w WindowState) Valid() bool {
 	return w.Right-w.Left >= 200 && w.Bottom-w.Top >= 150
 }
 
-func defaultSettings() Settings {
+func Default() Settings {
 	return Settings{
 		FontSize: 15, FontUTF8: "D2Coding", FontEUCKR: "GulimChe",
 		Theme: "choboterm", CursorStyle: "block", CursorBlink: true, Scrollback: 5000,
@@ -122,8 +124,8 @@ func defaultSettings() Settings {
 
 var settingsMu sync.Mutex
 
-// settingsFile is the settings file path; tests may replace it.
-var settingsFile = func() (string, error) {
+// File is the settings file path; tests may replace it.
+var File = func() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -131,16 +133,16 @@ var settingsFile = func() (string, error) {
 	return filepath.Join(dir, "choboterm", "settings.json"), nil
 }
 
-// loadSettings reads the settings file. Missing fields keep their defaults.
-func loadSettings() Settings {
+// Load reads the settings file. Missing fields keep their defaults.
+func Load() Settings {
 	settingsMu.Lock()
 	defer settingsMu.Unlock()
 	return readSettings()
 }
 
 func readSettings() Settings {
-	s := defaultSettings()
-	p, err := settingsFile()
+	s := Default()
+	p, err := File()
 	if err != nil {
 		return s
 	}
@@ -149,7 +151,7 @@ func readSettings() Settings {
 		return s
 	}
 	if json.Unmarshal(data, &s) != nil {
-		return defaultSettings()
+		return Default()
 	}
 	if s.Macros == nil {
 		s.Macros = []Macro{} // the page expects a list, not null
@@ -157,13 +159,13 @@ func readSettings() Settings {
 	return s
 }
 
-// updateSettings applies change to the stored settings and writes them back.
-func updateSettings(change func(*Settings)) error {
+// Update applies change to the stored settings and writes them back.
+func Update(change func(*Settings)) error {
 	settingsMu.Lock()
 	defer settingsMu.Unlock()
 	s := readSettings()
 	change(&s)
-	p, err := settingsFile()
+	p, err := File()
 	if err != nil {
 		return err
 	}
@@ -177,17 +179,8 @@ func updateSettings(change func(*Settings)) error {
 	return os.WriteFile(p, data, 0o600)
 }
 
-// GetSettings returns the user preferences.
-func (a *App) GetSettings() Settings {
-	return loadSettings()
-}
-
-// SaveSettings stores the user preferences. The window position, the
-// update check state and the web server's settings are kept as stored.
-func (a *App) SaveSettings(s Settings) error {
-	return updateSettings(func(cur *Settings) {
-		w, u, web := cur.Window, cur.Update, cur.Web
-		*cur = s
-		cur.Window, cur.Update, cur.Web = w, u, web
-	})
+// UpdateState is what the Go side remembers between checks.
+type UpdateState struct {
+	Last     time.Time `json:"last"`     // when GitHub was last asked
+	Notified string    `json:"notified"` // the newest version already shown to the user
 }

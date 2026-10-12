@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"choboterm/internal/i18n"
 )
 
 // zmodemState tracks a tab's running ZMODEM transfer, if any.
@@ -32,7 +34,7 @@ func (t *tab) cancelZmodem() {
 
 // termMessage prints a status line in the tab's terminal (yellow).
 func (t *tab) termMessage(msg string) {
-	msg = strings.ReplaceAll(tr(msg), "\n", "\r\n")
+	msg = strings.ReplaceAll(i18n.Tr(msg), "\n", "\r\n")
 	data := "\r\n\x1b[33m" + msg + "\x1b[0m\r\n"
 	t.emitOutput([]byte(data))
 }
@@ -83,7 +85,7 @@ func (t *tab) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 			msg = fmt.Sprintf("[Zmodem] %d개 파일을 받았습니다: %s\n  %s", len(saved), where, strings.Join(saved, "\n  "))
 		}
 	} else {
-		files, release, derr := pick.openFiles(pickOpts{Title: tr("Zmodem으로 보낼 파일 선택")})
+		files, release, derr := pick.openFiles(pickOpts{Title: i18n.Tr("Zmodem으로 보낼 파일 선택")})
 		defer release()
 		if derr != nil || len(files) == 0 {
 			p.abort()

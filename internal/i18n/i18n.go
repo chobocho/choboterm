@@ -1,4 +1,4 @@
-package main
+package i18n
 
 // English screen, Go side. Most text reaches the page and is translated
 // there (see frontend/src/i18n.ts); this covers what doesn't: Windows file
@@ -13,10 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-)
 
-//go:embed frontend/src/i18n_en.json
-var enJSON []byte
+	"choboterm/frontend"
+	"choboterm/internal/config"
+)
 
 var hangul = regexp.MustCompile(`[\x{ac00}-\x{d7a3}]`)
 
@@ -28,7 +28,7 @@ type enPattern struct {
 
 var enDict = sync.OnceValues(func() (map[string]string, []enPattern) {
 	exact := map[string]string{}
-	_ = json.Unmarshal(enJSON, &exact)
+	_ = json.Unmarshal(frontend.EnJSON, &exact)
 	var pats []enPattern
 	for k, to := range exact {
 		if !strings.Contains(k, "{}") {
@@ -97,17 +97,17 @@ func enTranslate(s string, depth int) string {
 	return s
 }
 
-// tr returns s in the screen language (unchanged in Korean).
-func tr(s string) string {
-	if appLang() != "en" {
+// Tr returns s in the screen language (unchanged in Korean).
+func Tr(s string) string {
+	if Lang() != "en" {
 		return s
 	}
 	return enTranslate(s, 0)
 }
 
-// appLang is the screen language: "ko" or "en". Settings.Language "" follows Windows.
-func appLang() string {
-	switch l := loadSettings().Language; l {
+// Lang is the screen language: "ko" or "en". Settings.Language "" follows Windows.
+func Lang() string {
+	switch l := config.Load().Language; l {
 	case "ko", "en":
 		return l
 	}
@@ -115,9 +115,4 @@ func appLang() string {
 		return "ko"
 	}
 	return "en"
-}
-
-// GetLanguage tells the page which language to show.
-func (a *App) GetLanguage() string {
-	return appLang()
 }

@@ -7,13 +7,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"choboterm/internal/osutil"
 	"choboterm/internal/version"
 )
 
 // runHeadless runs only the web server (--headless, or a headless build)
 // until interrupted, and returns the exit code.
 func runHeadless(opts cliOptions) int {
-	attachConsole()
+	osutil.AttachConsole()
 	app := NewApp()
 	o := opts.webOptions()
 	if o == nil {
@@ -38,7 +39,7 @@ func runHeadless(opts cliOptions) int {
 	}
 	fmt.Println("Ctrl+C stops the server.")
 	if opts.open {
-		if err := openURL(w.localURL()); err != nil {
+		if err := osutil.OpenURL(w.localURL()); err != nil {
 			fmt.Fprintln(os.Stderr, "choboterm: open browser:", err)
 		}
 	}

@@ -1,3 +1,191 @@
+export namespace config {
+	
+	export class Highlight {
+	    on: boolean;
+	    red: string;
+	    yellow: string;
+	    green: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Highlight(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.on = source["on"];
+	        this.red = source["red"];
+	        this.yellow = source["yellow"];
+	        this.green = source["green"];
+	    }
+	}
+	export class Macro {
+	    name: string;
+	    key: string;
+	    text: string;
+	    kind: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Macro(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.key = source["key"];
+	        this.text = source["text"];
+	        this.kind = source["kind"];
+	    }
+	}
+	export class WebSettings {
+	    enabled: boolean;
+	    addr: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WebSettings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.addr = source["addr"];
+	    }
+	}
+	export class UpdateState {
+	    // Go type: time
+	    last: any;
+	    notified: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.last = this.convertValues(source["last"], null);
+	        this.notified = source["notified"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class WindowState {
+	    left: number;
+	    top: number;
+	    right: number;
+	    bottom: number;
+	    maximized: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new WindowState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.left = source["left"];
+	        this.top = source["top"];
+	        this.right = source["right"];
+	        this.bottom = source["bottom"];
+	        this.maximized = source["maximized"];
+	    }
+	}
+	export class Settings {
+	    fontSize: number;
+	    fontUtf8: string;
+	    fontEucKr: string;
+	    theme: string;
+	    cursorStyle: string;
+	    cursorBlink: boolean;
+	    scrollback: number;
+	    translucency: string;
+	    opacity: number;
+	    glassGpu: boolean;
+	    pasteNoConfirm: boolean;
+	    keepAlive: number;
+	    autoReconnect: boolean;
+	    logAuto: boolean;
+	    logDir: string;
+	    logRaw: boolean;
+	    logTime: boolean;
+	    language: string;
+	    highlight: Highlight;
+	    consoleHeight: number;
+	    macros: Macro[];
+	    updateCheck: boolean;
+	    window?: WindowState;
+	    update?: UpdateState;
+	    web?: WebSettings;
+	
+	    static createFrom(source: any = {}) {
+	        return new Settings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fontSize = source["fontSize"];
+	        this.fontUtf8 = source["fontUtf8"];
+	        this.fontEucKr = source["fontEucKr"];
+	        this.theme = source["theme"];
+	        this.cursorStyle = source["cursorStyle"];
+	        this.cursorBlink = source["cursorBlink"];
+	        this.scrollback = source["scrollback"];
+	        this.translucency = source["translucency"];
+	        this.opacity = source["opacity"];
+	        this.glassGpu = source["glassGpu"];
+	        this.pasteNoConfirm = source["pasteNoConfirm"];
+	        this.keepAlive = source["keepAlive"];
+	        this.autoReconnect = source["autoReconnect"];
+	        this.logAuto = source["logAuto"];
+	        this.logDir = source["logDir"];
+	        this.logRaw = source["logRaw"];
+	        this.logTime = source["logTime"];
+	        this.language = source["language"];
+	        this.highlight = this.convertValues(source["highlight"], Highlight);
+	        this.consoleHeight = source["consoleHeight"];
+	        this.macros = this.convertValues(source["macros"], Macro);
+	        this.updateCheck = source["updateCheck"];
+	        this.window = this.convertValues(source["window"], WindowState);
+	        this.update = this.convertValues(source["update"], UpdateState);
+	        this.web = this.convertValues(source["web"], WebSettings);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+
+}
+
 export namespace main {
 	
 	export class ConnectRequest {
@@ -195,24 +383,6 @@ export namespace main {
 	        this.standby = source["standby"];
 	    }
 	}
-	export class Highlight {
-	    on: boolean;
-	    red: string;
-	    yellow: string;
-	    green: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new Highlight(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.on = source["on"];
-	        this.red = source["red"];
-	        this.yellow = source["yellow"];
-	        this.green = source["green"];
-	    }
-	}
 	export class HostEntry {
 	    host: string;
 	    port: number;
@@ -261,24 +431,6 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.label = source["label"];
-	    }
-	}
-	export class Macro {
-	    name: string;
-	    key: string;
-	    text: string;
-	    kind: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new Macro(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.key = source["key"];
-	        this.text = source["text"];
-	        this.kind = source["kind"];
 	    }
 	}
 	export class SSHConfigHost {
@@ -379,151 +531,6 @@ export namespace main {
 	        this.label = source["label"];
 	    }
 	}
-	export class WebSettings {
-	    enabled: boolean;
-	    addr: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new WebSettings(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.enabled = source["enabled"];
-	        this.addr = source["addr"];
-	    }
-	}
-	export class UpdateState {
-	    // Go type: time
-	    last: any;
-	    notified: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new UpdateState(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.last = this.convertValues(source["last"], null);
-	        this.notified = source["notified"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	export class WindowState {
-	    left: number;
-	    top: number;
-	    right: number;
-	    bottom: number;
-	    maximized: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new WindowState(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.left = source["left"];
-	        this.top = source["top"];
-	        this.right = source["right"];
-	        this.bottom = source["bottom"];
-	        this.maximized = source["maximized"];
-	    }
-	}
-	export class Settings {
-	    fontSize: number;
-	    fontUtf8: string;
-	    fontEucKr: string;
-	    theme: string;
-	    cursorStyle: string;
-	    cursorBlink: boolean;
-	    scrollback: number;
-	    translucency: string;
-	    opacity: number;
-	    glassGpu: boolean;
-	    pasteNoConfirm: boolean;
-	    keepAlive: number;
-	    autoReconnect: boolean;
-	    logAuto: boolean;
-	    logDir: string;
-	    logRaw: boolean;
-	    logTime: boolean;
-	    language: string;
-	    highlight: Highlight;
-	    consoleHeight: number;
-	    macros: Macro[];
-	    updateCheck: boolean;
-	    window?: WindowState;
-	    update?: UpdateState;
-	    web?: WebSettings;
-	
-	    static createFrom(source: any = {}) {
-	        return new Settings(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.fontSize = source["fontSize"];
-	        this.fontUtf8 = source["fontUtf8"];
-	        this.fontEucKr = source["fontEucKr"];
-	        this.theme = source["theme"];
-	        this.cursorStyle = source["cursorStyle"];
-	        this.cursorBlink = source["cursorBlink"];
-	        this.scrollback = source["scrollback"];
-	        this.translucency = source["translucency"];
-	        this.opacity = source["opacity"];
-	        this.glassGpu = source["glassGpu"];
-	        this.pasteNoConfirm = source["pasteNoConfirm"];
-	        this.keepAlive = source["keepAlive"];
-	        this.autoReconnect = source["autoReconnect"];
-	        this.logAuto = source["logAuto"];
-	        this.logDir = source["logDir"];
-	        this.logRaw = source["logRaw"];
-	        this.logTime = source["logTime"];
-	        this.language = source["language"];
-	        this.highlight = this.convertValues(source["highlight"], Highlight);
-	        this.consoleHeight = source["consoleHeight"];
-	        this.macros = this.convertValues(source["macros"], Macro);
-	        this.updateCheck = source["updateCheck"];
-	        this.window = this.convertValues(source["window"], WindowState);
-	        this.update = this.convertValues(source["update"], UpdateState);
-	        this.web = this.convertValues(source["web"], WebSettings);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
 	export class TextSave {
 	    path: string;
 	    text: string;
@@ -590,7 +597,6 @@ export namespace main {
 	        this.url = source["url"];
 	    }
 	}
-	
 	export class ViewResult {
 	    data: string;
 	    truncated: boolean;
@@ -637,7 +643,6 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
-	
 
 }
 

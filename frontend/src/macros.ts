@@ -1,7 +1,7 @@
 // Macros: named texts sent to the terminal, from the macro window
 // (Ctrl+Shift+M) or with the function key bound to them.
 
-import {main} from '../wailsjs/go/models';
+import {config} from '../wailsjs/go/models';
 import {saveSettings, settings} from './settings';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -22,7 +22,7 @@ export function keyName(ev: KeyboardEvent): string {
 }
 
 /** The macro bound to this keydown, if any. Unbound function keys still reach the terminal. */
-export function macroForKey(ev: KeyboardEvent): main.Macro | undefined {
+export function macroForKey(ev: KeyboardEvent): config.Macro | undefined {
     const k = keyName(ev);
     return k ? settings.macros.find(m => m.key === k) : undefined;
 }
@@ -66,7 +66,7 @@ const sendBtn = $<HTMLButtonElement>('mSend');
 const delBtn = $<HTMLButtonElement>('mDel');
 
 let selected = -1;
-let onSend: ((m: main.Macro) => void) | undefined;
+let onSend: ((m: config.Macro) => void) | undefined;
 let onClose: (() => void) | undefined;
 
 export function macrosOpen() {
@@ -81,7 +81,7 @@ function save() {
     saveSettings(s => (s.macros = macros()));
 }
 
-function label(m: main.Macro) {
+function label(m: config.Macro) {
     return m.name || m.text.split(/\r?\n/)[0] || '(이름 없음)';
 }
 
@@ -112,7 +112,7 @@ function paintList() {
     }
 }
 
-function paintKeys(m?: main.Macro) {
+function paintKeys(m?: config.Macro) {
     keySelect.replaceChildren(new Option('(없음)', ''));
     for (const k of MACRO_KEYS) {
         const owner = macros().find(o => o.key === k && o !== m);
@@ -145,7 +145,7 @@ function paintKind() {
 }
 
 function add() {
-    macros().push(main.Macro.createFrom({name: '', key: '', text: '', kind: ''}));
+    macros().push(config.Macro.createFrom({name: '', key: '', text: '', kind: ''}));
     save();
     select(macros().length - 1);
     nameInput.focus();
@@ -168,7 +168,7 @@ function send() {
 }
 
 /** Opens the window; send runs with the chosen macro after the window closed. */
-export function openMacros(sendMacro: (m: main.Macro) => void, close: () => void) {
+export function openMacros(sendMacro: (m: config.Macro) => void, close: () => void) {
     onSend = sendMacro;
     onClose = close;
     overlay.hidden = false;

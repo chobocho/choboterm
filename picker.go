@@ -4,6 +4,8 @@ import (
 	"errors"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"choboterm/internal/osutil"
 )
 
 // fileFilter is one entry of a file dialog's type list, e.g. {"Lua (*.lua)", "*.lua"}.
@@ -95,7 +97,7 @@ func wailsFilters(fs []fileFilter) []runtime.FileFilter {
 // browser, which has the keyboard focus (see raiseDialogSoon).
 func (p wailsPicker) front() {
 	if p.a.caller != nil {
-		raiseDialogSoon()
+		osutil.RaiseDialogSoon()
 	}
 }
 

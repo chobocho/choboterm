@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"choboterm/internal/dbg"
+	"choboterm/internal/i18n"
+	"choboterm/internal/osutil"
 )
 
 const (
@@ -410,9 +412,9 @@ type ConsoleFile struct {
 func (a *App) ConsoleOpen() (ConsoleFile, error) {
 	dir, _ := ensureScriptsDir()
 	p, release, err := a.picker().openFile(pickOpts{
-		Title:   tr("Lua 파일 불러오기"),
+		Title:   i18n.Tr("Lua 파일 불러오기"),
 		Dir:     dir,
-		Filters: []fileFilter{{Name: tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
+		Filters: []fileFilter{{Name: i18n.Tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
 	})
 	defer release()
 	if err != nil || p == "" {
@@ -437,10 +439,10 @@ func (a *App) ConsoleOpen() (ConsoleFile, error) {
 // It returns "" if the user cancelled the dialog.
 func (a *App) ConsoleSave(text string) (string, error) {
 	local, finish, err := a.picker().saveFile(pickOpts{
-		Title:   tr("Lua 콘솔 저장"),
+		Title:   i18n.Tr("Lua 콘솔 저장"),
 		Dir:     downloadsDir(),
 		Name:    "lua_console_" + time.Now().Format("20060102_150405") + ".txt",
-		Filters: []fileFilter{{Name: tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
+		Filters: []fileFilter{{Name: i18n.Tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
 	})
 	if err != nil || local == "" {
 		return "", err
@@ -526,9 +528,9 @@ func (a *App) RunScriptFile(tabID int) (string, error) {
 	}
 	dir, _ := ensureScriptsDir()
 	p, release, err := a.picker().openFile(pickOpts{
-		Title:   tr("Lua 스크립트 실행"),
+		Title:   i18n.Tr("Lua 스크립트 실행"),
 		Dir:     dir,
-		Filters: []fileFilter{{Name: tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
+		Filters: []fileFilter{{Name: i18n.Tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
 	})
 	defer release()
 	if err != nil || p == "" {
@@ -563,7 +565,7 @@ func (a *App) ShowScripts() error {
 	if err != nil {
 		return err
 	}
-	return openFolder(dir)
+	return osutil.OpenFolder(dir)
 }
 
 // ScriptScreen is the frontend's answer to a "script:screen" event.

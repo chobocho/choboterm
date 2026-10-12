@@ -17,7 +17,10 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/config"
 	"choboterm/internal/dbg"
+	"choboterm/internal/i18n"
+	"choboterm/internal/osutil"
 	"choboterm/internal/version"
 )
 
@@ -143,8 +146,8 @@ func (a *App) startup(ctx context.Context) {
 func (a *App) domReady(ctx context.Context) {
 	dbg.Printf("dom ready")
 	a.shown.Do(func() {
-		if w := loadSettings().Window; w != nil {
-			restoreWindowBounds(*w)
+		if w := config.Load().Window; w != nil {
+			osutil.RestoreWindowBounds(*w)
 		}
 		runtime.WindowShow(ctx)
 	})
@@ -154,8 +157,8 @@ func (a *App) domReady(ctx context.Context) {
 // still connected, or browsers using the web server, the window stays open
 // and the page asks first; Quit closes it (WebHideWindow hides it).
 func (a *App) beforeClose(ctx context.Context) bool {
-	if w, ok := currentWindowState(); ok && w.valid() {
-		_ = updateSettings(func(s *Settings) { s.Window = &w })
+	if w, ok := osutil.CurrentWindowState(); ok && w.Valid() {
+		_ = config.Update(func(s *config.Settings) { s.Window = &w })
 	}
 	if a.quit.Load() {
 		return false
@@ -441,13 +444,13 @@ func (t *tab) start(sess Session, proto string, req ConnectRequest) {
 	// Connect returns: the session's first output can get there before that.
 	t.emit("term:open", t.codec.Name())
 	go t.pump(sess)
-	go t.keepAlive(sess, time.Duration(loadSettings().KeepAlive)*time.Second)
+	go t.keepAlive(sess, time.Duration(config.Load().KeepAlive)*time.Second)
 	if s, ok := sess.(*sshSession); ok {
 		t.restoreForwards(s, req.Host, req.Port)
 	}
 	if t.log.active() != "" {
 		t.log.mark(fmt.Sprintf("접속: %s %s:%d", proto, req.Host, req.Port))
-	} else if loadSettings().LogAuto {
+	} else if config.Load().LogAuto {
 		_, _ = t.startLog() // a failure must not fail the connection
 	}
 }
@@ -715,14 +718,14 @@ func (a *App) confirmHostKey(tabID int, host, fingerprint string) bool {
 	}
 	if a.caller != nil || a.ctx == nil {
 		// A web page: ask in the page, like other questions while connecting.
-		return a.choose(tabID, tr("알 수 없는 호스트"),
-			tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
+		return a.choose(tabID, i18n.Tr("알 수 없는 호스트"),
+			i18n.Tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
 				host, fingerprint)), "Yes", "No")
 	}
 	res, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
 		Type:  runtime.QuestionDialog,
-		Title: tr("알 수 없는 호스트"),
-		Message: tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
+		Title: i18n.Tr("알 수 없는 호스트"),
+		Message: i18n.Tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
 			host, fingerprint)),
 		Buttons:       []string{"Yes", "No"},
 		DefaultButton: "No",

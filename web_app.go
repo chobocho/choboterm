@@ -10,7 +10,9 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"choboterm/internal/config"
 	"choboterm/internal/dbg"
+	"choboterm/internal/osutil"
 )
 
 // webPage is the page the web server serves (frontend/dist, set by main).
@@ -35,7 +37,7 @@ type WebInfo struct {
 // WebStatus returns the web server's state.
 func (a *App) WebStatus() WebInfo {
 	info := WebInfo{Addr: webDefaultAddr}
-	if s := loadSettings().Web; s != nil {
+	if s := config.Load().Web; s != nil {
 		info.Enabled = s.Enabled
 		if s.Addr != "" {
 			info.Addr = s.Addr
@@ -64,7 +66,7 @@ func (a *App) WebStart(addr string) (WebInfo, error) {
 	if err := a.startWebServer(webOptions{Addr: addr}); err != nil {
 		return a.WebStatus(), err
 	}
-	_ = updateSettings(func(s *Settings) { s.Web = &WebSettings{Enabled: true, Addr: addr} })
+	_ = config.Update(func(s *config.Settings) { s.Web = &config.WebSettings{Enabled: true, Addr: addr} })
 	return a.WebStatus(), nil
 }
 
@@ -79,7 +81,7 @@ func (a *App) WebStop() error {
 	}
 	a.webErr.Store(nil)
 	a.emitWebStatus()
-	return updateSettings(func(s *Settings) {
+	return config.Update(func(s *config.Settings) {
 		if s.Web != nil {
 			s.Web.Enabled = false
 		}
@@ -96,7 +98,7 @@ func (a *App) WebOpen() error {
 	if w == nil {
 		return errors.New("웹 서버가 꺼져 있습니다")
 	}
-	return openURL(w.localURL())
+	return osutil.OpenURL(w.localURL())
 }
 
 // WebNewToken makes a new access token; every browser has to log in again.

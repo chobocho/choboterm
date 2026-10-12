@@ -10,6 +10,10 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"choboterm/internal/config"
+	"choboterm/internal/i18n"
+	"choboterm/internal/osutil"
 )
 
 // sessionLog writes a tab's terminal output to a file while logging is on.
@@ -161,7 +165,7 @@ func (l *sessionLog) mark(msg string) {
 	} else if st, err := l.f.Stat(); err == nil && st.Size() > 0 && !(l.stamp && l.bol) {
 		b = []byte("\r\n") // raw output may stop in the middle of a line
 	}
-	line := fmt.Sprintf("===== %s %s =====\r\n", time.Now().Format("2006-01-02 15:04:05"), tr(msg))
+	line := fmt.Sprintf("===== %s %s =====\r\n", time.Now().Format("2006-01-02 15:04:05"), i18n.Tr(msg))
 	_, _ = l.f.Write(append(b, line...))
 	l.bol = true
 }
@@ -343,7 +347,7 @@ func (t *tab) startLog() (string, error) {
 	t.mu.Lock()
 	host, port := t.host, t.port
 	t.mu.Unlock()
-	s := loadSettings()
+	s := config.Load()
 	p, err := t.log.start(s.LogDir, host, port, !s.LogRaw, s.LogTime)
 	if err != nil || p == "" {
 		return t.log.active(), err
@@ -389,16 +393,16 @@ func (a *App) ShowLogs(tabID int) error {
 		return errNotInBrowser // Explorer would open on the other PC
 	}
 	if p := a.LogPath(tabID); p != "" {
-		return showFile(p)
+		return osutil.ShowFile(p)
 	}
-	dir := loadSettings().LogDir
+	dir := config.Load().LogDir
 	if dir == "" {
 		dir = logsDir()
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	return openFolder(dir)
+	return osutil.OpenFolder(dir)
 }
 
 // ChooseLogDir asks for the log folder; "" means the dialog was cancelled.
@@ -410,7 +414,7 @@ func (a *App) ChooseLogDir(current string) (string, error) {
 		current = ""
 	}
 	dir, err := a.picker().folder(pickOpts{
-		Title: tr("로그 폴더 선택"),
+		Title: i18n.Tr("로그 폴더 선택"),
 		Dir:   current,
 	})
 	if err != nil {

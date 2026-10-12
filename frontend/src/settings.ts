@@ -1,9 +1,9 @@
 // User preferences, stored by the Go side in %AppData%\choboterm\settings.json.
 
 import {GetSettings, SaveSettings} from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {config} from '../wailsjs/go/models';
 
-export let settings: main.Settings = main.Settings.createFrom({
+export let settings: config.Settings = config.Settings.createFrom({
     fontSize: 15,
     fontUtf8: 'D2Coding',
     fontEucKr: 'GulimChe',
@@ -46,7 +46,7 @@ export async function loadSettings() {
 }
 
 /** Changes settings and writes them shortly after (several quick changes are written once). */
-export function saveSettings(change: (s: main.Settings) => void) {
+export function saveSettings(change: (s: config.Settings) => void) {
     change(settings);
     clearTimeout(timer);
     timer = window.setTimeout(() => SaveSettings(settings).catch(() => undefined), 300);

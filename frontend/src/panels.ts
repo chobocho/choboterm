@@ -6,7 +6,7 @@ import {openForwards} from './forwards';
 import {DockerSource, openContainers} from './containers';
 import {openSessionManager} from './sessions';
 import {RunScript} from '../wailsjs/go/main/App';
-import {main} from '../wailsjs/go/models';
+import {config} from '../wailsjs/go/models';
 import {active, focusActive, Tab} from './tabstate';
 import {toast} from './notify';
 import {applySettings} from './look';
@@ -30,7 +30,7 @@ export function showSessions() {
 
 $<HTMLButtonElement>('sessBtn').addEventListener('click', showSessions);
 
-export function sendMacro(t: Tab, m: main.Macro) {
+export function sendMacro(t: Tab, m: config.Macro) {
     if (t.state !== 'on') return toast('연결되어 있지 않습니다');
     if (m.kind === 'lua') return runScript(t, () => RunScript(t.id, m.name || '매크로', m.text));
     const text = expandMacro(m.text);

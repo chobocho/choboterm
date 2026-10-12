@@ -1,22 +1,24 @@
 //go:build windows
 
-package main
+package osutil
 
 import (
 	"os"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"choboterm/internal/config"
 )
 
-// windowClass names the main window's class so it can be found again.
-const windowClass = "chobotermWindow"
+// WindowClass names the main window's class so it can be found again.
+const WindowClass = "chobotermWindow"
 
 var (
-	user32                 = windows.NewLazySystemDLL("user32.dll")
-	procFindWindowExW      = user32.NewProc("FindWindowExW")
-	procGetWindowPlacement = user32.NewProc("GetWindowPlacement")
-	procSetWindowPlacement = user32.NewProc("SetWindowPlacement")
+	User32                 = windows.NewLazySystemDLL("user32.dll")
+	ProcFindWindowExW      = User32.NewProc("FindWindowExW")
+	procGetWindowPlacement = User32.NewProc("GetWindowPlacement")
+	procSetWindowPlacement = User32.NewProc("SetWindowPlacement")
 )
 
 type winPoint struct{ X, Y int32 }
@@ -42,11 +44,11 @@ const (
 
 // mainWindow finds this process's main window.
 func mainWindow() uintptr {
-	cls, _ := windows.UTF16PtrFromString(windowClass)
+	cls, _ := windows.UTF16PtrFromString(WindowClass)
 	pid := uint32(os.Getpid())
 	var h uintptr
 	for {
-		h, _, _ = procFindWindowExW.Call(0, h, uintptr(unsafe.Pointer(cls)), 0)
+		h, _, _ = ProcFindWindowExW.Call(0, h, uintptr(unsafe.Pointer(cls)), 0)
 		if h == 0 {
 			return 0
 		}
@@ -57,18 +59,18 @@ func mainWindow() uintptr {
 	}
 }
 
-// currentWindowState returns the window's normal (restored) bounds and
+// CurrentWindowState returns the window's normal (restored) bounds and
 // whether it is maximized.
-func currentWindowState() (WindowState, bool) {
+func CurrentWindowState() (config.WindowState, bool) {
 	h := mainWindow()
 	if h == 0 {
-		return WindowState{}, false
+		return config.WindowState{}, false
 	}
 	wp := winPlacement{Length: uint32(unsafe.Sizeof(winPlacement{}))}
 	if r, _, _ := procGetWindowPlacement.Call(h, uintptr(unsafe.Pointer(&wp))); r == 0 {
-		return WindowState{}, false
+		return config.WindowState{}, false
 	}
-	return WindowState{
+	return config.WindowState{
 		Left:   int(wp.Normal.Left),
 		Top:    int(wp.Normal.Top),
 		Right:  int(wp.Normal.Right),
@@ -78,12 +80,12 @@ func currentWindowState() (WindowState, bool) {
 	}, true
 }
 
-// restoreWindowBounds moves the (still hidden) window to its saved bounds.
+// RestoreWindowBounds moves the (still hidden) window to its saved bounds.
 // Windows moves it back on screen if the bounds are no longer visible,
 // e.g. after a monitor was removed.
-func restoreWindowBounds(s WindowState) bool {
+func RestoreWindowBounds(s config.WindowState) bool {
 	h := mainWindow()
-	if h == 0 || !s.valid() {
+	if h == 0 || !s.Valid() {
 		return false
 	}
 	wp := winPlacement{

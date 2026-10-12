@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/i18n"
 )
 
 // viewLimit is how much of a remote file the text viewer loads.
@@ -214,7 +215,7 @@ type SaveResult struct {
 // Path is "" if the user cancelled the dialog.
 func (a *App) TextSaveAs(name, text, enc string) (SaveResult, error) {
 	local, finish, err := a.picker().saveFile(pickOpts{
-		Title: tr("다른 인코딩으로 저장 (" + enc + ")"),
+		Title: i18n.Tr("다른 인코딩으로 저장 (" + enc + ")"),
 		Dir:   downloadsDir(),
 		Name:  name,
 	})

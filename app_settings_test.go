@@ -5,14 +5,16 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"choboterm/internal/config"
 )
 
 func useTempSettings(t *testing.T) string {
 	t.Helper()
 	file := filepath.Join(t.TempDir(), "settings.json")
-	orig := settingsFile
-	settingsFile = func() (string, error) { return file, nil }
-	t.Cleanup(func() { settingsFile = orig })
+	orig := config.File
+	config.File = func() (string, error) { return file, nil }
+	t.Cleanup(func() { config.File = orig })
 	return file
 }
 
@@ -20,13 +22,13 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 	file := useTempSettings(t)
 	a := NewApp()
 
-	if s := a.GetSettings(); !reflect.DeepEqual(s, defaultSettings()) {
+	if s := a.GetSettings(); !reflect.DeepEqual(s, config.Default()) {
 		t.Fatalf("defaults = %+v", s)
 	}
 	s := a.GetSettings()
 	s.FontSize = 18
 	s.PasteNoConfirm = true
-	s.Macros = []Macro{{Name: "목록", Key: "F5", Text: "ls -al\n"}}
+	s.Macros = []config.Macro{{Name: "목록", Key: "F5", Text: "ls -al\n"}}
 	if err := a.SaveSettings(s); err != nil {
 		t.Fatal(err)
 	}
@@ -35,8 +37,8 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 	}
 
 	// The window position belongs to the Go side; saving from the page keeps it.
-	w := WindowState{Left: 10, Top: 20, Right: 910, Bottom: 620, Maximized: true}
-	if err := updateSettings(func(s *Settings) { s.Window = &w }); err != nil {
+	w := config.WindowState{Left: 10, Top: 20, Right: 910, Bottom: 620, Maximized: true}
+	if err := config.Update(func(s *config.Settings) { s.Window = &w }); err != nil {
 		t.Fatal(err)
 	}
 	s.FontSize = 20
@@ -62,7 +64,7 @@ func TestSettingsDefaultsAndRoundTrip(t *testing.T) {
 	if err := os.WriteFile(file, []byte(`{`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.GetSettings(); !reflect.DeepEqual(got, defaultSettings()) {
+	if got := a.GetSettings(); !reflect.DeepEqual(got, config.Default()) {
 		t.Fatalf("broken file: %+v", got)
 	}
 }

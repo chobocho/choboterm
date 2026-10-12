@@ -24,7 +24,9 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"choboterm/frontend"
 	"choboterm/internal/codec"
+	"choboterm/internal/config"
 	"choboterm/internal/version"
 )
 
@@ -307,7 +309,7 @@ func TestWebCalls(t *testing.T) {
 	if v != codec.UTF8 {
 		t.Fatalf("SetEncoding: %q", v)
 	}
-	var s Settings
+	var s config.Settings
 	if err := json.Unmarshal(c.callOK("GetSettings"), &s); err != nil || s.FontSize == 0 {
 		t.Fatalf("GetSettings: %+v %v", s, err)
 	}
@@ -920,7 +922,7 @@ func TestHandoffToRunning(t *testing.T) {
 
 func TestWebNoTokenMode(t *testing.T) {
 	isolateSettings(t)
-	if !termuxBuild {
+	if !frontend.Termux {
 		if _, err := startWeb(NewApp(), testPage, webOptions{Addr: "127.0.0.1:0", NoToken: true}); err == nil {
 			t.Fatal("no-token mode should be rejected outside the Termux build")
 		}
@@ -940,7 +942,7 @@ func TestWebNoTokenMode(t *testing.T) {
 	if code, _ := f.get("/assets/app.js"); code != http.StatusOK {
 		t.Fatalf("asset without login: status %d", code)
 	}
-	settings, err := settingsFile()
+	settings, err := config.File()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -962,21 +964,21 @@ func TestWebStatusAndSettings(t *testing.T) {
 	if err != nil || !info.Running || !strings.Contains(info.URL, "token=") {
 		t.Fatalf("start %+v %v", info, err)
 	}
-	if s := loadSettings().Web; s == nil || !s.Enabled || s.Addr != "127.0.0.1:0" {
+	if s := config.Load().Web; s == nil || !s.Enabled || s.Addr != "127.0.0.1:0" {
 		t.Fatalf("settings %+v", s)
 	}
 	// The page's own settings save keeps the web settings.
-	if err := a.SaveSettings(defaultSettings()); err != nil {
+	if err := a.SaveSettings(config.Default()); err != nil {
 		t.Fatal(err)
 	}
-	if s := loadSettings().Web; s == nil || !s.Enabled {
+	if s := config.Load().Web; s == nil || !s.Enabled {
 		t.Fatal("SaveSettings dropped the web settings")
 	}
 	oldTok := a.web.Load().token
 	if info, err := a.WebNewToken(); err != nil || !info.Running || a.web.Load().token == oldTok {
 		t.Fatalf("new token %+v %v", info, err)
 	}
-	if err := a.WebStop(); err != nil || a.web.Load() != nil || loadSettings().Web.Enabled {
+	if err := a.WebStop(); err != nil || a.web.Load() != nil || config.Load().Web.Enabled {
 		t.Fatal("stop")
 	}
 	if err := a.WebOpen(); err == nil {
@@ -986,7 +988,7 @@ func TestWebStatusAndSettings(t *testing.T) {
 
 func TestParseArgs(t *testing.T) {
 	noToken, err := parseArgs([]string{"--no-token"})
-	if termuxBuild {
+	if frontend.Termux {
 		if err != nil || !noToken.noToken || !noToken.web {
 			t.Fatalf("--no-token: %+v %v", noToken, err)
 		}

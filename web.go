@@ -31,7 +31,10 @@ import (
 	"sync"
 	"time"
 
+	"choboterm/frontend"
+	"choboterm/internal/config"
 	"choboterm/internal/dbg"
+	"choboterm/internal/i18n"
 )
 
 const (
@@ -118,7 +121,7 @@ func startWeb(a *App, page fs.FS, opts webOptions) (*webServer, error) {
 	}
 	var token string
 	if opts.NoToken {
-		if !termuxBuild {
+		if !frontend.Termux {
 			return nil, errors.New("no-token mode is only supported in the Termux build")
 		}
 	} else {
@@ -406,7 +409,7 @@ func (w *webServer) handleRoot(rw http.ResponseWriter, r *http.Request) {
 	}
 	info, _ := json.Marshal(map[string]interface{}{
 		"id": c.id, "key": c.key, "base": c.id << tabBits, "local": c.local,
-		"platform": goruntime.GOOS, "arch": goruntime.GOARCH, "lang": appLang(),
+		"platform": goruntime.GOOS, "arch": goruntime.GOARCH, "lang": i18n.Lang(),
 		"window": w.app.ctx != nil,
 	})
 	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -451,7 +454,7 @@ func (w *webServer) loginPage(rw http.ResponseWriter, status int, wrong bool) {
 	}
 	msg := ""
 	if wrong {
-		msg = `<p class="err">` + tr("토큰이 맞지 않습니다") + `</p>`
+		msg = `<p class="err">` + i18n.Tr("토큰이 맞지 않습니다") + `</p>`
 	}
 	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.Header().Set("Cache-Control", "no-store")
@@ -464,7 +467,7 @@ input{width:100%%;box-sizing:border-box;padding:8px;margin:12px 0;background:#11
 button{padding:8px 16px}.err{color:#f66}p{margin:0 0 8px}</style></head>
 <body><form method="post" action="/login"><p><b>choboterm</b></p><p>%s</p>%s
 <input name="token" type="password" autocomplete="current-password" autofocus><button>%s</button></form></body></html>`,
-		tr("choboterm 창의 설정에서 보이는 접속 토큰을 입력하세요"), msg, tr("접속"))
+		i18n.Tr("choboterm 창의 설정에서 보이는 접속 토큰을 입력하세요"), msg, i18n.Tr("접속"))
 }
 
 // splitIndex splits index.html right after <head>, where the client's script goes.
@@ -588,7 +591,7 @@ func outboundIP() string {
 
 // webConfigDir is where the token and the certificate are kept.
 func webConfigDir() (string, error) {
-	p, err := settingsFile()
+	p, err := config.File()
 	if err != nil {
 		return "", err
 	}

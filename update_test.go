@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"choboterm/internal/config"
 	"choboterm/internal/version"
 )
 
@@ -81,7 +82,7 @@ func TestCheckUpdateOncePerDayAndVersion(t *testing.T) {
 		t.Fatalf("second check the same day: %+v, %d requests", info, hits.Load())
 	}
 	// A day later the same version isn't announced again.
-	_ = updateSettings(func(s *Settings) { s.Update.Last = time.Now().Add(-25 * time.Hour) })
+	_ = config.Update(func(s *config.Settings) { s.Update.Last = time.Now().Add(-25 * time.Hour) })
 	if info, _ := a.CheckUpdate(false); !info.Checked || info.Newer {
 		t.Fatalf("next day, same version: %+v", info)
 	}

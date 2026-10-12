@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"choboterm/internal/i18n"
 )
 
 // RemoteFS is a remote file system reachable over SFTP or FTP.
@@ -300,7 +302,7 @@ func (a *App) FileDownload(tabID int, remotePath string, size int64) (string, er
 		return "", errors.New("연결되어 있지 않습니다")
 	}
 	local, finish, err := a.picker().saveFile(pickOpts{
-		Title: tr("다운로드"),
+		Title: i18n.Tr("다운로드"),
 		Dir:   downloadsDir(),
 		Name:  path.Base(remotePath),
 	})
@@ -322,7 +324,7 @@ func (a *App) FileUpload(tabID int, remoteDir string) (int, error) {
 	if t == nil {
 		return 0, errors.New("연결되어 있지 않습니다")
 	}
-	files, release, err := a.picker().openFiles(pickOpts{Title: tr("업로드할 파일 선택")})
+	files, release, err := a.picker().openFiles(pickOpts{Title: i18n.Tr("업로드할 파일 선택")})
 	defer release()
 	if err != nil || len(files) == 0 {
 		return 0, err
@@ -485,7 +487,7 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []FileEntry) (Down
 	finish := keepPath(localDir)
 	if localDir == "" {
 		d, f, err := a.picker().saveDir(pickOpts{
-			Title: tr("저장할 폴더 선택"),
+			Title: i18n.Tr("저장할 폴더 선택"),
 			Dir:   downloadsDir(),
 		})
 		if err != nil || d == "" {
