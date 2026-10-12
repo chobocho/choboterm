@@ -90,8 +90,9 @@ type webServer struct {
 	stages    map[string]*webStage
 	downloads map[string]*webDownload
 	closed    bool
-	// onIdle runs when the last page went away (the window may then quit).
-	onIdle func()
+	// onChange runs when a page was loaded or went away, with how many are
+	// open now (the window shows it in its title).
+	onChange func(clients int)
 }
 
 // startWeb starts the web server for a's state and page (the frontend/dist
@@ -233,16 +234,49 @@ func (w *webServer) localURL() string {
 	return u + "&local=" + code
 }
 
-// clientCount is the number of pages open now.
+// clientCount is the number of pages open now (including ones briefly
+// disconnected, which keep their tabs for the grace time).
 func (w *webServer) clientCount() int {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return len(w.clients)
 }
 
+// connectedCount is the number of pages connected right now: the browsers
+// someone is looking at.
+func (w *webServer) connectedCount() int {
+	w.mu.Lock()
+	clients := make([]*webClient, 0, len(w.clients))
+	for _, c := range w.clients {
+		clients = append(clients, c)
+	}
+	w.mu.Unlock()
+	n := 0
+	for _, c := range clients {
+		c.mu.Lock()
+		if c.conn != nil {
+			n++
+		}
+		c.mu.Unlock()
+	}
+	return n
+}
+
+// changed tells onChange that the pages changed.
+func (w *webServer) changed() {
+	w.mu.Lock()
+	f, closed := w.onChange, w.closed
+	n := len(w.clients)
+	w.mu.Unlock()
+	if f != nil && !closed {
+		go f(n)
+	}
+}
+
 func (w *webServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", w.handleLogin)
+	mux.HandleFunc("/web/show", w.handleShow)
 	mux.HandleFunc("/web/shim.js", w.auth(w.handleShim))
 	mux.HandleFunc("/web/ws", w.auth(w.handleWS))
 	mux.HandleFunc("/web/stage", w.auth(w.handleStageNew))
@@ -439,6 +473,9 @@ func (w *webServer) newClient(local bool) (*webClient, error) {
 	}
 	c := newWebClient(w, id, local)
 	w.clients[id] = c
+	if f := w.onChange; f != nil {
+		go f(len(w.clients))
+	}
 	return c, nil
 }
 
@@ -454,11 +491,13 @@ func (w *webServer) removeClient(c *webClient) {
 	if w.clients[c.id] == c {
 		delete(w.clients, c.id)
 	}
-	idle := len(w.clients) == 0 && !w.closed
-	onIdle := w.onIdle
+	n, f := len(w.clients), w.onChange
+	if w.closed {
+		f = nil
+	}
 	w.mu.Unlock()
-	if idle && onIdle != nil {
-		onIdle()
+	if f != nil {
+		f(n)
 	}
 }
 

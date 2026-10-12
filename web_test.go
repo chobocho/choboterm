@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/binary"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"testing/fstest"
@@ -70,6 +72,11 @@ func startTestWeb(t *testing.T, opts webOptions) *webFixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(w.stop)
+	return fixtureFor(t, a, w)
+}
+
+// fixtureFor is a logged-out browser for the running server w of a.
+func fixtureFor(t *testing.T, a *App, w *webServer) *webFixture {
 	jar, _ := cookiejar.New(nil)
 	f := &webFixture{t: t, a: a, w: w, base: strings.TrimSuffix(w.URL(true), "/"), jar: jar}
 	f.hc = &http.Client{Jar: jar, Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
@@ -418,8 +425,12 @@ func TestWebReconnectResends(t *testing.T) {
 
 func TestWebDisconnectedPageClosesItsTabs(t *testing.T) {
 	f := startTestWeb(t, webOptions{Grace: 200 * time.Millisecond})
-	var idle atomic.Int32
-	f.w.onIdle = func() { idle.Add(1) }
+	var idle atomic.Int32 // onChange calls saying no page is left
+	f.w.onChange = func(n int) {
+		if n == 0 {
+			idle.Add(1)
+		}
+	}
 	f.login()
 	p := f.page()
 	c := f.connect(p)
@@ -771,6 +782,139 @@ func TestBeforeCloseIgnoresWebTabs(t *testing.T) {
 	}
 }
 
+// Closing the window while browsers use the web server asks (app:closeWeb,
+// with how many pages are open) instead of quitting or hiding by itself;
+// after Quit (the user chose "quit all") it closes.
+func TestBeforeCloseAsksWhenBrowsersAreConnected(t *testing.T) {
+	f := startTestWeb(t, webOptions{})
+	var got []interface{}
+	f.a.hooks.emit = func(name string, data ...interface{}) {
+		if name == "app:closeWeb" {
+			got = data
+		}
+	}
+	if f.a.beforeClose(nil) || got != nil {
+		t.Fatal("asked with no browser")
+	}
+	f.login()
+	f.connect(f.page())
+	if !f.a.beforeClose(nil) || len(got) != 1 || got[0] != 1 {
+		t.Fatalf("app:closeWeb %v", got)
+	}
+	// Even with a connected window tab, the browser question comes first
+	// (it covers the window's tabs too).
+	got = nil
+	f.a.getTab(2).sess = newPipeSession()
+	if !f.a.beforeClose(nil) || got == nil {
+		t.Fatal("window tab hid the browser question")
+	}
+	f.a.quit.Store(true)
+	if f.a.beforeClose(nil) {
+		t.Fatal("didn't close after Quit")
+	}
+}
+
+// A page coming and going is reported to the window (title), and a server
+// that can't start says why in Settings.
+func TestWebStatusEventsAndStartError(t *testing.T) {
+	isolateSettings(t)
+	old := webPage
+	webPage = testPage
+	defer func() { webPage = old }()
+	a := NewApp()
+	var mu sync.Mutex
+	var status [][]interface{}
+	a.hooks.emit = func(name string, data ...interface{}) {
+		if name == "web:status" {
+			mu.Lock()
+			status = append(status, data)
+			mu.Unlock()
+		}
+	}
+	if _, err := a.WebStart("127.0.0.1:0"); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	if len(status) == 0 || status[len(status)-1][0] != true {
+		t.Fatalf("status after start %v", status)
+	}
+	mu.Unlock()
+	w := a.web.Load()
+	f := fixtureFor(t, a, w)
+	f.login()
+	c := f.connect(f.page())
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		mu.Lock()
+		last := status[len(status)-1]
+		mu.Unlock()
+		if last[1] == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no status with 1 page: %v", last)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	c.c.Close()
+
+	// Another server on the same port: Settings shows why it's off.
+	b := NewApp()
+	b.hooks.emit = func(string, ...interface{}) {}
+	if _, err := b.WebStart(w.ln.Addr().String()); err == nil {
+		t.Fatal("started on a port in use")
+	}
+	if s := b.WebStatus(); s.Running || !strings.Contains(s.Error, "address already in use") && !strings.Contains(s.Error, "Only one usage") {
+		t.Fatalf("status %+v", s)
+	}
+	if err := a.WebStop(); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if last := status[len(status)-1]; last[0] != false {
+		t.Fatalf("status after stop %v", last)
+	}
+}
+
+// Starting choboterm again finds the running one (same token) and makes it
+// show its window; a server of another token, or none, isn't taken for it.
+func TestHandoffToRunning(t *testing.T) {
+	f := startTestWeb(t, webOptions{})
+	addr := f.w.ln.Addr().String()
+	// No window in tests: the running one refuses (nothing to show).
+	if handoffToRunning(webOptions{Addr: addr}) {
+		t.Fatal("handoff without a window")
+	}
+	f.a.ctx = context.Background() // stands in for the window; showWindow is stubbed below
+	defer func() { f.a.ctx = nil }()
+	shown := make(chan struct{}, 1)
+	oldShow := showWindowHook
+	showWindowHook = func(*App) { shown <- struct{}{} }
+	defer func() { showWindowHook = oldShow }()
+	if !handoffToRunning(webOptions{Addr: addr}) {
+		t.Fatal("no handoff to the running one")
+	}
+	select {
+	case <-shown:
+	case <-time.After(2 * time.Second):
+		t.Fatal("window not shown")
+	}
+	// A server with another token (another user's) doesn't count.
+	f.w.token = "someone-else-0123456789abcdef0123456789"
+	if handoffToRunning(webOptions{Addr: addr}) {
+		t.Fatal("handoff to a server of another token")
+	}
+	// Nothing listening.
+	if handoffToRunning(webOptions{Addr: "127.0.0.1:1"}) {
+		t.Fatal("handoff with nothing listening")
+	}
+	// Only this PC may ask, and only with POST and a nonce.
+	if code, _ := f.get("/web/show?nonce=0123456789abcdef"); code != http.StatusNotFound {
+		t.Fatalf("GET /web/show: %d", code)
+	}
+}
+
 func TestWebStatusAndSettings(t *testing.T) {
 	isolateSettings(t)
 	old := webPage
@@ -836,9 +980,6 @@ func TestParseArgs(t *testing.T) {
 	}
 	if o := (cliOptions{}).webOptions(); o != nil {
 		t.Fatal("webOptions without --web")
-	}
-	if webInstanceID("") != webInstanceID(webDefaultAddr) || webInstanceID("a:1") == webInstanceID("a:2") {
-		t.Fatal("instance ids")
 	}
 }
 

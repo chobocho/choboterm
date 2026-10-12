@@ -1966,7 +1966,7 @@ body.resizing-col #terms .term {
 
 #askMsg {
     white-space: pre-line;
-    word-break: break-all;
+    overflow-wrap: anywhere; /* long paths still wrap, words stay whole */
 }
 
 #askInput[hidden] {
@@ -1975,6 +1975,12 @@ body.resizing-col #terms .term {
 
 .ask .buttons {
     margin-top: 0;
+    flex-wrap: wrap;
+}
+
+/* A question with two answers besides Cancel needs more room. */
+.dialog.ask:has(#askAlt:not([hidden])) {
+    width: min(540px, calc(100vw - 32px));
 }
 
 .ask .buttons #askOk {

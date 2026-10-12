@@ -618,6 +618,7 @@ export namespace main {
 	    fingerprint: string;
 	    remote: boolean;
 	    clients: number;
+	    error: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new WebInfo(source);
@@ -633,6 +634,7 @@ export namespace main {
 	        this.fingerprint = source["fingerprint"];
 	        this.remote = source["remote"];
 	        this.clients = source["clients"];
+	        this.error = source["error"];
 	    }
 	}
 	

@@ -179,6 +179,7 @@ func (c *webClient) close() {
 	debugf("web: client %d closed", c.id)
 
 	if conn != nil {
+		// 1001 "closed" tells the page not to reconnect (see web_shim.js).
 		_ = conn.WriteControl(websocket.CloseMessage,
 			websocket.FormatCloseMessage(websocket.CloseGoingAway, "closed"), time.Now().Add(time.Second))
 		_ = conn.Close()
@@ -265,6 +266,7 @@ func (c *webClient) serve(conn *websocket.Conn, seq uint64) {
 	c.cond.Broadcast()
 	c.mu.Unlock()
 	debugf("web: client %d connected (gen %d, seq %d)", c.id, gen, seq)
+	c.srv.changed()
 
 	stop := make(chan struct{})
 	go c.writeLoop(conn, gen, seq)
@@ -281,6 +283,7 @@ func (c *webClient) serve(conn *websocket.Conn, seq uint64) {
 	c.cond.Broadcast()
 	c.mu.Unlock()
 	_ = conn.Close()
+	c.srv.changed()
 }
 
 // writeLoop sends queued messages after sent until the connection changes.

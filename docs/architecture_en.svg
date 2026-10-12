@@ -139,7 +139,7 @@
   <text x="427" y="539" class="sub">An App per page (caller) · tab ids from clientID&lt;&lt;20</text>
   <text x="427" y="556" class="sub">ack · replay · dedup calls · flow control over 8MB</text>
   <text x="427" y="573" class="sub">Token cookie · Origin check · TLS for outside (self-signed)</text>
-  <text x="427" y="590" class="sub">Close window → hides while browsers use it · rerun shows it</text>
+  <text x="427" y="590" class="sub">Close window → quit all / window only · rerun shows it</text>
 
   <rect x="415" y="606" width="340" height="47" rx="5" fill="#fff8f7" stroke="#c5221f" stroke-width="1.2"/>
   <text x="427" y="624" class="title">picker.go — file dialogs <tspan class="new">NEW</tspan></text>

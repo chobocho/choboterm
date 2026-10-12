@@ -574,5 +574,14 @@
   "페이지를 찾을 수 없습니다: {}": "Page not found: {}",
   "웹 서버를 시작하지 못했습니다: {}": "Couldn't start the web server: {}",
   "인증서를 만들지 못했습니다: {}": "Couldn't create the certificate: {}",
-  "인증서를 읽지 못했습니다: {}": "Couldn't read the certificate: {}"
+  "인증서를 읽지 못했습니다: {}": "Couldn't read the certificate: {}",
+  "웹 서버": "Web server",
+  "브라우저 {}개": "{} browser(s)",
+  "브라우저 {}개가 웹 서버에 연결되어 있습니다.": "{} browser(s) are connected to the web server.",
+  "모두 종료하면 브라우저의 탭도 끊어집니다.": "Quitting everything also disconnects the browsers' tabs.",
+  "이 창의 연결된 탭 {}개는 어느 쪽이든 끊어집니다.": "The {} connected tab(s) of this window are disconnected either way.",
+  "창만 닫으면 웹 서버는 계속 돌고, choboterm을 다시 실행하면 창이 나타납니다. 설정 > 웹 서버에서 끌 수 있습니다.": "Closing only the window keeps the web server running; start choboterm again to bring the window back. Turn the server off in Settings > Web server.",
+  "모두 종료": "Quit all",
+  "창만 닫기 (웹 서버 유지)": "Close window only (keep web server)",
+  "시작하지 못했습니다: {}": "Couldn't start: {}"
 }

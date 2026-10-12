@@ -13,7 +13,7 @@ import {initTranslucencyPreview, openPrefs, prefsOpen} from './prefs';
 import {expandMacro, macroForKey, macrosOpen, openMacros} from './macros';
 import {forwardsOpen, forwardsTabClosed, openForwards} from './forwards';
 import {containersOpen, containersTabClosed, DockerMode, DockerSource, openContainers} from './containers';
-import {ask, askOpen} from './dialog';
+import {ask, askOpen, choose} from './dialog';
 import {openSaveSession, openSessionManager, sessionManagerOpen, sessionSaveOpen} from './sessions';
 import {authPromptOpen, initAuthPrompt} from './authprompt';
 import {viewerOpen} from './viewer';
@@ -27,7 +27,7 @@ import {closeFiles, filesOpen, focusFiles, forgetFiles, openFiles, setActiveTabP
 
 import {
     CloseTab, Connect, Disconnect, DockerOpen, GetLanguage, ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, RunScript, RunScriptFile, ScriptScreen, StartConsole, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Quit, Resize, Send, SendBreak,
-    SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme,
+    SetEncoding, SetTabTheme, ShowLogs, StartLog, StopLog, TabTheme, WebHideWindow,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, Environment, EventsOn, WindowSetTitle, WindowUnminimise} from '../wailsjs/runtime/runtime';
@@ -852,6 +852,9 @@ function setState(t: Tab, state: TabState) {
     if (t === active) updateTitle();
 }
 
+// The web server's state, from the "web:status" event (window only).
+const webServer = {running: false, clients: 0};
+
 function updateTitle() {
     let title = appName;
     const t = active;
@@ -868,8 +871,16 @@ function updateTitle() {
     }
     // At the right end: whether this tab is drawn with GPU acceleration.
     if (t) title += t.webgl ? '  ⚡GPU' : '  🐢CPU';
+    // And whether the web server runs, so it isn't forgotten.
+    if (webServer.running) title += `  🌐 ${tr('웹 서버')} (${tr(`브라우저 ${webServer.clients}개`)})`;
     WindowSetTitle(title);
 }
+
+EventsOn('web:status', (running: boolean, clients: number) => {
+    webServer.running = running;
+    webServer.clients = clients;
+    updateTitle();
+});
 
 /**
  * Connects tab t with req; returns the protocol. Throws on failure.
@@ -1090,6 +1101,27 @@ EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
 });
 
 // The window is closing with tabs still connected: ask first.
+// Closing the window while browsers use the web server: quit everything,
+// or close only the window and keep serving them.
+EventsOn('app:closeWeb', async (browsers: number) => {
+    WindowUnminimise();
+    const n = [...tabs.values()].filter(t => t.state !== 'idle').length;
+    let msg = `브라우저 ${browsers}개가 웹 서버에 연결되어 있습니다.\n\n모두 종료하면 브라우저의 탭도 끊어집니다.`;
+    if (n > 0) msg += `\n이 창의 연결된 탭 ${n}개는 어느 쪽이든 끊어집니다.`;
+    msg += '\n\n창만 닫으면 웹 서버는 계속 돌고, choboterm을 다시 실행하면 창이 나타납니다. 설정 > 웹 서버에서 끌 수 있습니다.';
+    const c = await choose('choboterm 끝내기', msg, '모두 종료', '창만 닫기 (웹 서버 유지)');
+    if (c === 'ok') return Quit();
+    if (c === 'alt') {
+        try {
+            await WebHideWindow();
+            return;
+        } catch (e) {
+            await ask('choboterm 끝내기', String(e));
+        }
+    }
+    if (!askOpen()) focusActive();
+});
+
 EventsOn('app:close', async () => {
     WindowUnminimise();
     const n = [...tabs.values()].filter(t => t.state !== 'idle').length;

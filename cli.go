@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"hash/fnv"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -103,15 +101,4 @@ func (o cliOptions) webOptions() *webOptions {
 		return nil
 	}
 	return &webOptions{Addr: o.addr, CertFile: o.cert, KeyFile: o.key, Insecure: o.insecure, Grace: o.grace}
-}
-
-// webInstanceID names the single-instance lock of a web server address,
-// so servers on different ports may run side by side.
-func webInstanceID(addr string) string {
-	if addr == "" {
-		addr = webDefaultAddr
-	}
-	h := fnv.New32a()
-	h.Write([]byte(addr))
-	return strconv.FormatUint(uint64(h.Sum32()), 16)
 }

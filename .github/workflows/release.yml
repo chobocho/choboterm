@@ -1,0 +1,105 @@
+# Builds the release files and publishes a GitHub Release when a version tag
+# (v0.2.16, ...) is pushed: the same files build.bat and build_linux.sh make.
+#
+#   git tag v0.2.16 && git push origin v0.2.16
+#
+# Can also be run by hand (Actions > release > Run workflow) for an existing tag.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.2.16)'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  WAILS_VERSION: v2.11.0
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+      - name: Build (wails build) — choboterm.exe
+        run: wails build -clean
+      - name: Test
+        run: go test ./...
+      - name: Build choboterm-headless.exe (console, no window)
+        run: go build -tags headless -trimpath -ldflags "-s -w" -o build/bin/choboterm-headless.exe .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            build/bin/choboterm.exe
+            build/bin/choboterm-headless.exe
+          if-no-files-found: error
+
+  linux:
+    # Ubuntu 22.04, like tools/linux/Dockerfile: runs on glibc 2.35 and later.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install GTK and WebKitGTK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Build (build_linux.sh --native) — tar.gz and headless
+        run: ./build_linux.sh --native
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            release/choboterm-linux-amd64.tar.gz
+            release/choboterm-headless-linux-amd64
+          if-no-files-found: error
+
+  release:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="${TAG#v}"
+          gh release create "$TAG" \
+            "dist/windows/choboterm.exe#choboterm.exe (Windows x64)" \
+            "dist/linux/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" \
+            "dist/windows/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" \
+            "dist/linux/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" \
+            --title "choboterm V$version" --generate-notes

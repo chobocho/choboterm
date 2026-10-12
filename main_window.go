@@ -36,21 +36,18 @@ func runWindow(opts cliOptions) {
 	}
 	app.webStart = web
 
+	// With the web server, starting choboterm again shows the one already
+	// running (its window may be hidden) instead of a second choboterm,
+	// which couldn't serve the same port (see handoff.go).
+	if web != nil && handoffToRunning(*web) {
+		return
+	}
+
 	// The window starts hidden and is shown once it is moved to where it was
 	// last time (see App.domReady), so it doesn't jump on screen.
 	start := options.Normal
 	if w := loadSettings().Window; w != nil && w.Maximized {
 		start = options.Maximised
-	}
-
-	// With the web server, starting choboterm again shows this window (which
-	// may be hidden while browsers use it) instead of a second server.
-	var single *options.SingleInstanceLock
-	if web != nil {
-		single = &options.SingleInstanceLock{
-			UniqueId:               "choboterm-web-" + webInstanceID(web.Addr),
-			OnSecondInstanceLaunch: func(options.SecondInstanceData) { app.showWindow() },
-		}
 	}
 
 	// Create application with options
@@ -64,14 +61,13 @@ func runWindow(opts cliOptions) {
 		// The window is see-through wherever the page is, so translucency
 		// (Settings) can be switched on and off without a restart. The page
 		// paints an opaque background while it is off.
-		BackgroundColour:   &options.RGBA{R: 0, G: 0, B: 0, A: 0},
-		StartHidden:        true,
-		WindowStartState:   start,
-		SingleInstanceLock: single,
-		OnStartup:          app.startup,
-		OnDomReady:         app.domReady,
-		OnBeforeClose:      app.beforeClose,
-		OnShutdown:         app.shutdown,
+		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
+		StartHidden:      true,
+		WindowStartState: start,
+		OnStartup:        app.startup,
+		OnDomReady:       app.domReady,
+		OnBeforeClose:    app.beforeClose,
+		OnShutdown:       app.shutdown,
 		Windows: &windows.Options{
 			WindowClassName:      windowClass,
 			WebviewIsTransparent: true,

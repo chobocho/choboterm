@@ -12,6 +12,10 @@
   <li>아키텍처 그림 한국어·영어 V0.2.16 새로 그림: 브라우저 상자, HTTPS · WebSocket 경로, web.go · picker.go · prefs.ts NEW, 배포에 headless. Chromium으로 그려 넘치는 글자 확인 · 수정</li>
   <li>빌드: Windows는 Linux에서 <code>wails build -platform windows/amd64</code>(버전 리소스 0.2.16 확인) + headless.exe(콘솔). Linux는 Ubuntu 22.04 컨테이너(일반 사용자로 go test 전체 통과, GLIBC 2.34까지) + headless 정적 바이너리</li>
   <li>GitHub 릴리스는 이 세션의 GitHub 토큰이 없어 만들지 못함 → 파일 4개를 사용자에게 전달</li>
+  <li>사용자 보고: 서버를 켠 채 창을 닫았다가 다시 실행하면 설정의 "끄기"가 비활성. 재현: 웹 없이 시작 → 설정에서 켬 → 다시 실행하면 단일 인스턴스 잠금이 없어 두 번째 프로세스가 뜨고 포트 7681 bind 실패(로그에만 남음)</li>
+  <li>수정: Wails 잠금 대신 handoff.go — 다시 실행하면 떠 있는 서버에 POST /web/show?nonce, 답(HMAC(토큰, nonce))을 확인하면 그 창을 보이고 종료. 서버 시작 실패는 설정에 표시</li>
+  <li>창 닫기: 브라우저가 연결돼 있으면 "모두 종료 / 창만 닫기 (웹 서버 유지) / 취소"를 물음(자동 숨김·자동 종료 없앰). 창 제목에 🌐 웹 서버 (브라우저 N개). 서버가 일부러 닫은 페이지는 다시 연결하지 않고 "연결이 끝났습니다" 표시</li>
+  <li>릴리스 워크플로(.github/workflows/release.yml): v* 태그를 푸시하면 Windows(wails build) · Ubuntu 22.04(build_linux.sh --native)에서 테스트·빌드하고 파일 4개로 GitHub Release 생성</li>
 </ul>
 
 <h2>2026-10-11 — V0.2.15 릴리스</h2>
