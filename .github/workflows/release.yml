@@ -3,7 +3,9 @@
 #
 #   git tag v0.2.16 && git push origin v0.2.16
 #
-# Can also be run by hand (Actions > release > Run workflow) for an existing tag.
+# Can also be run by hand (Actions > release > Run workflow): with only a tag
+# it rebuilds that tag; with a ref too it builds that commit or branch and the
+# release creates the tag there (for when tags can't be pushed).
 name: release
 
 on:
@@ -14,12 +16,17 @@ on:
       tag:
         description: 'Tag to release (e.g. v0.2.16)'
         required: true
+      ref:
+        description: 'Commit or branch to build if the tag does not exist yet (e.g. main)'
+        required: false
 
 permissions:
   contents: read
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  # What to build: the pushed tag, or the given ref, or the existing tag.
+  SRC: ${{ github.event.inputs.ref || github.event.inputs.tag || github.ref_name }}
   WAILS_VERSION: v2.11.0
 
 jobs:
@@ -28,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.SRC }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -56,10 +63,12 @@ jobs:
   linux:
     # Ubuntu 22.04, like tools/linux/Dockerfile: runs on glibc 2.35 and later.
     runs-on: ubuntu-22.04
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.SRC }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -68,6 +77,9 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Commit being built
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Install GTK and WebKitGTK
         run: |
           sudo apt-get update
@@ -95,9 +107,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          SHA: ${{ needs.linux.outputs.sha }}
         run: |
           version="${TAG#v}"
-          gh release create "$TAG" \
+          # --target: where a tag that doesn't exist yet is created.
+          gh release create "$TAG" --target "$SHA" \
             "dist/windows/choboterm.exe#choboterm.exe (Windows x64)" \
             "dist/linux/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" \
             "dist/windows/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" \
