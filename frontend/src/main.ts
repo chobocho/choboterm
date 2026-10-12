@@ -895,6 +895,8 @@ function updateTitle() {
     if (t) title += t.webgl ? '  ⚡GPU' : '  🐢CPU';
     // And whether the web server runs, so it isn't forgotten.
     if (webServer.running) title += `  🌐 ${tr('웹 서버')} (${tr(`브라우저 ${webServer.clients}개`)})`;
+    // Wails updates the native window title; browsers need the document title.
+    document.title = title;
     WindowSetTitle(title);
 }
 
@@ -2445,6 +2447,8 @@ Promise.all([GetVersion(), loadSettings(), GetLanguage(), Environment()]).then((
     startI18n(lang === 'en' ? 'en' : 'ko' as Lang);
     initTranslucencyPreview(applyTranslucency);
     appName = `choboterm V${v}`;
+    $<HTMLSpanElement>('connectTitle').textContent = `${appName} - Connect to`;
+    document.title = appName;
     applySettings();
     const first = createTab();
     activate(first);
