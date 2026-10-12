@@ -10,7 +10,7 @@ import {helpOpen, toggleHelp} from './help';
 import {initTranslucencyPreview, openPrefs} from './prefs';
 import {expandMacro, macroForKey, openMacros} from './macros';
 import {forwardsTabClosed, openForwards} from './forwards';
-import {containersTabClosed, DockerMode, DockerSource, openContainers} from './containers';
+import {DockerMode, DockerSource, openContainers} from './containers';
 import {ask, askOpen, choose} from './dialog';
 import {openSaveSession, openSessionManager} from './sessions';
 import {initAuthPrompt} from './authprompt';
@@ -19,26 +19,24 @@ import {Lang, startI18n, tr} from './i18n';
 import {attachSearch, closeSearch, openSearch, switchSearch} from './search';
 import {loadSettings, settings} from './settings';
 import {themeByName, THEMES} from './themes';
-import {closeFiles, filesOpen, forgetFiles, openFiles, setActiveTabProvider, showFilesFor} from './files';
+import {filesOpen, forgetFiles, setActiveTabProvider, showFilesFor} from './files';
 import {
-    CloseTab, Connect, Disconnect, DockerOpen, GetLanguage, RunScript, RunScriptFile, ShowScripts, StopScript, GetHistory, GetLocalShells,
-    GetSerialPorts, GetSessions, GetSSHConfigHosts, GetVersion, LookupSSH, Quit, Resize, Send, SendBreak, SetEncoding, ShowLogs, StartLog, StopLog,
-    TabTheme, WebHideWindow,
+    CloseTab, GetLanguage, RunScript, RunScriptFile, ShowScripts, StopScript, GetHistory, GetLocalShells, GetSerialPorts, GetSessions, GetSSHConfigHosts,
+    GetVersion, LookupSSH, Quit, Resize, SendBreak, ShowLogs, WebHideWindow,
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardSetText, Environment, EventsOn, WindowUnminimise} from '../wailsjs/runtime/runtime';
 import {isLinux, setPlatform, webPage} from './platform';
 import {checkUpdate} from './update';
-import {active, DialogState, fitPane, focusActive, Group, orderedTabs, panesOf, setActive, SplitDir, Tab, tabs, tabsEl, TabState, termsEl} from './tabstate';
+import {active, DialogState, fitPane, focusActive, Group, orderedTabs, panesOf, setActive, SplitDir, Tab, tabs, tabsEl, termsEl} from './tabstate';
 import {notice, reconnectHint, toast} from './notify';
 import {appName, setVersion, updateTitle, version} from './title';
-import {
-    applyEncoding, applyLook, applySettings, applyTranslucency, chooseRenderer, chooseTheme, DEFAULT_FONT, lookOptions, paintMargin, setFontSize,
-} from './look';
+import {applyLook, applySettings, applyTranslucency, chooseRenderer, chooseTheme, DEFAULT_FONT, lookOptions, paintMargin, setFontSize} from './look';
 import {copySelection, extendTouchSelection, pasteClipboard, pasteText, selectTouchWord, touchCell} from './clipboard';
 import {ARROWS, isPaneKey, paintGroup, splitKey, splitPane, unsplitPane} from './split';
 import {isAppShortcut, modalOpen} from './shortcuts';
 import {runScript, showConsole} from './luaconsole';
+import {cancelRetry, connectTab, disconnect, openFilesFor, retryNow, sendInput, setState, startDocker, toggleEncoding, toggleLog} from './connection';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -470,113 +468,6 @@ function closeTab(t: Tab) {
     }
 }
 
-function setState(t: Tab, state: TabState) {
-    t.state = state;
-    t.el.classList.toggle('on', state !== 'idle');
-    if (t.docker) {
-        const d = t.docker;
-        t.label.textContent = d.mode === 'logs' ? `📜 ${d.name}` : `🐳 ${d.name}`;
-        t.el.title = `${d.mode === 'logs' ? 'docker logs' : 'docker exec'}: ${d.name} @ ${d.src.label}`;
-        if (t.log) t.el.title += `
-로그 기록 중: ${t.log}`;
-    } else if (t.req && t.proto === 'local') {
-        t.label.textContent = t.session?.name ?? t.req.host;
-        t.el.title = `로컬 셸: ${t.req.host}`;
-        if (t.log) t.el.title += `
-로그 기록 중: ${t.log}`;
-    } else if (t.req && t.proto === 'serial') {
-        t.label.textContent = t.session?.name ?? t.req.host.split(/\s/)[0];
-        t.el.title = `시리얼: ${t.req.host} (${t.req.port} baud)`;
-        if (t.log) t.el.title += `
-로그 기록 중: ${t.log}`;
-    } else if (t.req) {
-        const scheme = t.proto || 'telnet';
-        // Show the port only when it isn't the protocol's usual one.
-        const usual = [21, 22, 23].includes(Number(t.req.port));
-        t.label.textContent = t.session?.name ?? (usual ? t.req.host : `${t.req.host}:${t.req.port}`);
-        t.el.title = `${scheme}://${t.req.login ? t.req.login + '@' : ''}${t.req.host}:${t.req.port}`;
-        if (t.log) t.el.title += `
-로그 기록 중: ${t.log}`;
-    }
-    if (t === active) updateTitle();
-}
-
-/**
- * Connects tab t with req; returns the protocol. Throws on failure.
- * keepScreen keeps the old output (automatic reconnect) instead of clearing it.
- */
-async function connectTab(t: Tab, req: main.ConnectRequest, keepScreen = false): Promise<string> {
-    cancelRetry(t);
-    req.cols = t.term.cols;
-    req.rows = t.term.rows;
-    forgetFiles(t.id); // a reconnect replaces the old connection's file window
-    const protocol = await Connect(t.id, req);
-    if (!tabs.has(t.id)) {
-        CloseTab(t.id); // the tab was closed while connecting
-        throw new Error('탭이 닫혔습니다');
-    }
-    t.req = req;
-    t.proto = protocol;
-    if (protocol === 'local') req.encoding = 'UTF-8'; // the pseudo console speaks UTF-8 only
-    if (!keepScreen) t.term.reset();
-    applyEncoding(t, req.encoding || 'UTF-8');
-    if (protocol === 'ftp') {
-        setState(t, 'ftp');
-        t.term.write(`FTP ${req.host}:${req.port}\r\n\x1b[90m${tr('Ctrl+Shift+F: 파일 전송 창 열기 · 탭을 닫으면 연결이 끊어집니다')}\x1b[0m\r\n`);
-    } else {
-        setState(t, 'on');
-        // The theme saved for this server, if any.
-        t.theme = (await TabTheme(t.id)) || undefined;
-        applyLook(t);
-        // The screen was cleared after an automatic log start was announced.
-        if (t.log && !keepScreen) notice(t, `로그 기록 중: ${t.log}`);
-    }
-    return protocol;
-}
-
-// ---- Automatic reconnect ----
-
-const RETRY_DELAYS = [3, 5, 10, 20, 30]; // seconds; the last one repeats
-const MAX_RETRIES = 10;
-
-function scheduleRetry(t: Tab, attempt: number, why: string) {
-    cancelRetry(t);
-    const reason = `\r\n\x1b[33m[${tr(why).replace(/\n/g, '\r\n')}]\r\n`;
-    if (attempt > MAX_RETRIES) {
-        t.term.write(`${reason}[${tr(`${MAX_RETRIES}번 시도했지만 연결하지 못했습니다`)}] ${tr('Enter: 다시 접속')}\x1b[0m\r\n`);
-        return;
-    }
-    const secs = RETRY_DELAYS[Math.min(attempt - 1, RETRY_DELAYS.length - 1)];
-    t.term.write(`${reason}[${tr(`${secs}초 후 다시 연결합니다 (${attempt}/${MAX_RETRIES})`)}] ${tr('Enter: 지금 연결 · Esc: 취소')}\x1b[0m\r\n`);
-    t.el.classList.add('retry');
-    t.retry = {attempt, timer: window.setTimeout(() => retryNow(t), secs * 1000)};
-}
-
-function cancelRetry(t: Tab) {
-    if (!t.retry) return;
-    clearTimeout(t.retry.timer);
-    t.retry = undefined;
-    t.el.classList.remove('retry');
-}
-
-async function retryNow(t: Tab) {
-    const attempt = t.retry?.attempt ?? 1;
-    cancelRetry(t);
-    if (!t.req || !tabs.has(t.id) || t.state !== 'idle') return;
-    t.reconnecting = true;
-    t.el.classList.add('retry');
-    t.term.write(`\x1b[90m${tr(`다시 연결하는 중... ${t.req.host}:${t.req.port}`)}\x1b[0m\r\n`);
-    try {
-        await connectTab(t, t.req, true);
-        notice(t, '다시 연결했습니다');
-    } catch (e) {
-        if (tabs.has(t.id) && t.state === 'idle') scheduleRetry(t, attempt + 1, String(e));
-    } finally {
-        t.reconnecting = false;
-        if (!t.retry) t.el.classList.remove('retry');
-    }
-}
-
 async function reconnect(t: Tab) {
     if (t.docker) return startDocker(t).catch(e => notice(t, String(e)));
     if (!t.req) return openDialog(t);
@@ -619,97 +510,6 @@ async function saveTabSession(t: Tab) {
     focusActive();
 }
 
-function disconnect(t: Tab) {
-    forwardsTabClosed(t.id);
-    if (t.retry) {
-        cancelRetry(t);
-        reconnectHint(t, '자동 재접속을 취소했습니다');
-    }
-    if (t.state === 'idle') return;
-    closeFiles(t.id);
-    Disconnect(t.id);
-    setState(t, 'idle');
-    t.term.write('\r\n');
-    reconnectHint(t, '연결을 끊었습니다');
-}
-
-/** The folder in the prompt at the cursor: "user@host:~/src$", "~/src $", "[/etc]#"... */
-function promptDir(term: Terminal): string {
-    const buf = term.buffer.active;
-    const line = buf.getLine(buf.baseY + buf.cursorY)?.translateToString(true, 0, buf.cursorX) ?? '';
-    // The first path followed by a prompt sign; later ones belong to the typed command.
-    const m = /(~[^\s$#%>:]*|\/[^\s$#%>:\])]*)[\])]?\s?[$#%>](?:\s|$)/.exec(line);
-    return m ? m[1] : '';
-}
-
-/** The folder in a window title like "user@host: ~/src". */
-function titleDir(title = ''): string {
-    const m = /(?:^|[:\s])(~[^\s]*|\/[^\s]*)\s*$/.exec(title);
-    return m ? m[1] : '';
-}
-
-/** Where the shell is, as far as the terminal can tell ("" if unknown). */
-function shellDir(t: Tab): string {
-    if (t.proto !== 'ssh') return '';
-    return promptDir(t.term) || t.osc7 || titleDir(t.title);
-}
-
-async function openFilesFor(t: Tab) {
-    if (t.state === 'idle' || !t.req || t.dialog) return;
-    if (t.proto === 'local') return toast('로컬 셸에서는 파일 전송 창을 쓰지 않습니다');
-    if (t.proto === 'serial') return toast('시리얼 포트에서는 파일 전송 창 대신 sz / rz(Zmodem)를 쓰세요');
-    try {
-        await openFiles(t.id, t.req.host, {startDir: shellDir(t), onClose: () => focusActive()});
-    } catch (e) {
-        notice(t, String(e));
-    }
-}
-
-async function toggleEncoding(t: Tab) {
-    if (t.proto === 'local' && t.state !== 'idle') return toast('로컬 셸은 UTF-8만 씁니다');
-    const name = await SetEncoding(t.id, t.encoding === 'EUC-KR' ? 'UTF-8' : 'EUC-KR');
-    applyEncoding(t, name);
-    if (t.req) t.req.encoding = name;
-    notice(t, `인코딩: ${name}`);
-    updateTitle();
-}
-
-// The window gets the output in base64; a browser gets the bytes (web_shim.js).
-EventsOn('term:data', (id: number, data: string | Uint8Array) => {
-    const t = tabs.get(id);
-    if (!t) return;
-    let bytes: Uint8Array;
-    if (typeof data === 'string') {
-        const bin = atob(data);
-        bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    } else {
-        bytes = data;
-    }
-    const t0 = performance.now();
-    t.term.write(bytes, () => {
-        dbg(`tab ${id} wrote ${bytes.length} bytes in ${Math.round(performance.now() - t0)}ms`);
-        t.hl.schedule();
-    });
-    if (t.group !== active?.group) t.el.classList.add('activity');
-});
-
-// lost: the connection broke (not ended by the server), so it may be reconnected.
-EventsOn('term:closed', (id: number, msg: string, lost: boolean) => {
-    const t = tabs.get(id);
-    if (!t) return;
-    dbg(`tab ${id} term:closed "${msg}" lost=${lost} autoReconnect=${settings.autoReconnect}`);
-    forgetFiles(t.id);
-    forwardsTabClosed(t.id);
-    containersTabClosed(t.id);
-    setState(t, 'idle');
-    if (lost && settings.autoReconnect && t.req) scheduleRetry(t, 1, msg);
-    else {
-        t.term.write('\r\n');
-        reconnectHint(t, msg);
-    }
-});
-
 // The window is closing with tabs still connected: ask first.
 // Closing the window while browsers use the web server: quit everything,
 // or close only the window and keep serving them.
@@ -738,20 +538,6 @@ EventsOn('app:close', async () => {
     if (n === 0 || await ask('choboterm 끝내기', `연결된 탭이 ${n}개 있습니다. 창을 닫으면 모두 끊어집니다. 닫을까요?`, '닫기')) return Quit();
     if (!askOpen()) focusActive();
 });
-
-// path: the new log file, or "" when logging stopped.
-EventsOn('log:changed', (id: number, path: string) => {
-    const t = tabs.get(id);
-    if (!t) return;
-    t.log = path || undefined;
-    t.el.classList.toggle('log', !!path);
-    setState(t, t.state); // refresh the tooltip
-    // While connecting, connectTab announces it once the screen is reset.
-    if (t.state === 'on' || !path) notice(t, path ? `로그 기록 시작: ${path}` : '로그 기록을 멈췄습니다');
-});
-
-EventsOn('xfer:progress', (id: number) => tabs.get(id)?.el.classList.add('busy'));
-EventsOn('xfer:end', (id: number) => tabs.get(id)?.el.classList.remove('busy'));
 
 const menu = $<HTMLUListElement>('tabMenu');
 let menuTab: Tab | undefined;
@@ -1438,27 +1224,6 @@ async function openSessions(list: main.SavedSession[]) {
     }
 }
 
-// Wails runs each Go call on its own goroutine, so calls made back to back can
-// reach the server out of order (e.g. replies to a burst of terminal queries).
-// One Send at a time keeps the order; input typed meanwhile goes in the next one.
-async function sendInput(t: Tab, data: string) {
-    t.outbox += data;
-    if (t.sending) return;
-    t.sending = true;
-    try {
-        while (t.outbox) {
-            const chunk = t.outbox;
-            t.outbox = '';
-            await Send(t.id, chunk);
-        }
-    } catch (e) {
-        t.outbox = '';
-        dbg(`tab ${t.id} send failed: ${e}`);
-    } finally {
-        t.sending = false;
-    }
-}
-
 function sendMacro(t: Tab, m: main.Macro) {
     if (t.state !== 'on') return toast('연결되어 있지 않습니다');
     if (m.kind === 'lua') return runScript(t, () => RunScript(t.id, m.name || '매크로', m.text));
@@ -1496,42 +1261,6 @@ async function openDockerTab(src: DockerSource, id: string, name: string, mode: 
         await startDocker(n);
     } catch (e) {
         notice(n, String(e));
-    }
-}
-
-/** Opens (again) tab t's docker exec / logs session. Throws on failure. */
-async function startDocker(t: Tab) {
-    const d = t.docker!;
-    // The tab it was opened from is gone: another tab to the same server will do.
-    const sshOn = (o?: Tab) => !!o && o.state === 'on' && o.proto === 'ssh' && !!o.req;
-    if (d.src.tab && !sshOn(tabs.get(d.src.tab))) {
-        const o = [...tabs.values()].find(o => sshOn(o) && o.req!.host === d.src.host && Number(o.req!.port) === d.src.port);
-        if (o) d.src = {...d.src, tab: o.id};
-    }
-    cancelRetry(t);
-    forgetFiles(t.id);
-    await DockerOpen(t.id, d.src.tab, d.id, d.mode, `${d.name}@${d.src.label}`, t.term.cols, t.term.rows);
-    if (!tabs.has(t.id)) {
-        CloseTab(t.id); // the tab was closed while opening
-        return;
-    }
-    t.proto = 'docker';
-    t.term.reset();
-    applyEncoding(t, 'UTF-8');
-    setState(t, 'on');
-    applyLook(t);
-}
-
-// ---- Session log ----
-
-/** Starts or stops writing tab t's output to a file; log:changed reports the result. */
-async function toggleLog(t: Tab) {
-    if (t.log) return StopLog(t.id);
-    if (t.state !== 'on') return toast('연결된 터미널에서만 로그를 기록할 수 있습니다');
-    try {
-        await StartLog(t.id);
-    } catch (e) {
-        notice(t, String(e));
     }
 }
 
