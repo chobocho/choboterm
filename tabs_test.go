@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"choboterm/internal/codec"
 )
 
 // pipeSession is a fake remote: the test writes "remote output" into out,
@@ -61,7 +63,7 @@ func TestTabsAreIndependent(t *testing.T) {
 	s1, s2 := newPipeSession(), newPipeSession()
 	t1, t2 := a.getTab(1), a.getTab(2)
 	t1.sess, t2.sess = s1, s2
-	t2.codec.Set(EncodingEUCKR)
+	t2.codec.Set(codec.EUCKR)
 	go t1.pump(s1)
 	go t2.pump(s2)
 

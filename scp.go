@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/codec"
 )
 
 // scpFS is the fallback for SSH servers without the SFTP subsystem
@@ -20,10 +22,10 @@ import (
 // exec channel; files move with the classic scp protocol (`scp -f` / `scp -t`).
 type scpFS struct {
 	client *ssh.Client
-	names  *codec
+	names  *codec.Codec
 }
 
-func newSCP(client *ssh.Client, names *codec) (*scpFS, error) {
+func newSCP(client *ssh.Client, names *codec.Codec) (*scpFS, error) {
 	s := &scpFS{client: client, names: names}
 	if _, err := s.run("command -v scp"); err != nil {
 		return nil, errors.New("서버에 scp가 없습니다")

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"choboterm/internal/codec"
 )
 
 func TestHistoryRemembersEncryptedPassword(t *testing.T) {
@@ -16,7 +18,7 @@ func TestHistoryRemembersEncryptedPassword(t *testing.T) {
 	defer func() { historyFile = orig }()
 
 	pass := "s3cret!비번"
-	if err := addHistory(HostEntry{Host: "bbs.example.com", Port: 23, Login: "guest", Encoding: EncodingEUCKR}, &pass); err != nil {
+	if err := addHistory(HostEntry{Host: "bbs.example.com", Port: 23, Login: "guest", Encoding: codec.EUCKR}, &pass); err != nil {
 		t.Fatal(err)
 	}
 	raw, _ := os.ReadFile(file)

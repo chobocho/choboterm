@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/codec"
 )
 
 // DockerPort is a container port published on the host.
@@ -314,7 +316,7 @@ func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int)
 	}
 	t := a.getTab(tabID)
 	t.disconnect()
-	t.codec.Set(EncodingUTF8)
+	t.codec.Set(codec.UTF8)
 	t.start(sess, "docker", ConnectRequest{Host: label})
 	return nil
 }

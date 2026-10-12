@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"choboterm/internal/codec"
 )
 
 // sessionsExport is the file written by "내보내기". Passwords are never in it:
@@ -66,7 +68,7 @@ func addSessions(list []SavedSession) (ImportResult, error) {
 	var r ImportResult
 	key := func(s SavedSession) string {
 		if s.Encoding == "" {
-			s.Encoding = EncodingUTF8
+			s.Encoding = codec.UTF8
 		}
 		return fmt.Sprintf("%s\x00%s\x00%s\x00%d\x00%s\x00%s", s.Name, s.Group, s.Host, s.Port, s.Login, s.Encoding)
 	}
@@ -83,7 +85,7 @@ func addSessions(list []SavedSession) (ImportResult, error) {
 			s.Name = s.Host
 		}
 		if s.Encoding == "" {
-			s.Encoding = EncodingUTF8
+			s.Encoding = codec.UTF8
 		}
 		if have[key(s)] {
 			r.Skipped++
@@ -191,10 +193,10 @@ func fromPuTTY(key string, v puttyValues) (SavedSession, bool) {
 	if err != nil {
 		name = key
 	}
-	enc := EncodingUTF8
+	enc := codec.UTF8
 	cp := strings.ToUpper(v.LineCodePage)
 	if strings.Contains(cp, "949") || strings.Contains(cp, "EUC-KR") || strings.Contains(cp, "KS_C") {
-		enc = EncodingEUCKR
+		enc = codec.EUCKR
 	}
 	return SavedSession{Name: name, Group: "PuTTY", Host: host, Port: port, Login: login, Encoding: enc}, true
 }

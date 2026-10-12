@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/jlaffaye/ftp"
+
+	"choboterm/internal/codec"
 )
 
 // ftpFS is a plain FTP connection. File names are converted with the
@@ -16,7 +18,7 @@ import (
 type ftpFS struct {
 	mu    sync.Mutex // one command at a time on the control connection
 	c     *ftp.ServerConn
-	names *codec
+	names *codec.Codec
 	stop  chan struct{}
 }
 
@@ -51,7 +53,7 @@ func dialFTP(req ConnectRequest, conn net.Conn) (*ftpFS, error) {
 		return nil, fmt.Errorf("FTP 로그인 실패: %w", err)
 	}
 
-	f := &ftpFS{c: c, names: newCodec(req.Encoding), stop: make(chan struct{})}
+	f := &ftpFS{c: c, names: codec.New(req.Encoding), stop: make(chan struct{})}
 	go f.keepAlive()
 	return f, nil
 }

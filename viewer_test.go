@@ -10,6 +10,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/text/encoding/korean"
+
+	"choboterm/internal/codec"
 )
 
 func TestFileViewOverSFTP(t *testing.T) {
@@ -75,17 +77,17 @@ func TestFileViewOverSFTP(t *testing.T) {
 }
 
 func TestEncodeText(t *testing.T) {
-	out, bad := encodeText("한글?", EncodingUTF8)
+	out, bad := encodeText("한글?", codec.UTF8)
 	if string(out) != "한글?" || bad != 0 {
 		t.Fatalf("utf-8: %q %d", out, bad)
 	}
 	want, _ := korean.EUCKR.NewEncoder().String("한글?")
-	out, bad = encodeText("한글?", EncodingEUCKR)
+	out, bad = encodeText("한글?", codec.EUCKR)
 	if !bytes.Equal(out, []byte(want)) || bad != 0 {
 		t.Fatalf("euc-kr: % x %d", out, bad)
 	}
 	// Emoji don't exist in CP949.
-	out, bad = encodeText("a😀b😀", EncodingEUCKR)
+	out, bad = encodeText("a😀b😀", codec.EUCKR)
 	if string(out) != "a?b?" || bad != 2 {
 		t.Fatalf("euc-kr missing: %q %d", out, bad)
 	}
@@ -116,7 +118,7 @@ func TestFileSaveTextOverSFTP(t *testing.T) {
 	}
 
 	// Saved in EUC-KR.
-	req := TextSave{Path: p, Text: "한글\r\n", Encoding: EncodingEUCKR, Size: v.Size, ModTime: v.ModTime}
+	req := TextSave{Path: p, Text: "한글\r\n", Encoding: codec.EUCKR, Size: v.Size, ModTime: v.ModTime}
 	r, err := a.FileSaveText(1, req)
 	if err != nil || !r.Saved || r.Size != 6 {
 		t.Fatalf("save: %+v, %v", r, err)

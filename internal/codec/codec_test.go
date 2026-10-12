@@ -1,4 +1,4 @@
-package main
+package codec
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 var euckrSample = []byte{0xC7, 0xD1, 0xB1, 0xDB, ' ', 0xA6, 0xA1, 0xA6, 0xA2}
 
 func TestCodecDecodeSplitChunks(t *testing.T) {
-	c := newCodec(EncodingEUCKR)
+	c := New(EUCKR)
 	var got []byte
 	// Feed one byte at a time so every multibyte character is split.
 	for _, b := range euckrSample {
@@ -21,7 +21,7 @@ func TestCodecDecodeSplitChunks(t *testing.T) {
 }
 
 func TestCodecDecodeCP949Extension(t *testing.T) {
-	c := newCodec(EncodingEUCKR)
+	c := New(EUCKR)
 	// "똠" exists only in CP949 (UHC), not in pure EUC-KR.
 	if got := c.Decode([]byte{0x8C, 0x63}); string(got) != "똠" {
 		t.Fatalf("got %q", got)
@@ -29,7 +29,7 @@ func TestCodecDecodeCP949Extension(t *testing.T) {
 }
 
 func TestCodecEncode(t *testing.T) {
-	c := newCodec(EncodingEUCKR)
+	c := New(EUCKR)
 	if got := c.Encode("한글 ─│"); !bytes.Equal(got, euckrSample) {
 		t.Fatalf("got % X", got)
 	}
@@ -39,8 +39,8 @@ func TestCodecEncode(t *testing.T) {
 }
 
 func TestCodecUTF8Passthrough(t *testing.T) {
-	c := newCodec("")
-	if c.Name() != EncodingUTF8 {
+	c := New("")
+	if c.Name() != UTF8 {
 		t.Fatalf("name %q", c.Name())
 	}
 	in := []byte("한글\x1b[0m")

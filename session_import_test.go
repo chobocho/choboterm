@@ -3,12 +3,14 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"choboterm/internal/codec"
 )
 
 func TestExportImportSessions(t *testing.T) {
 	useTempHistory(t)
 	_, _ = saveSession(SavedSession{Name: "web", Group: "회사", Host: "10.0.0.1", Port: 22, Login: "me", Pass: "secret"}, true)
-	_, _ = saveSession(SavedSession{Name: "bbs", Host: "bbs.example.com", Port: 23, Encoding: EncodingEUCKR}, false)
+	_, _ = saveSession(SavedSession{Name: "bbs", Host: "bbs.example.com", Port: 23, Encoding: codec.EUCKR}, false)
 
 	data, err := encodeExport(loadSessions())
 	if err != nil {
@@ -31,7 +33,7 @@ func TestExportImportSessions(t *testing.T) {
 		t.Fatalf("import: %+v, %v", r, err)
 	}
 	got := loadSessions()
-	if len(got) != 2 || got[0].Name != "bbs" || got[0].Encoding != EncodingEUCKR || got[1].Group != "회사" || got[1].Login != "me" {
+	if len(got) != 2 || got[0].Name != "bbs" || got[0].Encoding != codec.EUCKR || got[1].Group != "회사" || got[1].Login != "me" {
 		t.Fatalf("imported %+v", got)
 	}
 
@@ -48,9 +50,9 @@ func TestFromPuTTY(t *testing.T) {
 		want SavedSession
 	}{
 		{"my%20server", puttyValues{HostName: "10.0.0.5", Protocol: "ssh", PortNumber: 8022, UserName: "u"}, true,
-			SavedSession{Name: "my server", Group: "PuTTY", Host: "10.0.0.5", Port: 8022, Login: "u", Encoding: EncodingUTF8}},
+			SavedSession{Name: "my server", Group: "PuTTY", Host: "10.0.0.5", Port: 8022, Login: "u", Encoding: codec.UTF8}},
 		{"bbs", puttyValues{HostName: "guest@bbs.example.com", Protocol: "telnet", LineCodePage: "CP949"}, true,
-			SavedSession{Name: "bbs", Group: "PuTTY", Host: "bbs.example.com", Port: 23, Login: "guest", Encoding: EncodingEUCKR}},
+			SavedSession{Name: "bbs", Group: "PuTTY", Host: "bbs.example.com", Port: 23, Login: "guest", Encoding: codec.EUCKR}},
 		{"Default%20Settings", puttyValues{Protocol: "ssh", PortNumber: 22}, false, SavedSession{}},
 		{"com1", puttyValues{HostName: "", Protocol: "serial"}, false, SavedSession{}},
 		{"raw", puttyValues{HostName: "h", Protocol: "raw", PortNumber: 7}, false, SavedSession{}},

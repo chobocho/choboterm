@@ -23,6 +23,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"choboterm/internal/codec"
 )
 
 // isClosed and input read a pipeSession under its lock (the pump and the
@@ -301,7 +303,7 @@ func TestWebCalls(t *testing.T) {
 	}
 	// Missing arguments are zero values; a struct comes back as an object.
 	json.Unmarshal(c.callOK("SetEncoding", p.Base+1), &v)
-	if v != EncodingUTF8 {
+	if v != codec.UTF8 {
 		t.Fatalf("SetEncoding: %q", v)
 	}
 	var s Settings

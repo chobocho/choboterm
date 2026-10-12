@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"choboterm/internal/codec"
 )
 
 // fakePicker answers dialogs from its fields and records what happened.
@@ -353,7 +355,7 @@ func TestTextSaveAsThroughPicker(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "k.txt")
 	p := &fakePicker{file: out}
 	a, _ := pickerApp(t, p)
-	r, err := a.TextSaveAs("k.txt", "한글", EncodingEUCKR)
+	r, err := a.TextSaveAs("k.txt", "한글", codec.EUCKR)
 	if err != nil || r.Path != "saved:k.txt" || r.Bad != 0 {
 		t.Fatalf("save: %+v %v", r, err)
 	}

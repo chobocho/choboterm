@@ -15,6 +15,8 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/codec"
 )
 
 // Session is a live terminal connection (SSH or Telnet).
@@ -98,7 +100,7 @@ type tab struct {
 	app   *App
 	mu    sync.Mutex
 	sess  Session
-	codec *codec
+	codec *codec.Codec
 	files fileState
 	zm    zmodemState
 	fwd   forwards
@@ -222,7 +224,7 @@ func (a *App) getTab(id int) *tab {
 	defer a.mu.Unlock()
 	t := a.tabs[id]
 	if t == nil {
-		t = &tab{id: id, app: a, codec: newCodec(EncodingUTF8)}
+		t = &tab{id: id, app: a, codec: codec.New(codec.UTF8)}
 		a.tabs[id] = t
 	}
 	return t
@@ -419,9 +421,9 @@ func (a *App) connectLocal(tabID int, req ConnectRequest, cmdline string) (strin
 	if err != nil {
 		return "", err
 	}
-	t.codec.Set(EncodingUTF8)
+	t.codec.Set(codec.UTF8)
 	req.Port = 0
-	_ = addHistory(HostEntry{Host: req.Host, Encoding: EncodingUTF8}, nil)
+	_ = addHistory(HostEntry{Host: req.Host, Encoding: codec.UTF8}, nil)
 	t.start(sess, "local", req)
 	return "local", nil
 }

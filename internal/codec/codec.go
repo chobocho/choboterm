@@ -1,4 +1,4 @@
-package main
+package codec
 
 import (
 	"sync"
@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	EncodingUTF8  = "UTF-8"
-	EncodingEUCKR = "EUC-KR"
+	UTF8  = "UTF-8"
+	EUCKR = "EUC-KR"
 )
 
-// codec converts between the remote character set and UTF-8 (used by xterm.js).
+// Codec converts between the remote character set and UTF-8 (used by xterm.js).
 // EUC-KR is handled as CP949 (a superset), which is what Korean servers actually send.
-type codec struct {
+type Codec struct {
 	mu    sync.Mutex
 	name  string
 	dec   transform.Transformer
@@ -23,22 +23,22 @@ type codec struct {
 	carry []byte // incomplete multibyte sequence left from the previous chunk
 }
 
-func newCodec(name string) *codec {
-	c := &codec{}
+func New(name string) *Codec {
+	c := &Codec{}
 	c.Set(name)
 	return c
 }
 
 // Set switches the character set and returns the normalized name.
-func (c *codec) Set(name string) string {
+func (c *Codec) Set(name string) string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if name != EncodingEUCKR {
-		name = EncodingUTF8
+	if name != EUCKR {
+		name = UTF8
 	}
 	c.name = name
 	c.carry = nil
-	if name == EncodingEUCKR {
+	if name == EUCKR {
 		c.dec = korean.EUCKR.NewDecoder()
 		c.enc = korean.EUCKR.NewEncoder()
 	} else {
@@ -47,7 +47,7 @@ func (c *codec) Set(name string) string {
 	return name
 }
 
-func (c *codec) Name() string {
+func (c *Codec) Name() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.name
@@ -55,7 +55,7 @@ func (c *codec) Name() string {
 
 // Decode converts remote bytes to UTF-8. A multibyte character split across
 // chunks is kept and completed with the next chunk.
-func (c *codec) Decode(b []byte) []byte {
+func (c *Codec) Decode(b []byte) []byte {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.dec == nil {
@@ -76,7 +76,7 @@ func (c *codec) Decode(b []byte) []byte {
 
 // Encode converts UTF-8 keyboard input to the remote character set.
 // Characters that don't exist in CP949 become '?'.
-func (c *codec) Encode(s string) []byte {
+func (c *Codec) Encode(s string) []byte {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.enc == nil {
@@ -98,9 +98,9 @@ func (c *codec) Encode(s string) []byte {
 }
 
 // DecodeString converts a complete remote string (e.g. a file name) to UTF-8.
-func (c *codec) DecodeString(s string) string {
+func (c *Codec) DecodeString(s string) string {
 	c.mu.Lock()
-	euckr := c.name == EncodingEUCKR
+	euckr := c.name == EUCKR
 	c.mu.Unlock()
 	if !euckr {
 		return s
@@ -113,6 +113,6 @@ func (c *codec) DecodeString(s string) string {
 }
 
 // EncodeString converts a complete UTF-8 string (e.g. a file path) to the remote set.
-func (c *codec) EncodeString(s string) string {
+func (c *Codec) EncodeString(s string) string {
 	return string(c.Encode(s))
 }

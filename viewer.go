@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"choboterm/internal/codec"
 )
 
 // viewLimit is how much of a remote file the text viewer loads.
@@ -192,10 +194,10 @@ func (a *App) FileSaveText(tabID int, req TextSave) (TextSaveResult, error) {
 // encodeText converts UTF-8 text to enc. Characters missing from CP949
 // become '?'; bad counts them.
 func encodeText(text, enc string) (out []byte, bad int) {
-	if enc != EncodingEUCKR {
+	if enc != codec.EUCKR {
 		return []byte(text), 0
 	}
-	c := newCodec(EncodingEUCKR)
+	c := codec.New(codec.EUCKR)
 	out = c.Encode(text)
 	// Encode turns each missing character into '?', so compare the counts.
 	bad = strings.Count(string(out), "?") - strings.Count(text, "?")
