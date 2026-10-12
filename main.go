@@ -23,7 +23,7 @@ func main() {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "choboterm:", err)
 		}
-		fmt.Fprint(os.Stderr, usage)
+		fmt.Fprint(os.Stderr, usageText())
 		if err != nil {
 			os.Exit(2)
 		}
@@ -38,7 +38,7 @@ func main() {
 	if opts.headless || headlessBuild {
 		if len(opts.unknown) > 0 {
 			attachConsole()
-			fmt.Fprintf(os.Stderr, "choboterm: unknown option %q\n%s", opts.unknown[0], usage)
+			fmt.Fprintf(os.Stderr, "choboterm: unknown option %q\n%s", opts.unknown[0], usageText())
 			os.Exit(2)
 		}
 		os.Exit(runHeadless(opts))

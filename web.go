@@ -56,6 +56,7 @@ type webOptions struct {
 	CertFile string // TLS certificate and key; "" = self-signed when needed
 	KeyFile  string
 	Insecure bool // plain HTTP even when other PCs can connect
+	NoToken  bool // disable login-token authentication (Termux-only option)
 	// Grace is how long a page may stay disconnected (network trouble, a
 	// sleeping laptop) before its tabs are closed. 0 = webGrace.
 	Grace time.Duration
@@ -112,9 +113,17 @@ func startWeb(a *App, page fs.FS, opts webOptions) (*webServer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("페이지를 찾을 수 없습니다: %w", err)
 	}
-	token, err := webToken(false)
-	if err != nil {
-		return nil, err
+	var token string
+	if opts.NoToken {
+		if !termuxBuild {
+			return nil, errors.New("no-token mode is only supported in the Termux build")
+		}
+	} else {
+		var err error
+		token, err = webToken(false)
+		if err != nil {
+			return nil, err
+		}
 	}
 	w := &webServer{
 		app:       &App{appState: a.appState},
@@ -202,7 +211,7 @@ func (w *webServer) URL(bare bool) string {
 		host = outboundIP()
 	}
 	u := scheme + "://" + net.JoinHostPort(host, port) + "/"
-	if bare {
+	if bare || w.opts.NoToken {
 		return u
 	}
 	return u + "?token=" + url.QueryEscape(w.token)
@@ -229,9 +238,16 @@ func (w *webServer) localURL() string {
 		if w.tls {
 			scheme = "https"
 		}
-		u = scheme + "://" + net.JoinHostPort("127.0.0.1", port) + "/?token=" + url.QueryEscape(w.token)
+		u = scheme + "://" + net.JoinHostPort("127.0.0.1", port) + "/"
+		if !w.opts.NoToken {
+			u += "?token=" + url.QueryEscape(w.token)
+		}
 	}
-	return u + "&local=" + code
+	sep := "?"
+	if strings.Contains(u, "?") {
+		sep = "&"
+	}
+	return u + sep + "local=" + code
 }
 
 // clientCount is the number of pages open now (including ones briefly
@@ -300,6 +316,9 @@ func securityHeaders(h http.Handler) http.Handler {
 
 // authed reports whether the request carries the access cookie.
 func (w *webServer) authed(r *http.Request) bool {
+	if w.opts.NoToken {
+		return true
+	}
 	c, err := r.Cookie(w.cookie)
 	return err == nil && w.tokenOK(c.Value)
 }
@@ -356,7 +375,11 @@ func (w *webServer) handleRoot(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	if tok := q.Get("token"); tok != "" {
+	if w.opts.NoToken {
+		if code := q.Get("local"); code != "" && loopbackRemote(r.RemoteAddr) && w.useCode(code) {
+			w.setCookie(rw, w.localCookie, w.localKey)
+		}
+	} else if tok := q.Get("token"); tok != "" {
 		if !w.tokenOK(tok) {
 			w.loginPage(rw, http.StatusUnauthorized, true)
 			return
@@ -403,6 +426,10 @@ func (w *webServer) useCode(code string) bool {
 
 // handleLogin takes the token typed into the login page.
 func (w *webServer) handleLogin(rw http.ResponseWriter, r *http.Request) {
+	if w.opts.NoToken {
+		http.Redirect(rw, r, "/", http.StatusSeeOther)
+		return
+	}
 	if r.Method != http.MethodPost {
 		http.Redirect(rw, r, "/", http.StatusSeeOther)
 		return

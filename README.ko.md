@@ -222,9 +222,11 @@ Termux에서 Go와 Node.js를 설치(`pkg install golang nodejs`)한 뒤 `./buil
 ```sh
 ./build_termux.sh
 ./release/choboterm-termux-arm64 --web=0.0.0.0:7681
+# 선택 사항: 브라우저 접속 토큰 입력을 끔
+./release/choboterm-termux-arm64 --web=0.0.0.0:7681 --no-token
 ```
 
-출력된 HTTPS 주소를 브라우저에서 엽니다. `--web=127.0.0.1:7681`을 쓰면 이 기기에서만 접속할 수 있습니다.
+출력된 HTTPS 주소를 브라우저에서 엽니다. `--web=127.0.0.1:7681`을 쓰면 이 기기에서만 접속할 수 있습니다. `--no-token`은 Termux 버전에서만 사용할 수 있고 브라우저 로그인 보호를 끕니다. 서버에 접속할 수 있는 누구나 사용할 수 있으므로 신뢰할 수 있는 네트워크에서만 사용하세요.
 
 ## 릴리스
 

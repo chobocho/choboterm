@@ -915,6 +915,37 @@ func TestHandoffToRunning(t *testing.T) {
 	}
 }
 
+func TestWebNoTokenMode(t *testing.T) {
+	isolateSettings(t)
+	if !termuxBuild {
+		if _, err := startWeb(NewApp(), testPage, webOptions{Addr: "127.0.0.1:0", NoToken: true}); err == nil {
+			t.Fatal("no-token mode should be rejected outside the Termux build")
+		}
+		return
+	}
+
+	f := startTestWeb(t, webOptions{NoToken: true})
+	if strings.Contains(f.w.URL(false), "token=") || f.w.URL(false) != f.w.URL(true) {
+		t.Fatalf("no-token URL contains a token: %s", f.w.URL(false))
+	}
+	if code, body := f.get("/"); code != http.StatusOK || !strings.Contains(body, "window.__cbt=") {
+		t.Fatalf("root without login: status %d, body %q", code, body)
+	}
+	if code, _ := f.get("/web/shim.js"); code != http.StatusOK {
+		t.Fatalf("shim without login: status %d", code)
+	}
+	if code, _ := f.get("/assets/app.js"); code != http.StatusOK {
+		t.Fatalf("asset without login: status %d", code)
+	}
+	settings, err := settingsFile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(settings), "web-token")); !os.IsNotExist(err) {
+		t.Fatalf("no-token mode unexpectedly created web-token: %v", err)
+	}
+}
+
 func TestWebStatusAndSettings(t *testing.T) {
 	isolateSettings(t)
 	old := webPage
@@ -951,6 +982,23 @@ func TestWebStatusAndSettings(t *testing.T) {
 }
 
 func TestParseArgs(t *testing.T) {
+	noToken, err := parseArgs([]string{"--no-token"})
+	if termuxBuild {
+		if err != nil || !noToken.noToken || !noToken.web {
+			t.Fatalf("--no-token: %+v %v", noToken, err)
+		}
+		if !strings.Contains(usageText(), "--no-token") {
+			t.Fatal("Termux usage does not document --no-token")
+		}
+	} else {
+		if err == nil {
+			t.Fatal("--no-token should be unavailable outside the Termux build")
+		}
+		if strings.Contains(usageText(), "--no-token") {
+			t.Fatal("non-Termux usage should not document --no-token")
+		}
+	}
+
 	cases := []struct {
 		args []string
 		want cliOptions

@@ -25,7 +25,11 @@ func runHeadless(opts cliOptions) int {
 	if w.tls {
 		fmt.Printf("  TLS certificate SHA-256: %s\n  (compare it with the one your browser shows before trusting it)\n\n", w.fp)
 	}
-	fmt.Println("Anyone with this URL can use this PC's shells and saved sessions: keep it secret.")
+	if opts.noToken {
+		fmt.Println("WARNING: browser token authentication is disabled. Anyone who can reach this server can use its shells and saved sessions.")
+	} else {
+		fmt.Println("Anyone with this URL can use this PC's shells and saved sessions: keep it secret.")
+	}
 	fmt.Println("Ctrl+C stops the server.")
 	if opts.open {
 		if err := openURL(w.localURL()); err != nil {

@@ -8,3 +8,4 @@ import "embed"
 var assets embed.FS
 
 const assetDir = "frontend/dist"
+const termuxBuild = false

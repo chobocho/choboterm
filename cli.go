@@ -15,6 +15,7 @@ type cliOptions struct {
 	key      string
 	insecure bool          // plain HTTP even when other PCs can connect
 	open     bool          // open the page in this PC's browser
+	noToken  bool          // disable web login token (Termux build only)
 	grace    time.Duration // how long a disconnected page keeps its tabs
 	help     bool
 	// unknown are arguments that aren't ours. The window ignores them, as it
@@ -38,6 +39,17 @@ Usage: choboterm [options]
 The page asks for the access token on first use; the URL printed at start
 (and shown in Settings > Web) carries it.
 `
+
+const termuxUsage = `  --no-token       disable browser token login (Termux build only; unsafe on
+                   networks you do not trust)
+`
+
+func usageText() string {
+	if termuxBuild {
+		return strings.Replace(usage, "  -h, --help", termuxUsage+"  -h, --help", 1)
+	}
+	return usage
+}
 
 // parseArgs reads the command line (without the program name).
 func parseArgs(args []string) (cliOptions, error) {
@@ -71,6 +83,11 @@ func parseArgs(args []string) (cliOptions, error) {
 			o.key, err = value()
 		case "--insecure", "-insecure":
 			o.insecure = true
+		case "--no-token":
+			if !termuxBuild {
+				return o, fmt.Errorf("--no-token is only supported in the Termux build")
+			}
+			o.noToken, o.web = true, true
 		case "--open", "-open":
 			o.open = true
 		case "--grace", "-grace":
@@ -100,5 +117,5 @@ func (o cliOptions) webOptions() *webOptions {
 	if !o.web {
 		return nil
 	}
-	return &webOptions{Addr: o.addr, CertFile: o.cert, KeyFile: o.key, Insecure: o.insecure, Grace: o.grace}
+	return &webOptions{Addr: o.addr, CertFile: o.cert, KeyFile: o.key, Insecure: o.insecure, NoToken: o.noToken, Grace: o.grace}
 }

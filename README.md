@@ -222,9 +222,11 @@ On Termux, install Go and Node.js (`pkg install golang nodejs`), then run `./bui
 ```sh
 ./build_termux.sh
 ./release/choboterm-termux-arm64 --web=0.0.0.0:7681
+# Optional: disable the browser access-token prompt
+./release/choboterm-termux-arm64 --web=0.0.0.0:7681 --no-token
 ```
 
-Open the printed HTTPS URL in a browser. Use `--web=127.0.0.1:7681` to restrict access to the device.
+Open the printed HTTPS URL in a browser. Use `--web=127.0.0.1:7681` to restrict access to the device. `--no-token` is available only in the Termux build and removes browser login protection; anyone who can reach the server can use it. Use it only on a trusted network.
 
 ## Release
 
