@@ -87,7 +87,8 @@ type appState struct {
 	// webStart is the web server to start with the window (main's --web
 	// or Settings > Web); nil = none.
 	webStart *webOptions
-	hidden   atomic.Bool // the window was closed but hides for the browsers (see hideForWeb)
+	hidden   atomic.Bool            // the window was closed but the web server kept running (see WebHideWindow)
+	webErr   atomic.Pointer[string] // why the web server didn't start, for Settings
 }
 
 // tab is one connection with its own terminal tab in the frontend.
@@ -146,17 +147,26 @@ func (a *App) domReady(ctx context.Context) {
 }
 
 // beforeClose remembers the window position for the next start. With a tab
-// still connected the window stays open and the page asks first; Quit closes it.
+// still connected, or browsers using the web server, the window stays open
+// and the page asks first; Quit closes it (WebHideWindow hides it).
 func (a *App) beforeClose(ctx context.Context) bool {
 	if w, ok := currentWindowState(); ok && w.valid() {
 		_ = updateSettings(func(s *Settings) { s.Window = &w })
 	}
-	if !a.quit.Load() && a.windowTabsConnected() {
+	if a.quit.Load() {
+		return false
+	}
+	if w := a.web.Load(); w != nil {
+		if n := w.connectedCount(); n > 0 {
+			a.emit("app:closeWeb", n)
+			return true
+		}
+	}
+	if a.windowTabsConnected() {
 		a.emit("app:close")
 		return true
 	}
-	// Browsers are still using the web server: hide instead of quitting.
-	return a.hideForWeb(ctx)
+	return false
 }
 
 // connectedWhere reports whether a tab whose id passes keep has a connection open.

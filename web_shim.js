@@ -44,9 +44,16 @@
             }
             scheduleAck();
         };
-        ws.onclose = () => {
+        ws.onclose = ev => {
             ws = null;
             if (gone) return;
+            if (ev.code === 1001 && ev.reason === 'closed') {
+                // The server closed this page on purpose (choboterm quit, the
+                // web server stopped): reconnecting would never work.
+                gone = true;
+                status('gone');
+                return;
+            }
             status('reconnecting');
             setTimeout(connect, Math.min(5000, 200 * 2 ** retry++));
         };

@@ -270,6 +270,10 @@ export function TextSaveAs(arg1, arg2, arg3) {
   return window['go']['main']['App']['TextSaveAs'](arg1, arg2, arg3);
 }
 
+export function WebHideWindow() {
+  return window['go']['main']['App']['WebHideWindow']();
+}
+
 export function WebNewToken() {
   return window['go']['main']['App']['WebNewToken']();
 }

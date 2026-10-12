@@ -4,7 +4,6 @@ package main
 // it, and closing the window while browsers are connected hides it instead.
 
 import (
-	"context"
 	"errors"
 	"io/fs"
 	"net"
@@ -28,6 +27,7 @@ type WebInfo struct {
 	Fingerprint string `json:"fingerprint"` // of the TLS certificate
 	Remote      bool   `json:"remote"`      // other PCs can connect
 	Clients     int    `json:"clients"`     // pages open now
+	Error       string `json:"error"`       // why it didn't start (e.g. the port is in use)
 }
 
 // WebStatus returns the web server's state.
@@ -46,6 +46,9 @@ func (a *App) WebStatus() WebInfo {
 	}
 	if host, _, err := net.SplitHostPort(info.Addr); err == nil {
 		info.Remote = !loopbackHost(host)
+	}
+	if e := a.webErr.Load(); e != nil && !info.Running {
+		info.Error = *e
 	}
 	return info
 }
@@ -72,6 +75,8 @@ func (a *App) WebStop() error {
 	if w := a.web.Load(); w != nil {
 		w.stop()
 	}
+	a.webErr.Store(nil)
+	a.emitWebStatus()
 	return updateSettings(func(s *Settings) {
 		if s.Web != nil {
 			s.Web.Enabled = false
@@ -109,6 +114,7 @@ func (a *App) WebNewToken() (WebInfo, error) {
 }
 
 // startWebServer replaces the running web server (if any) with a new one.
+// A failure is kept for Settings to show (see WebStatus).
 func (a *App) startWebServer(opts webOptions) error {
 	if webPage == nil {
 		return errors.New("no page to serve")
@@ -118,12 +124,30 @@ func (a *App) startWebServer(opts webOptions) error {
 	}
 	w, err := startWeb(a, webPage, opts)
 	if err != nil {
+		msg := err.Error()
+		a.webErr.Store(&msg)
+		a.emitWebStatus()
 		return err
 	}
+	a.webErr.Store(nil)
 	w.mu.Lock()
-	w.onIdle = a.webIdle
+	w.onChange = func(int) { a.emitWebStatus() }
 	w.mu.Unlock()
+	a.emitWebStatus()
 	return nil
+}
+
+// emitWebStatus tells the window whether the web server runs and how many
+// browser pages use it (shown in the window title).
+func (a *App) emitWebStatus() {
+	if a.ctx == nil && a.hooks.emit == nil {
+		return
+	}
+	running, clients := false, 0
+	if w := a.web.Load(); w != nil {
+		running, clients = true, w.connectedCount()
+	}
+	a.emit("web:status", running, clients)
 }
 
 // windowTabsConnected reports whether a tab of the window (not of a web
@@ -132,13 +156,15 @@ func (a *App) windowTabsConnected() bool {
 	return a.connectedWhere(func(id int) bool { return clientOf(id) == windowClient })
 }
 
-// hideForWeb is beforeClose with browsers still connected: the window's tabs
-// are closed and the window hides, while the web server keeps serving.
-// It reports whether the window was hidden.
-func (a *App) hideForWeb(ctx context.Context) bool {
-	w := a.web.Load()
-	if w == nil || w.clientCount() == 0 || ctx == nil {
-		return false
+// WebHideWindow closes the window's tabs and hides the window while the web
+// server keeps serving the browsers: the user chose that when closing the
+// window (app:closeWeb). Starting choboterm again shows it (see handoff.go).
+func (a *App) WebHideWindow() error {
+	if a.caller != nil {
+		return errWindowOnly
+	}
+	if a.ctx == nil || a.web.Load() == nil {
+		return errors.New("웹 서버가 꺼져 있습니다")
 	}
 	a.mu.Lock()
 	var ids []int
@@ -152,19 +178,9 @@ func (a *App) hideForWeb(ctx context.Context) bool {
 		a.CloseTab(id)
 	}
 	a.hidden.Store(true)
-	a.quit.Store(false)
-	runtime.WindowHide(ctx)
-	debugf("web: window hidden; %d page(s) still open", w.clientCount())
-	return true
-}
-
-// webIdle runs when the last browser page went away: a window hidden for
-// the browsers now quits.
-func (a *App) webIdle() {
-	if a.hidden.Load() && a.ctx != nil {
-		a.quit.Store(true)
-		runtime.Quit(a.ctx)
-	}
+	runtime.WindowHide(a.ctx)
+	debugf("web: window hidden; %d page(s) connected", a.web.Load().connectedCount())
+	return nil
 }
 
 // showWindow brings the window back (choboterm started again): a hidden

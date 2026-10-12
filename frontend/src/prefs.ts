@@ -86,7 +86,7 @@ function paintWeb(info: main.WebInfo) {
     webStop.disabled = !info.running;
     webUrlRow.hidden = !info.running;
     webUrl.value = info.url;
-    let state = '꺼져 있음';
+    let state = info.error ? `시작하지 못했습니다: ${info.error}` : '꺼져 있음';
     if (info.running) {
         state = `켜짐 (${info.remote ? '다른 PC에서도 접속 가능' : '이 PC에서만'}) · 열린 브라우저 ${info.clients}개`;
         if (info.tls) state += `\nTLS 인증서 SHA-256: ${info.fingerprint}`;

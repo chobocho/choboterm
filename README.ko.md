@@ -142,7 +142,8 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 처음 접속할 때 접속 토큰을 묻습니다. 설정 창의 주소(토큰 포함)를 복사해 열면 바로 들어갑니다. "새 토큰"을 누르면 접속한 브라우저가 모두 끊기고 다시 로그인해야 합니다. **주소(토큰)를 아는 사람은 이 PC의 셸과 저장된 세션을 쓸 수 있으니 공유하지 마세요.**
   - 파일 창: 설정 창의 "브라우저로 열기"로 연 이 PC의 브라우저는 창과 같은 파일 대화상자(저장 위치 선택 등)를 씁니다. 다른 PC의 브라우저는 브라우저로 올리고 내려받습니다(여러 파일·폴더는 .zip 하나로). 로그 폴더 선택·탐색기 열기처럼 이 PC에서만 의미 있는 기능은 다른 PC에서 쓸 수 없습니다.
   - 네트워크가 잠깐 끊겨도 브라우저가 다시 연결하며 그동안의 출력을 이어 받습니다. 60초(`--grace`) 넘게 끊겨 있으면 그 페이지의 탭을 닫습니다.
-  - 브라우저가 연결된 채로 창을 닫으면 창의 탭만 닫고 창을 숨깁니다(웹 서버는 계속). choboterm을 다시 실행하면 숨긴 창이 나타나고, 마지막 브라우저가 떠나면 끝납니다. 웹 서버를 켜 두면 choboterm은 하나만 실행됩니다.
+  - 브라우저가 연결된 채로 창을 닫으면 먼저 묻습니다: **모두 종료**(브라우저의 탭도 끊김) 또는 **창만 닫기 (웹 서버 유지)**(창의 탭을 닫고 창을 숨김, 웹 서버는 설정에서 끌 때까지 계속). 웹 서버가 도는 동안 창 제목에 `🌐 웹 서버 (브라우저 N개)`가 붙습니다.
+  - 웹 서버가 도는 중에 choboterm을 다시 실행하면 두 번째 choboterm을 띄우지 않고 떠 있는 창(숨긴 창 포함)을 앞으로 가져옵니다. 떠 있는 서버에 묻고 그 답을 접속 토큰으로 확인하므로, 서버를 어떻게 켰든(명령행 · 설정 창) 동작합니다.
   - 브라우저는 `Ctrl+W`, `Ctrl+T`, `Ctrl+N` 같은 키를 페이지에 넘기지 않습니다. 접속한 뒤 페이지를 닫으려 하면 한 번 묻습니다. 다른 PC에서 HTTP(`--insecure`)로 열면 클립보드 읽기(붙여넣기 단축키)가 막히므로 HTTPS를 쓰세요.
   - **창 없이 웹 서버만**: `choboterm --headless`는 창을 띄우지 않고 웹 서버만 실행합니다(시작할 때 토큰이 들어간 주소를 출력, `Ctrl+C`로 끝냄). GTK·WebKit이 없는 서버에서는 `choboterm-headless`(Linux 정적 바이너리) / `choboterm-headless.exe`를 씁니다.
 
@@ -218,7 +219,7 @@ wsl -- ./build_linux.sh
 
 1. `main.go`의 `AppVersion`과 `wails.json`의 `productVersion`을 올립니다.
 2. `build.bat`으로 `release\choboterm.exe`와 `release\choboterm-headless.exe`를, 이어서 `wsl -- ./build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`와 `release/choboterm-headless-linux-amd64`를 만듭니다. (실행 중인 choboterm은 먼저 종료)
-3. 커밋·푸시 후 GitHub Release를 만듭니다.
+3. 커밋·푸시 후 버전 태그를 푸시합니다: `git tag v0.2.16 && git push origin v0.2.16`. `release` 워크플로(`.github/workflows/release.yml`)가 Windows와 Ubuntu 22.04에서 파일 4개를 빌드하고 GitHub Release를 만듭니다. 손으로 만들 때는:
 
    ```sh
    gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.0" --notes "..."
@@ -306,7 +307,7 @@ go test ./...
 | `session_import.go` / `putty_windows.go` | 세션 가져오기·내보내기, PuTTY 세션 읽기 |
 | `settings.go` | 사용자 설정 (`settings.json`) |
 | `web.go` / `web_client.go` / `web_files.go` / `web_tls.go` / `web_shim.js` | 웹 서버: 로그인·페이지, 페이지별 WebSocket(호출·이벤트·재전송·흐름 제어), 업로드·다운로드, TLS, 브라우저 쪽 `window.go` · `window.runtime` |
-| `web_app.go` / `web_headless.go` / `cli.go` / `main_window.go` / `main_headless.go` | 설정 창의 웹 서버, 창 숨기기, 창 없는 실행, 명령행 옵션 |
+| `web_app.go` / `handoff.go` / `web_headless.go` / `cli.go` / `main_window.go` / `main_headless.go` | 설정 창의 웹 서버, 창 닫기 · 숨기기, 다시 실행하면 떠 있는 창 보이기, 창 없는 실행, 명령행 옵션 |
 | `picker.go` · `raise_windows.go` | 파일 대화상자 추상화(창 · 이 PC의 브라우저 · 다른 PC의 브라우저), 이 PC의 브라우저를 위해 연 대화상자를 앞으로 가져오기 |
 | `window_windows.go` | 창 크기·위치 저장과 복원 (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` · `secret_linux.go` | 비밀번호 암호화 (Windows DPAPI, Linux 키링의 키로 AES-GCM) |

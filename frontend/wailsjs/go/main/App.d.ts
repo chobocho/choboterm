@@ -136,6 +136,8 @@ export function TabTheme(arg1:number):Promise<string>;
 
 export function TextSaveAs(arg1:string,arg2:string,arg3:string):Promise<main.SaveResult>;
 
+export function WebHideWindow():Promise<void>;
+
 export function WebNewToken():Promise<main.WebInfo>;
 
 export function WebOpen():Promise<void>;

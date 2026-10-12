@@ -142,7 +142,8 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
   - The first visit asks for the access token; opening the address shown in Settings (with the token) logs in directly. "New token" disconnects every browser and makes them log in again. **Anyone with the address (token) can use this PC's shells and saved sessions, so don't share it.**
   - File windows: a browser on this PC opened with "Open in browser" in Settings uses the same file dialogs as the window (choosing where to save, ...). A browser on another PC uploads and downloads instead (several files or folders as one .zip). Things that only make sense on this PC, such as choosing the log folder or opening Explorer, aren't available from another PC.
   - After a short network drop the browser reconnects and gets the output it missed. A page disconnected for more than 60 seconds (`--grace`) has its tabs closed.
-  - Closing the window while browsers are connected closes only the window's tabs and hides it (the web server keeps running). Starting choboterm again shows the hidden window; it quits when the last browser leaves. With the web server on, only one choboterm runs.
+  - Closing the window while browsers are connected asks first: **Quit all** (the browsers' tabs end too) or **Close window only (keep web server)** (the window's tabs close and it hides; the server keeps running until you turn it off in Settings). While the server runs, the window title shows `🌐 Web server (N browsers)`.
+  - Starting choboterm again while it serves (its window shown or hidden) brings that window to the front instead of starting a second one. It asks the running server and checks the answer against the access token, so this works however the server was turned on.
   - Browsers don't pass keys like `Ctrl+W`, `Ctrl+T`, `Ctrl+N` to the page; once connected, closing the page asks first. Over plain HTTP from another PC (`--insecure`) reading the clipboard (the paste shortcut) is blocked, so use HTTPS.
   - **Web server without the window**: `choboterm --headless` runs only the web server (it prints the address with the token at start; `Ctrl+C` stops it). On servers without GTK/WebKit, use `choboterm-headless` (a static Linux binary) / `choboterm-headless.exe`.
 
@@ -218,7 +219,7 @@ wsl -- ./build_linux.sh
 
 1. Bump `AppVersion` in `main.go` and `productVersion` in `wails.json`.
 2. Build `release\choboterm.exe` and `release\choboterm-headless.exe` with `build.bat`, then `release/choboterm-linux-amd64.tar.gz` and `release/choboterm-headless-linux-amd64` with `wsl -- ./build_linux.sh`. (Quit any running choboterm first.)
-3. Commit and push, then create a GitHub Release.
+3. Commit and push, then push the version tag: `git tag v0.2.16 && git push origin v0.2.16`. The `release` workflow (`.github/workflows/release.yml`) builds the four files on Windows and Ubuntu 22.04 and publishes the GitHub Release. To do it by hand instead:
 
    ```sh
    gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.0" --notes "..."
@@ -306,7 +307,7 @@ Tests that need a real server run only when the environment variables are set.
 | `session_import.go` / `putty_windows.go` | Session import · export, reading PuTTY sessions |
 | `settings.go` | User settings (`settings.json`) |
 | `web.go` / `web_client.go` / `web_files.go` / `web_tls.go` / `web_shim.js` | Web server: login and page, one WebSocket per page (calls, events, replay, flow control), uploads and downloads, TLS, the browser side's `window.go` / `window.runtime` |
-| `web_app.go` / `web_headless.go` / `cli.go` / `main_window.go` / `main_headless.go` | The web server in Settings, hiding the window, running without the window, command line options |
+| `web_app.go` / `handoff.go` / `web_headless.go` / `cli.go` / `main_window.go` / `main_headless.go` | The web server in Settings, closing or hiding the window, showing the running one when started again, running without the window, command line options |
 | `picker.go` · `raise_windows.go` | File dialogs abstraction (window · browser on this PC · browser elsewhere); bringing a dialog opened for a browser on this PC to the front |
 | `window_windows.go` | Saving and restoring window size and position (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` · `secret_linux.go` | Password encryption (Windows DPAPI; Linux AES-GCM with a key from the keyring) |

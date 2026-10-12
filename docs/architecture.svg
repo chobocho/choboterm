@@ -139,7 +139,7 @@
   <text x="427" y="539" class="sub">페이지마다 App(호출자) · 탭 번호 clientID&lt;&lt;20부터</text>
   <text x="427" y="556" class="sub">ack · 재전송 · 중복 호출 제거 · 8MB 넘으면 흐름 제어</text>
   <text x="427" y="573" class="sub">토큰 쿠키 · Origin 검사 · 외부 주소는 TLS(자체 서명)</text>
-  <text x="427" y="590" class="sub">창 닫기 → 브라우저가 있으면 숨김 · 다시 실행하면 표시</text>
+  <text x="427" y="590" class="sub">창 닫기 → 모두 종료 / 창만 닫기 · 다시 실행하면 표시</text>
 
   <rect x="415" y="606" width="340" height="47" rx="5" fill="#fff8f7" stroke="#c5221f" stroke-width="1.2"/>
   <text x="427" y="624" class="title">picker.go — 파일 대화상자 <tspan class="new">NEW</tspan></text>
