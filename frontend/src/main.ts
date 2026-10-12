@@ -31,7 +31,7 @@ import {
 } from '../wailsjs/go/main/App';
 import {main} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardGetText, ClipboardSetText, Environment, EventsOn, WindowSetTitle, WindowUnminimise} from '../wailsjs/runtime/runtime';
-import {isLinux, setPlatform} from './platform';
+import {isLinux, setPlatform, webPage} from './platform';
 import {checkUpdate} from './update';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -132,7 +132,8 @@ const tabs = new Map<number, Tab>();
 const tabsEl = $<HTMLDivElement>('tabs');
 const termsEl = $<HTMLDivElement>('terms');
 let active: Tab | undefined;
-let nextId = 1;
+// In a browser, this page's tab ids start at its base (see platform.ts).
+let nextId = (webPage?.base ?? 0) + 1;
 let dragging: Tab | undefined;
 
 function notice(t: Tab, msg: string) {
@@ -1052,12 +1053,18 @@ ambiguousFontReady.then(() => {
     tabs.forEach(t => t.term.clearTextureAtlas());
 });
 
-EventsOn('term:data', (id: number, b64: string) => {
+// The window gets the output in base64; a browser gets the bytes (web_shim.js).
+EventsOn('term:data', (id: number, data: string | Uint8Array) => {
     const t = tabs.get(id);
     if (!t) return;
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    let bytes: Uint8Array;
+    if (typeof data === 'string') {
+        const bin = atob(data);
+        bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } else {
+        bytes = data;
+    }
     const t0 = performance.now();
     t.term.write(bytes, () => {
         dbg(`tab ${id} wrote ${bytes.length} bytes in ${Math.round(performance.now() - t0)}ms`);

@@ -2,22 +2,13 @@ package main
 
 import (
 	"embed"
+	"fmt"
+	"io/fs"
 	"os"
-
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/linux"
-	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
-
-// The window icon on Linux (Windows takes it from the exe).
-//
-//go:embed build/appicon.png
-var appIcon []byte
 
 // AppVersion is shown in the window title. Keep in sync with wails.json productVersion.
 const AppVersion = "0.2.15"
@@ -30,59 +21,31 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "--lua-host" {
 		os.Exit(runLuaHost(os.Stdin, os.Stdout))
 	}
-
-	// Create an instance of the app structure
-	app := NewApp()
-
-	// The window starts hidden and is shown once it is moved to where it was
-	// last time (see App.domReady), so it doesn't jump on screen.
-	start := options.Normal
-	if w := loadSettings().Window; w != nil && w.Maximized {
-		start = options.Maximised
+	opts, err := parseArgs(os.Args[1:])
+	if err != nil || opts.help {
+		attachConsole()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "choboterm:", err)
+		}
+		fmt.Fprint(os.Stderr, usage)
+		if err != nil {
+			os.Exit(2)
+		}
+		return
 	}
-
-	// Create application with options
-	err := wails.Run(&options.App{
-		Title:  appName,
-		Width:  900,
-		Height: 600,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
-		// The window is see-through wherever the page is, so translucency
-		// (Settings) can be switched on and off without a restart. The page
-		// paints an opaque background while it is off.
-		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
-		StartHidden:      true,
-		WindowStartState: start,
-		OnStartup:        app.startup,
-		OnDomReady:       app.domReady,
-		OnBeforeClose:    app.beforeClose,
-		OnShutdown:       app.shutdown,
-		Windows: &windows.Options{
-			WindowClassName:      windowClass,
-			WebviewIsTransparent: true,
-			WindowIsTranslucent:  true,
-			// No blur: Acrylic turns solid gray whenever the window is inactive.
-			BackdropType: windows.None,
-		},
-		// Translucency is Windows only; the page stays opaque on Linux.
-		Linux: &linux.Options{
-			Icon:             appIcon,
-			ProgramName:      "choboterm",
-			WebviewGpuPolicy: linux.WebviewGpuPolicyOnDemand,
-		},
-		// Files dropped on the file window are uploaded (see files.ts).
-		DragAndDrop: &options.DragAndDrop{
-			EnableFileDrop:     true,
-			DisableWebViewDrop: true,
-		},
-		Bind: []interface{}{
-			app,
-		},
-	})
-
+	page, err := fs.Sub(assets, "frontend/dist")
 	if err != nil {
-		println("Error:", err.Error())
+		panic(err) // embedded at build time
 	}
+	webPage = page
+
+	if opts.headless || headlessBuild {
+		if len(opts.unknown) > 0 {
+			attachConsole()
+			fmt.Fprintf(os.Stderr, "choboterm: unknown option %q\n%s", opts.unknown[0], usage)
+			os.Exit(2)
+		}
+		os.Exit(runHeadless(opts))
+	}
+	runWindow(opts)
 }

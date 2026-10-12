@@ -34,11 +34,16 @@ type asker func(title, message string, fields []PromptField) (values []string, o
 // promptTimeout is how long a prompt waits for the user before it counts as cancelled.
 var promptTimeout = 5 * time.Minute
 
+type pendingPrompt struct {
+	ch  chan promptAnswer
+	tab int
+}
+
 var prompts = struct {
 	sync.Mutex
 	next    int
-	pending map[int]chan promptAnswer
-}{pending: map[int]chan promptAnswer{}}
+	pending map[int]pendingPrompt
+}{pending: map[int]pendingPrompt{}}
 
 // ask shows a prompt for tab tabID in the page and waits for the answer.
 func (a *App) ask(tabID int, title, message string, fields []PromptField) ([]string, bool) {
@@ -61,7 +66,7 @@ func (a *App) askPrompt(p Prompt) ([]string, bool) {
 	prompts.Lock()
 	prompts.next++
 	p.ID = prompts.next
-	prompts.pending[p.ID] = ch
+	prompts.pending[p.ID] = pendingPrompt{ch, p.Tab}
 	prompts.Unlock()
 	defer func() {
 		prompts.Lock()
@@ -69,7 +74,7 @@ func (a *App) askPrompt(p Prompt) ([]string, bool) {
 		prompts.Unlock()
 	}()
 
-	a.emit("auth:prompt", p)
+	a.emitFor(p.Tab, "auth:prompt", p)
 	select {
 	case ans := <-ch:
 		if !ans.ok || len(ans.values) != len(fields) {
@@ -77,7 +82,7 @@ func (a *App) askPrompt(p Prompt) ([]string, bool) {
 		}
 		return ans.values, true
 	case <-time.After(promptTimeout):
-		a.emit("auth:promptDone", p.ID) // close the dialog in the page
+		a.emitFor(p.Tab, "auth:promptDone", p.ID) // close the dialog in the page
 		return nil, false
 	}
 }
@@ -92,12 +97,27 @@ func (a *App) asker(tabID int) asker {
 // AnswerPrompt delivers the user's answer to the prompt with the given id.
 func (a *App) AnswerPrompt(id int, values []string, ok bool) {
 	prompts.Lock()
-	ch := prompts.pending[id]
+	pp, found := prompts.pending[id]
 	prompts.Unlock()
-	if ch != nil {
+	if found {
 		select {
-		case ch <- promptAnswer{values: values, ok: ok}:
+		case pp.ch <- promptAnswer{values: values, ok: ok}:
 		default:
+		}
+	}
+}
+
+// cancelPrompts cancels the prompts waiting in tabs for which match is true
+// (a web page that went away won't answer them).
+func cancelPrompts(match func(tab int) bool) {
+	prompts.Lock()
+	defer prompts.Unlock()
+	for _, pp := range prompts.pending {
+		if match(pp.tab) {
+			select {
+			case pp.ch <- promptAnswer{}:
+			default:
+			}
 		}
 	}
 }

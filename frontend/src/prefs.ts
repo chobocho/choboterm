@@ -1,7 +1,9 @@
 // Settings window (Ctrl+Shift+O or the ⚙ button).
 
 import {saveSettings, settings} from './settings';
-import {ChooseLogDir} from '../wailsjs/go/main/App';
+import {ChooseLogDir, WebNewToken, WebOpen, WebStart, WebStatus, WebStop} from '../wailsjs/go/main/App';
+import {ClipboardSetText} from '../wailsjs/runtime/runtime';
+import {webPage} from './platform';
 import {main} from '../wailsjs/go/models';
 import {FONTS} from './cjkwidth';
 import {paletteOf, themeByName, THEMES} from './themes';
@@ -44,6 +46,12 @@ const hlYellow = $<HTMLInputElement>('pHlYellow');
 const hlGreen = $<HTMLInputElement>('pHlGreen');
 const logDir = $<HTMLInputElement>('pLogDir');
 const error = $<HTMLDivElement>('pError');
+const webAddr = $<HTMLInputElement>('pWebAddr');
+const webStart = $<HTMLButtonElement>('pWebStart');
+const webStop = $<HTMLButtonElement>('pWebStop');
+const webState = $<HTMLSpanElement>('pWebState');
+const webUrlRow = $<HTMLDivElement>('pWebUrlRow');
+const webUrl = $<HTMLInputElement>('pWebUrl');
 
 let onApply: (() => void) | undefined;
 let onClose: (() => void) | undefined;
@@ -69,6 +77,45 @@ function paintTranslucency() {
 trans.addEventListener('change', paintTranslucency);
 opacity.addEventListener('input', paintTranslucency);
 glassGpu.addEventListener('change', paintTranslucency);
+
+// ---- Web server (window only; takes effect at once, not on OK) ----
+
+function paintWeb(info: main.WebInfo) {
+    webAddr.value = info.addr;
+    webStart.textContent = info.running ? '다시 시작' : '켜기';
+    webStop.disabled = !info.running;
+    webUrlRow.hidden = !info.running;
+    webUrl.value = info.url;
+    let state = '꺼져 있음';
+    if (info.running) {
+        state = `켜짐 (${info.remote ? '다른 PC에서도 접속 가능' : '이 PC에서만'}) · 열린 브라우저 ${info.clients}개`;
+        if (info.tls) state += `\nTLS 인증서 SHA-256: ${info.fingerprint}`;
+    }
+    webState.textContent = state;
+}
+
+/** Runs a web server action and shows the resulting state (or the error). */
+async function webDo(action: () => Promise<main.WebInfo | void>) {
+    for (const b of [webStart, webStop]) b.disabled = true;
+    try {
+        const info = await action();
+        paintWeb(info ?? await WebStatus());
+    } catch (e) {
+        paintWeb(await WebStatus());
+        webState.textContent = String(e);
+    } finally {
+        webStart.disabled = false;
+    }
+}
+
+webStart.addEventListener('click', () => webDo(() => WebStart(webAddr.value.trim())));
+webStop.addEventListener('click', () => webDo(() => WebStop()));
+$<HTMLButtonElement>('pWebToken').addEventListener('click', () => webDo(() => WebNewToken()));
+$<HTMLButtonElement>('pWebOpen').addEventListener('click', () => webDo(() => WebOpen()));
+$<HTMLButtonElement>('pWebCopy').addEventListener('click', () => {
+    ClipboardSetText(webUrl.value).catch(() => undefined);
+    webUrl.select();
+});
 
 export function prefsOpen() {
     return !overlay.hidden;
@@ -106,6 +153,7 @@ export function openPrefs(apply: () => void, close: () => void) {
     hlGreen.value = settings.highlight.green;
     paintHighlight();
     error.textContent = '';
+    if (!webPage) WebStatus().then(paintWeb).catch(() => undefined);
     overlay.hidden = false;
     fontSize.focus();
     fontSize.select();

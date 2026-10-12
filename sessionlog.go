@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // sessionLog writes a tab's terminal output to a file while logging is on.
@@ -387,6 +385,9 @@ func (a *App) LogPath(tabID int) string {
 // ShowLogs opens the tab's log file selected in Explorer (its folder on
 // Linux), or the log folder.
 func (a *App) ShowLogs(tabID int) error {
+	if !a.local() {
+		return errNotInBrowser // Explorer would open on the other PC
+	}
 	if p := a.LogPath(tabID); p != "" {
 		return showFile(p)
 	}
@@ -408,9 +409,9 @@ func (a *App) ChooseLogDir(current string) (string, error) {
 	if st, err := os.Stat(current); err != nil || !st.IsDir() {
 		current = ""
 	}
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            tr("로그 폴더 선택"),
-		DefaultDirectory: current,
+	dir, err := a.picker().folder(pickOpts{
+		Title: tr("로그 폴더 선택"),
+		Dir:   current,
 	})
 	if err != nil {
 		return "", errors.New("폴더를 고르지 못했습니다: " + err.Error())

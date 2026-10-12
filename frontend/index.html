@@ -224,6 +224,22 @@
                     <span class="hint" id="pUpdateMsg"></span>
                 </div>
             </fieldset>
+            <fieldset class="window-only">
+                <legend>웹 서버 (브라우저로 접속)</legend>
+                <div class="dirrow">
+                    <input id="pWebAddr" spellcheck="false" autocomplete="off" placeholder="127.0.0.1:7681" title="주소:포트 (비우면 127.0.0.1:7681)"/>
+                    <button type="button" id="pWebStart">켜기</button>
+                    <button type="button" id="pWebStop">끄기</button>
+                </div>
+                <span class="hint" id="pWebState"></span>
+                <div class="dirrow" id="pWebUrlRow">
+                    <input id="pWebUrl" readonly spellcheck="false" title="접속 주소 (토큰 포함)"/>
+                    <button type="button" id="pWebCopy">주소 복사</button>
+                    <button type="button" id="pWebOpen">브라우저로 열기</button>
+                    <button type="button" id="pWebToken" title="지금 접속한 브라우저는 모두 끊기고 다시 로그인해야 합니다">새 토큰</button>
+                </div>
+                <span class="hint">127.0.0.1은 이 PC에서만, 0.0.0.0은 다른 PC에서도 접속합니다 (HTTPS, 자체 서명 인증서). 주소(토큰)를 아는 사람은 이 PC의 셸과 저장된 세션을 쓸 수 있으니 공유하지 마세요. 켜기·끄기는 바로 적용됩니다.</span>
+            </fieldset>
             <div class="error" id="pError"></div>
             <div class="buttons">
                 <button type="button" id="pOk">확인</button>

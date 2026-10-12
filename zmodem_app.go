@@ -2,14 +2,11 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // zmodemState tracks a tab's running ZMODEM transfer, if any.
@@ -37,7 +34,7 @@ func (t *tab) cancelZmodem() {
 func (t *tab) termMessage(msg string) {
 	msg = strings.ReplaceAll(tr(msg), "\n", "\r\n")
 	data := "\r\n\x1b[33m" + msg + "\x1b[0m\r\n"
-	t.emit("term:data", base64.StdEncoding.EncodeToString([]byte(data)))
+	t.emitOutput([]byte(data))
 }
 
 // runZmodem handles one sz (receive=true) or rz session detected in the output.
@@ -59,8 +56,8 @@ func (t *tab) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 	}
 
 	var last time.Time
+	pick := a.picker()
 	o := zmOptions{
-		Dir:        a.downloadDir(),
 		DecodeName: t.codec.DecodeString,
 		EncodeName: t.codec.EncodeString,
 		Progress: func(x XferProgress) {
@@ -76,14 +73,18 @@ func (t *tab) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<
 		err error
 	)
 	if receive {
+		var finish func(bool) string
+		o.Dir, finish = pick.receiveDir()
 		t.termMessage("[Zmodem] 파일을 받는 중입니다... (Ctrl+C: 취소)")
 		var saved []string
 		saved, err = zmReceive(p, o)
+		where := finish(len(saved) > 0)
 		if len(saved) > 0 {
-			msg = fmt.Sprintf("[Zmodem] %d개 파일을 받았습니다: %s\n  %s", len(saved), o.Dir, strings.Join(saved, "\n  "))
+			msg = fmt.Sprintf("[Zmodem] %d개 파일을 받았습니다: %s\n  %s", len(saved), where, strings.Join(saved, "\n  "))
 		}
 	} else {
-		files, derr := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{Title: tr("Zmodem으로 보낼 파일 선택")})
+		files, release, derr := pick.openFiles(pickOpts{Title: tr("Zmodem으로 보낼 파일 선택")})
+		defer release()
 		if derr != nil || len(files) == 0 {
 			p.abort()
 			err = errCancelled

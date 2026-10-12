@@ -19,8 +19,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
@@ -409,11 +407,12 @@ type ConsoleFile struct {
 // input line.
 func (a *App) ConsoleOpen() (ConsoleFile, error) {
 	dir, _ := ensureScriptsDir()
-	p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            tr("Lua 파일 불러오기"),
-		DefaultDirectory: dir,
-		Filters:          []runtime.FileFilter{{DisplayName: tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
+	p, release, err := a.picker().openFile(pickOpts{
+		Title:   tr("Lua 파일 불러오기"),
+		Dir:     dir,
+		Filters: []fileFilter{{Name: tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
 	})
+	defer release()
 	if err != nil || p == "" {
 		return ConsoleFile{}, err
 	}
@@ -435,16 +434,20 @@ func (a *App) ConsoleOpen() (ConsoleFile, error) {
 // ConsoleSave asks for a local file and writes the console's text to it.
 // It returns "" if the user cancelled the dialog.
 func (a *App) ConsoleSave(text string) (string, error) {
-	local, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:            tr("Lua 콘솔 저장"),
-		DefaultDirectory: downloadsDir(),
-		DefaultFilename:  "lua_console_" + time.Now().Format("20060102_150405") + ".txt",
-		Filters:          []runtime.FileFilter{{DisplayName: tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
+	local, finish, err := a.picker().saveFile(pickOpts{
+		Title:   tr("Lua 콘솔 저장"),
+		Dir:     downloadsDir(),
+		Name:    "lua_console_" + time.Now().Format("20060102_150405") + ".txt",
+		Filters: []fileFilter{{Name: tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
 	})
 	if err != nil || local == "" {
 		return "", err
 	}
-	return local, os.WriteFile(local, []byte(text), 0o644)
+	if err := os.WriteFile(local, []byte(text), 0o644); err != nil {
+		finish(false)
+		return local, err
+	}
+	return finish(true), nil
 }
 
 // ConsoleEval runs code in the tab's console; the result comes back as a
@@ -520,11 +523,12 @@ func (a *App) RunScriptFile(tabID int) (string, error) {
 		return "", errors.New("탭이 없습니다")
 	}
 	dir, _ := ensureScriptsDir()
-	p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            tr("Lua 스크립트 실행"),
-		DefaultDirectory: dir,
-		Filters:          []runtime.FileFilter{{DisplayName: tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
+	p, release, err := a.picker().openFile(pickOpts{
+		Title:   tr("Lua 스크립트 실행"),
+		Dir:     dir,
+		Filters: []fileFilter{{Name: tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
 	})
+	defer release()
 	if err != nil || p == "" {
 		return "", err
 	}
@@ -550,6 +554,9 @@ func runScriptFile(t *tab, p string) (string, error) {
 
 // ShowScripts opens the scripts folder in Explorer (the file manager on Linux).
 func (a *App) ShowScripts() error {
+	if !a.local() {
+		return errNotInBrowser // Explorer would open on the other PC
+	}
 	dir, err := ensureScriptsDir()
 	if err != nil {
 		return err

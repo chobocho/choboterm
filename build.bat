@@ -15,21 +15,21 @@ if errorlevel 1 (
     goto :fail
 )
 
-echo [1/3] 테스트 실행 중...
+echo [1/4] 테스트 실행 중...
 go test ./...
 if errorlevel 1 (
     echo [오류] 테스트가 실패했습니다.
     goto :fail
 )
 
-echo [2/3] 빌드 중...
+echo [2/4] 빌드 중...
 call wails build -clean
 if errorlevel 1 (
     echo [오류] 빌드가 실패했습니다.
     goto :fail
 )
 
-echo [3/3] release 폴더에 복사 중...
+echo [3/4] release 폴더에 복사 중...
 if not exist release mkdir release
 copy /y "build\bin\choboterm.exe" "release\choboterm.exe" >nul
 if errorlevel 1 (
@@ -37,8 +37,17 @@ if errorlevel 1 (
     goto :fail
 )
 
+rem 창 없이 웹 서버만 띄우는 콘솔 프로그램 (choboterm-headless.exe, WebView2 불필요)
+echo [4/4] choboterm-headless.exe 빌드 중...
+go build -tags headless -trimpath -ldflags "-s -w" -o release\choboterm-headless.exe .
+if errorlevel 1 (
+    echo [오류] choboterm-headless.exe 빌드가 실패했습니다.
+    goto :fail
+)
+
 echo.
 echo 완료: %~dp0release\choboterm.exe
+echo       %~dp0release\choboterm-headless.exe
 endlocal
 exit /b 0
 

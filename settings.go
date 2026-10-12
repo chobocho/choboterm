@@ -59,6 +59,15 @@ type Settings struct {
 	Window *WindowState `json:"window,omitempty"`
 	// Update is when the last check ran and what it found, kept by the Go side only.
 	Update *UpdateState `json:"update,omitempty"`
+	// Web is the web server's settings (Settings > Web), kept by the Go side
+	// only: the page changes them with the Web* methods.
+	Web *WebSettings `json:"web,omitempty"`
+}
+
+// WebSettings are the web server's settings.
+type WebSettings struct {
+	Enabled bool   `json:"enabled"` // start it with the window
+	Addr    string `json:"addr"`    // "" = 127.0.0.1:7681 (this PC only)
 }
 
 // Highlight lists the words shown on a red, yellow or green background,
@@ -173,12 +182,12 @@ func (a *App) GetSettings() Settings {
 	return loadSettings()
 }
 
-// SaveSettings stores the user preferences. The window position and the
-// update check state are kept as stored.
+// SaveSettings stores the user preferences. The window position, the
+// update check state and the web server's settings are kept as stored.
 func (a *App) SaveSettings(s Settings) error {
 	return updateSettings(func(cur *Settings) {
-		w, u := cur.Window, cur.Update
+		w, u, web := cur.Window, cur.Update, cur.Web
 		*cur = s
-		cur.Window, cur.Update = w, u
+		cur.Window, cur.Update, cur.Web = w, u, web
 	})
 }

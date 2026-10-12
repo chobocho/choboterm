@@ -137,6 +137,18 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 두 방식 모두 다시 시작하지 않아도 바로 적용됩니다.
 - **창 위치 기억**: 창 크기·위치·최대화 상태를 닫을 때 저장해 다음 실행 때 그대로 엽니다. 모니터를 뺀 경우처럼 저장된 위치가 화면 밖이면 보이는 곳으로 옮깁니다.
 - **최근 접속 기록**: Host 목록에 최근 20개를 저장합니다. 비밀번호는 Telnet만, 암호화해서 저장합니다. 서버별 색 테마와 포트 포워딩 규칙은 기록에서 밀려나도 지워지지 않습니다.
+- **웹 서버 (브라우저로 접속)**: zellij처럼 choboterm의 화면을 브라우저에서도 씁니다. 설정 창의 "웹 서버"에서 켜거나, `choboterm --web`으로 실행합니다. 창은 그대로 동작하고, 브라우저 페이지마다 자기 탭을 따로 가집니다.
+  - 기본 주소는 `127.0.0.1:7681`(이 PC에서만)입니다. `0.0.0.0:7681`처럼 다른 PC가 접속할 수 있는 주소면 HTTPS로 엽니다(처음 한 번 자체 서명 인증서를 만들고, 설정 창과 시작 메시지에 지문을 보여 줌). `--cert` / `--key`로 가진 인증서를 쓸 수 있습니다.
+  - 처음 접속할 때 접속 토큰을 묻습니다. 설정 창의 주소(토큰 포함)를 복사해 열면 바로 들어갑니다. "새 토큰"을 누르면 접속한 브라우저가 모두 끊기고 다시 로그인해야 합니다. **주소(토큰)를 아는 사람은 이 PC의 셸과 저장된 세션을 쓸 수 있으니 공유하지 마세요.**
+  - 파일 창: 설정 창의 "브라우저로 열기"로 연 이 PC의 브라우저는 창과 같은 파일 대화상자(저장 위치 선택 등)를 씁니다. 다른 PC의 브라우저는 브라우저로 올리고 내려받습니다(여러 파일·폴더는 .zip 하나로). 로그 폴더 선택·탐색기 열기처럼 이 PC에서만 의미 있는 기능은 다른 PC에서 쓸 수 없습니다.
+  - 네트워크가 잠깐 끊겨도 브라우저가 다시 연결하며 그동안의 출력을 이어 받습니다. 60초(`--grace`) 넘게 끊겨 있으면 그 페이지의 탭을 닫습니다.
+  - 브라우저가 연결된 채로 창을 닫으면 창의 탭만 닫고 창을 숨깁니다(웹 서버는 계속). choboterm을 다시 실행하면 숨긴 창이 나타나고, 마지막 브라우저가 떠나면 끝납니다. 웹 서버를 켜 두면 choboterm은 하나만 실행됩니다.
+  - 브라우저는 `Ctrl+W`, `Ctrl+T`, `Ctrl+N` 같은 키를 페이지에 넘기지 않습니다. 접속한 뒤 페이지를 닫으려 하면 한 번 묻습니다. 다른 PC에서 HTTP(`--insecure`)로 열면 클립보드 읽기(붙여넣기 단축키)가 막히므로 HTTPS를 쓰세요.
+  - **창 없이 웹 서버만**: `choboterm --headless`는 창을 띄우지 않고 웹 서버만 실행합니다(시작할 때 토큰이 들어간 주소를 출력, `Ctrl+C`로 끝냄). GTK·WebKit이 없는 서버에서는 `choboterm-headless`(Linux 정적 바이너리) / `choboterm-headless.exe`를 씁니다.
+
+    ```sh
+    ./choboterm-headless --web=0.0.0.0:7681      # 다른 PC에서 https://이PC:7681/ 로 접속
+    ```
 
 X11 포워딩은 지원하지 않습니다.
 
@@ -178,6 +190,7 @@ X11 포워딩은 지원하지 않습니다.
 - 세션, 서버별 색 테마·포트 포워딩: `%AppData%\choboterm\sessions.json` (비밀번호는 DPAPI로 암호화된 값만 저장)
 - 설정: `%AppData%\choboterm\settings.json`
 - 세션 로그: `문서\choboterm\logs` (설정 창에서 변경)
+- 웹 서버: 접속 토큰 `%AppData%\choboterm\web-token`, 자체 서명 인증서 `web-cert.pem` / `web-key.pem` (같은 폴더). 다른 PC의 브라우저와 주고받는 파일은 임시 폴더에 잠깐 두었다가 지웁니다.
 - Linux에서는 `%AppData%\choboterm` 대신 `~/.config/choboterm`, `문서` 대신 `~/Documents`를 씁니다. 비밀번호는 키링에 보관한 키로 AES-GCM 암호화합니다.
 
 ## 빌드
@@ -191,9 +204,11 @@ wails dev     # 개발 모드 (핫 리로드)
 wails build   # build/bin/choboterm.exe 생성
 ```
 
-`build.bat`을 실행하면 테스트 → `wails build` → `release\choboterm.exe` 복사까지 한 번에 합니다. (`release` 폴더는 git에 올리지 않습니다.)
+`build.bat`을 실행하면 테스트 → `wails build` → `release\choboterm.exe` 복사까지 한 번에 하고, 창 없는 웹 서버용 `release\choboterm-headless.exe`(콘솔 프로그램, WebView2 불필요)도 만듭니다. (`release` 폴더는 git에 올리지 않습니다.)
 
-Linux 버전은 `build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`를 만듭니다. 오래된 배포판에서도 돌도록 Ubuntu 22.04 Docker 컨테이너(`tools/linux/Dockerfile`) 안에서 테스트·빌드하고, `--native`를 주면 이 PC의 Go와 라이브러리(`libgtk-3-dev`, `libwebkit2gtk-4.1-dev`)로 빌드합니다. Windows에서는 WSL에서 실행합니다(프론트엔드는 `build.bat`이 만든 `frontend/dist`를 그대로 씀).
+창 없는 빌드는 `go build -tags headless`입니다. Wails 창 코드가 빠지므로 Linux에서는 `CGO_ENABLED=0`으로 GTK·WebKit이 필요 없는 정적 바이너리가 됩니다.
+
+Linux 버전은 `build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`와 `release/choboterm-headless-linux-amd64`(창 없는 정적 바이너리)를 만듭니다. 오래된 배포판에서도 돌도록 Ubuntu 22.04 Docker 컨테이너(`tools/linux/Dockerfile`) 안에서 테스트·빌드하고, `--native`를 주면 이 PC의 Go와 라이브러리(`libgtk-3-dev`, `libwebkit2gtk-4.1-dev`)로 빌드합니다. Windows에서는 WSL에서 실행합니다(프론트엔드는 `build.bat`이 만든 `frontend/dist`를 그대로 씀).
 
 ```sh
 wsl -- ./build_linux.sh
@@ -266,6 +281,8 @@ go test ./...
 - 화면은 WebView2 안의 TypeScript(xterm.js)가, 접속·파일 전송·저장은 Go가 맡습니다. 둘은 Wails 바인딩(Go 메서드 호출)과 이벤트로 주고받습니다.
 - 탭마다 Go 쪽에 `tab`이 하나 있고, 서버 출력은 16ms·256KB 단위로 묶어 `term:data` 이벤트로 보냅니다. 이때 인코딩 변환, Zmodem 감지, 세션 로그, Lua 스크립트 전달이 함께 일어납니다.
 - Lua 스크립트는 `choboterm.exe --lua-host`로 띄운 별도 프로세스에서 돌아서, 스크립트가 멈추거나 메모리를 다 써도 앱은 영향을 받지 않습니다.
+- 웹 서버(`web*.go`, `web_shim.js`): 같은 `frontend/dist`를 브라우저에 주고, Wails가 창에 넣어 주는 `window.go` · `window.runtime`을 WebSocket 하나로 흉내 냅니다. 페이지마다 `App`을 따로 두어(상태는 공유) 누가 불렀는지 압니다. 탭 번호는 페이지마다 `clientID<<20`부터 매기므로(창은 0부터, 지금과 같음) 이벤트를 탭 주인에게만 보냅니다. 출력은 base64 대신 바이너리 프레임으로 보내고, 페이지가 받았다고 알린 만큼만 지웁니다(다시 연결하면 빠진 것만 다시 보냄, 너무 밀리면 읽기를 멈춤).
+- 파일 대화상자는 모두 `App.picker()`(`picker.go`)를 거칩니다. 창과 이 PC의 브라우저는 Wails 대화상자, 다른 PC의 브라우저는 업로드·다운로드입니다. "이 PC"는 주소(127.0.0.1)만이 아니라 choboterm이 직접 연 브라우저에 준 일회용 코드로 판단합니다(SSH 포워딩·프록시도 127.0.0.1로 오기 때문).
 - SSH는 점프 호스트를 거칠 수 있습니다(`sshjump.go`): 단계마다 앞 연결의 채널 위에서 다음 서버에 로그인합니다.
 - 키워드 강조(`highlight.ts`)는 서버 출력을 바꾸지 않고 xterm 데코레이션으로 화면 위에만 칠합니다.
 - 도커 컨테이너(`docker.go`, `containers.ts`): 서버에서는 탭의 SSH 접속에 세션을 하나 더 열어 `docker ps` · `docker exec`를 실행하므로 다시 로그인하지 않습니다. 이 PC에서는 Docker Desktop의 `docker`를 직접 실행하고, 셸 탭은 ConPTY로 엽니다.
@@ -288,6 +305,9 @@ go test ./...
 | `session_store.go` | 저장한 세션, 서버별 설정(색 테마·포트 포워딩) |
 | `session_import.go` / `putty_windows.go` | 세션 가져오기·내보내기, PuTTY 세션 읽기 |
 | `settings.go` | 사용자 설정 (`settings.json`) |
+| `web.go` / `web_client.go` / `web_files.go` / `web_tls.go` / `web_shim.js` | 웹 서버: 로그인·페이지, 페이지별 WebSocket(호출·이벤트·재전송·흐름 제어), 업로드·다운로드, TLS, 브라우저 쪽 `window.go` · `window.runtime` |
+| `web_app.go` / `web_headless.go` / `cli.go` / `main_window.go` / `main_headless.go` | 설정 창의 웹 서버, 창 숨기기, 창 없는 실행, 명령행 옵션 |
+| `picker.go` · `raise_windows.go` | 파일 대화상자 추상화(창 · 이 PC의 브라우저 · 다른 PC의 브라우저), 이 PC의 브라우저를 위해 연 대화상자를 앞으로 가져오기 |
 | `window_windows.go` | 창 크기·위치 저장과 복원 (Win32 WINDOWPLACEMENT) |
 | `secret_windows.go` · `secret_linux.go` | 비밀번호 암호화 (Windows DPAPI, Linux 키링의 키로 AES-GCM) |
 | `frontend/src/main.ts` | 탭, 터미널, 접속 창, 단축키 |
@@ -297,7 +317,7 @@ go test ./...
 | `luahost.go` / `luarun.go` | Lua 스크립트: 별도 프로세스의 실행기와 앱 쪽 관리(출력 전달, 입력 보내기 제한, 정지·강제 종료) |
 | `luajob_windows.go` · `luajob_linux.go` | 스크립트 프로세스의 메모리 제한 (Windows Job Object, Linux는 `/proc` 감시) |
 | `build_linux.sh` · `tools/linux/` | Linux 빌드(Ubuntu 22.04 컨테이너)와 tar.gz 묶음(설치 스크립트, 데스크톱 항목) |
-| `frontend/src/platform.ts` | 실행 중인 OS (Linux에서 Windows 전용 항목 숨김) |
+| `frontend/src/platform.ts` | 실행 중인 OS (Linux에서 Windows 전용 항목 숨김), 브라우저에서 열렸는지와 탭 번호 시작값 |
 | `frontend/src/sessions.ts` | 세션 저장 창, 세션 관리 창, 가져오기·내보내기 |
 | `frontend/src/help.ts` | F1 도움말 창 (한국어 / English) |
 | `frontend/src/search.ts` | 스크롤백 검색 막대 |
