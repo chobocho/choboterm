@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 	"syscall"
 	"unsafe"
@@ -62,6 +63,18 @@ func (j *luaJob) hitMemoryLimit() bool {
 		return false
 	}
 	return info.PeakProcessMemoryUsed >= j.limit/10*9
+}
+
+// memoryReport describes the process's memory use against the limit (for
+// diagnosing a script that didn't end).
+func (j *luaJob) memoryReport() string {
+	var info windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+	if err := windows.QueryInformationJobObject(j.h, windows.JobObjectExtendedLimitInformation,
+		uintptr(unsafe.Pointer(&info)), uint32(unsafe.Sizeof(info)), nil); err != nil {
+		return "job query failed: " + err.Error()
+	}
+	return fmt.Sprintf("peak process memory %dMB, job peak %dMB, limit %dMB, flags %#x",
+		info.PeakProcessMemoryUsed>>20, info.PeakJobMemoryUsed>>20, j.limit>>20, info.BasicLimitInformation.LimitFlags)
 }
 
 func (j *luaJob) close() {

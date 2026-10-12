@@ -98,7 +98,11 @@ func (f *scriptFixture) end(t *testing.T, within time.Duration) string {
 		}
 		return msg
 	case <-time.After(within):
-		t.Fatalf("script did not end within %v", within)
+		report := ""
+		if s := f.tab.script.Load(); s != nil && s.job != nil {
+			report = " (" + s.job.memoryReport() + ")"
+		}
+		t.Fatalf("script did not end within %v%s", within, report)
 		return ""
 	}
 }
