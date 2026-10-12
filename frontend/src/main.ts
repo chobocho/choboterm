@@ -269,6 +269,18 @@ function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     dbg(`tab ${id} open`);
     term.open(pane);
 
+    // Some Android browser/IME combinations (notably Samsung Internet with
+    // Samsung Keyboard) emit Backspace while composing Hangul. Let the IME
+    // handle it instead of xterm ending composition and forwarding stale input.
+    if (/Android/i.test(navigator.userAgent)) {
+        let composing = false;
+        pane.addEventListener('compositionstart', () => { composing = true; }, true);
+        pane.addEventListener('compositionend', () => { composing = false; }, true);
+        pane.addEventListener('keydown', ev => {
+            if (composing && (ev.key === 'Backspace' || ev.keyCode === 8)) ev.stopImmediatePropagation();
+        }, true);
+    }
+
     term.onData(d => dbg(`tab ${id} onData ${JSON.stringify(d)}`));
     term.onRender(({start, end}) => dbg(`tab ${id} render rows ${start}-${end}`));
 
