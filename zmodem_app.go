@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"choboterm/internal/i18n"
+	"choboterm/internal/telnet"
+	"choboterm/internal/terminal"
 )
 
 // zmodemState tracks a tab's running ZMODEM transfer, if any.
@@ -41,14 +43,14 @@ func (t *tab) termMessage(msg string) {
 
 // runZmodem handles one sz (receive=true) or rz session detected in the output.
 // Raw remote bytes arrive on in; unconsumed bytes are handed back on done.
-func (t *tab) runZmodem(sess Session, receive bool, in <-chan []byte, done chan<- []byte) {
+func (t *tab) runZmodem(sess terminal.Session, receive bool, in <-chan []byte, done chan<- []byte) {
 	a := t.app
 	ctx, cancel := context.WithCancel(context.Background())
 	t.zm.mu.Lock()
 	t.zm.cancel = cancel
 	t.zm.mu.Unlock()
 
-	_, telnet := sess.(*telnetSession)
+	_, telnet := sess.(*telnet.Session)
 	p := &zmPeer{
 		ctx:     ctx,
 		in:      in,

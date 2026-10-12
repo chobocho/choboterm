@@ -1,4 +1,4 @@
-package main
+package terminal
 
 import (
 	"bytes"
@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-// detectWait is how long to wait for a server greeting on a non-standard port.
+// DetectWait is how long to wait for a server greeting on a non-standard port.
 // Telnet servers that stay silent until the client speaks cost this much delay.
-var detectWait = 2 * time.Second
+var DetectWait = 2 * time.Second
 
 var ftpGreeting = regexp.MustCompile(`^220[ -]`)
 
@@ -23,10 +23,10 @@ type prefixConn struct {
 
 func (c *prefixConn) Read(p []byte) (int, error) { return c.r.Read(p) }
 
-// dialDetect connects to addr and guesses the protocol from the server's
+// DialDetect connects to addr and guesses the protocol from the server's
 // first bytes: SSH servers start with "SSH-", FTP servers with "220 ",
 // anything else (IAC negotiation, a login banner, or silence) is Telnet.
-func dialDetect(addr string) (net.Conn, string, error) {
+func DialDetect(addr string) (net.Conn, string, error) {
 	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
 	if err != nil {
 		return nil, "", err
@@ -34,7 +34,7 @@ func dialDetect(addr string) (net.Conn, string, error) {
 
 	var head []byte
 	buf := make([]byte, 512)
-	deadline := time.Now().Add(detectWait)
+	deadline := time.Now().Add(DetectWait)
 	_ = conn.SetReadDeadline(deadline)
 	// Read until the greeting is long enough to decide (it may arrive in pieces).
 	for len(head) < 4 && !bytes.ContainsAny(head, "\r\n") {

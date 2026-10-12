@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/sshconn"
 )
 
 func TestParseContainers(t *testing.T) {
@@ -202,7 +204,7 @@ func TestDockerRemote(t *testing.T) {
 			}
 		}
 	}
-	a.getTab(1).sess = &sshSession{client: client}
+	a.getTab(1).sess = &sshconn.Session{Client: client}
 
 	list, err := a.DockerList(1, false)
 	if err != nil || len(list) != 1 || list[0].Name != "web" || !list[0].Running || list[0].Published[0].Port != 8080 {

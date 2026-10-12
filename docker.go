@@ -20,6 +20,8 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/sshconn"
+	"choboterm/internal/terminal"
 )
 
 // DockerPort is a container port published on the host.
@@ -182,11 +184,11 @@ func (a *App) dockerClient(src int) (*ssh.Client, error) {
 	if t == nil {
 		return nil, errors.New("연결되어 있지 않습니다")
 	}
-	sess, _ := t.session().(*sshSession)
+	sess, _ := t.session().(*sshconn.Session)
 	if sess == nil {
 		return nil, errors.New("서버의 컨테이너는 SSH 접속에서만 볼 수 있습니다")
 	}
-	return sess.client, nil
+	return sess.Client, nil
 }
 
 // parsePorts reads docker's port list, e.g.
@@ -278,10 +280,10 @@ func dockerArgs(id, mode string) ([]string, error) {
 // dockerExec is a "docker exec" session sharing another tab's SSH connection:
 // closing it must leave that connection open.
 type dockerExec struct {
-	*sshSession
+	*sshconn.Session
 }
 
-func (d dockerExec) Close() error { return d.session.Close() }
+func (d dockerExec) Close() error { return d.Session.Close() }
 
 // DockerOpen runs a shell in container id ("shell") or follows its log
 // ("logs") in tab tabID: on the server of SSH tab src, or on this PC when src
@@ -294,7 +296,7 @@ func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int)
 	if cols <= 0 || rows <= 0 {
 		cols, rows = 80, 24
 	}
-	var sess Session
+	var sess terminal.Session
 	if src == 0 {
 		exe, err := localDocker()
 		if err != nil {
@@ -308,7 +310,7 @@ func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int)
 		if err != nil {
 			return err
 		}
-		s, err := openPty(client, cols, rows, remoteDocker(args...))
+		s, err := sshconn.OpenPty(client, cols, rows, remoteDocker(args...))
 		if err != nil {
 			return err
 		}
@@ -317,6 +319,6 @@ func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int)
 	t := a.getTab(tabID)
 	t.disconnect()
 	t.codec.Set(codec.UTF8)
-	t.start(sess, "docker", ConnectRequest{Host: label})
+	t.start(sess, "docker", terminal.ConnectRequest{Host: label})
 	return nil
 }

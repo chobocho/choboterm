@@ -12,6 +12,7 @@ import (
 	"golang.org/x/text/encoding/korean"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/sshconn"
 )
 
 func TestFileViewOverSFTP(t *testing.T) {
@@ -31,7 +32,7 @@ func TestFileViewOverSFTP(t *testing.T) {
 
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
-	a.getTab(1).sess = &sshSession{client: client}
+	a.getTab(1).sess = &sshconn.Session{Client: client}
 	res, err := a.FileOpen(1)
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +107,7 @@ func TestFileSaveTextOverSFTP(t *testing.T) {
 
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
-	a.getTab(1).sess = &sshSession{client: client}
+	a.getTab(1).sess = &sshconn.Session{Client: client}
 	res, err := a.FileOpen(1)
 	if err != nil {
 		t.Fatal(err)

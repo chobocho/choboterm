@@ -3,33 +3,26 @@ package main
 import (
 	"sync"
 	"time"
-)
 
-// PromptField is one input in a prompt: a label and whether to hide what is typed.
-type PromptField struct {
-	Label  string `json:"label"`
-	Secret bool   `json:"secret"`
-}
+	"choboterm/internal/terminal"
+)
 
 // Prompt asks the user for one or more values while connecting
 // (a key passphrase, a one-time code...). The page answers with AnswerPrompt.
 type Prompt struct {
-	ID      int           `json:"id"`
-	Tab     int           `json:"tab"`
-	Title   string        `json:"title"`
-	Message string        `json:"message"`
-	Fields  []PromptField `json:"fields"`
-	OK      string        `json:"ok"`     // button labels; "" = 확인 / 취소
-	Cancel  string        `json:"cancel"` // (a question with no fields is a choice of two)
+	ID      int                    `json:"id"`
+	Tab     int                    `json:"tab"`
+	Title   string                 `json:"title"`
+	Message string                 `json:"message"`
+	Fields  []terminal.PromptField `json:"fields"`
+	OK      string                 `json:"ok"`     // button labels; "" = 확인 / 취소
+	Cancel  string                 `json:"cancel"` // (a question with no fields is a choice of two)
 }
 
 type promptAnswer struct {
 	values []string
 	ok     bool
 }
-
-// asker asks the user for the fields' values; ok is false if they cancelled.
-type asker func(title, message string, fields []PromptField) (values []string, ok bool)
 
 // promptTimeout is how long a prompt waits for the user before it counts as cancelled.
 var promptTimeout = 5 * time.Minute
@@ -46,7 +39,7 @@ var prompts = struct {
 }{pending: map[int]pendingPrompt{}}
 
 // ask shows a prompt for tab tabID in the page and waits for the answer.
-func (a *App) ask(tabID int, title, message string, fields []PromptField) ([]string, bool) {
+func (a *App) ask(tabID int, title, message string, fields []terminal.PromptField) ([]string, bool) {
 	return a.askPrompt(Prompt{Tab: tabID, Title: title, Message: message, Fields: fields})
 }
 
@@ -88,8 +81,8 @@ func (a *App) askPrompt(p Prompt) ([]string, bool) {
 }
 
 // asker returns an asker bound to a tab.
-func (a *App) asker(tabID int) asker {
-	return func(title, message string, fields []PromptField) ([]string, bool) {
+func (a *App) asker(tabID int) terminal.Asker {
+	return func(title, message string, fields []terminal.PromptField) ([]string, bool) {
 		return a.ask(tabID, title, message, fields)
 	}
 }

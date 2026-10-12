@@ -11,6 +11,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"choboterm/internal/dbg"
+	"choboterm/internal/terminal"
 )
 
 // ptySession runs a local program in a Windows pseudo console (ConPTY), so
@@ -25,7 +26,7 @@ type ptySession struct {
 }
 
 // startPty starts cmdline (with dir as its folder) in a cols x rows console.
-func startPty(cmdline, dir string, cols, rows int) (Session, error) {
+func startPty(cmdline, dir string, cols, rows int) (terminal.Session, error) {
 	var inR, inW, outR, outW windows.Handle
 	if err := windows.CreatePipe(&inR, &inW, nil, 0); err != nil {
 		return nil, err

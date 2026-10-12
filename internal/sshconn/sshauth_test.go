@@ -1,4 +1,4 @@
-package main
+package sshconn
 
 import (
 	"bytes"
@@ -17,6 +17,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+
+	"choboterm/internal/sshconn/sshtest"
+	"choboterm/internal/terminal"
 )
 
 // keyServer starts a server that accepts only the public key want (and any
@@ -33,14 +36,14 @@ func keyServer(t *testing.T, want ssh.PublicKey, passwords bool) (string, ssh.Si
 	if passwords {
 		cfg.PasswordCallback = func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) { return nil, nil }
 	}
-	host := ed25519Signer(t)
+	host := sshtest.Ed25519Signer(t)
 	return serveShell(t, cfg, host), host
 }
 
 // useHome points the user profile at a temp dir with known_hosts trusting
 // host for addr, no agents, and no cached keys. It returns the .ssh folder.
 func useHome(t *testing.T, addr string, host ssh.Signer) string {
-	home := filepath.Dir(useKnownHosts(t, addr, host.PublicKey()))
+	home := filepath.Dir(sshtest.UseKnownHosts(t, addr, host.PublicKey()))
 	orig := agentSources
 	agentSources = func() []agentSource { return nil }
 	t.Cleanup(func() { agentSources = orig })
@@ -69,17 +72,17 @@ func writeKey(t *testing.T, dir, name string, priv interface{}, pass string) str
 	return path
 }
 
-func dialAsk(t *testing.T, addr, pass string, ask asker, keys ...string) (Session, error) {
+func dialAsk(t *testing.T, addr, pass string, ask terminal.Asker, keys ...string) (terminal.Session, error) {
 	host, portStr, _ := net.SplitHostPort(addr)
 	port, _ := strconv.Atoi(portStr)
-	return dialSSH(ConnectRequest{Host: host, Port: port, Login: "u", Pass: pass, Cols: 80, Rows: 24},
+	return Dial(terminal.ConnectRequest{Host: host, Port: port, Login: "u", Pass: pass, Cols: 80, Rows: 24},
 		func(string, string) bool { t.Fatal("unexpected host key prompt"); return false }, ask, nil, keys)
 }
 
 // countingAsker answers with the given values in turn and counts the prompts.
-func countingAsker(answers ...string) (asker, *int) {
+func countingAsker(answers ...string) (terminal.Asker, *int) {
 	n := 0
-	return func(title, msg string, fields []PromptField) ([]string, bool) {
+	return func(title, msg string, fields []terminal.PromptField) ([]string, bool) {
 		n++
 		if n > len(answers) || answers[n-1] == "" {
 			return nil, false
@@ -233,15 +236,15 @@ func otpServer(t *testing.T) (string, ssh.Signer) {
 			return nil, nil
 		},
 	}
-	host := ed25519Signer(t)
+	host := sshtest.Ed25519Signer(t)
 	return serveShell(t, cfg, host), host
 }
 
 // recordingAsker answers each prompt with the next values and keeps the prompts.
-func recordingAsker(answers ...[]string) (asker, *[][]PromptField, *[]string) {
-	var fields [][]PromptField
+func recordingAsker(answers ...[]string) (terminal.Asker, *[][]terminal.PromptField, *[]string) {
+	var fields [][]terminal.PromptField
 	var msgs []string
-	return func(title, msg string, f []PromptField) ([]string, bool) {
+	return func(title, msg string, f []terminal.PromptField) ([]string, bool) {
 		fields = append(fields, f)
 		msgs = append(msgs, msg)
 		i := len(fields) - 1
@@ -295,7 +298,7 @@ func TestPasswordAskedWhenEmpty(t *testing.T) {
 			return nil, errors.New("bad password")
 		},
 	}
-	host := ed25519Signer(t)
+	host := sshtest.Ed25519Signer(t)
 	addr := serveShell(t, cfg, host)
 	useHome(t, addr, host)
 

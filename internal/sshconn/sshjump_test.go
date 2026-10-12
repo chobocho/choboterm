@@ -1,4 +1,4 @@
-package main
+package sshconn
 
 import (
 	"encoding/binary"
@@ -14,6 +14,9 @@ import (
 	"github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
+
+	"choboterm/internal/sshconn/sshtest"
+	"choboterm/internal/terminal"
 )
 
 func TestSSHCommandJump(t *testing.T) {
@@ -25,7 +28,7 @@ func TestSSHCommandJump(t *testing.T) {
 		"ssh web":                       "",
 		"web":                           "",
 	} {
-		if got := sshCommandJump(in); got != want {
+		if got := CommandJump(in); got != want {
 			t.Errorf("sshCommandJump(%q) = %q, want %q", in, got, want)
 		}
 	}
@@ -45,16 +48,16 @@ Host web
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := proxyJumpFor(cfg, "web", ""); got != "bastion" {
+	if got := ProxyJumpFor(cfg, "web", ""); got != "bastion" {
 		t.Errorf("ProxyJump of web = %q", got)
 	}
-	if got := proxyJumpFor(cfg, "web", "other"); got != "other" {
+	if got := ProxyJumpFor(cfg, "web", "other"); got != "other" {
 		t.Errorf("-J should win over the config: %q", got)
 	}
-	if got := proxyJumpFor(cfg, "bastion", ""); got != "" {
+	if got := ProxyJumpFor(cfg, "bastion", ""); got != "" {
 		t.Errorf("ProxyJump none = %q", got)
 	}
-	hops, err := parseJumps(cfg, "bastion, me@10.0.0.2:2222,[::1]", "u")
+	hops, err := ParseJumps(cfg, "bastion, me@10.0.0.2:2222,[::1]", "u")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +74,7 @@ Host web
 			t.Errorf("hop %d = %+v, want %+v", i, h, want[i])
 		}
 	}
-	if _, err := parseJumps(cfg, "b:99999", "u"); err == nil {
+	if _, err := ParseJumps(cfg, "b:99999", "u"); err == nil {
 		t.Error("a bad port was accepted")
 	}
 }
@@ -134,7 +137,7 @@ func startJumpServer(t *testing.T, key ssh.Signer) (string, *int32) {
 }
 
 func TestDialThroughJumpHosts(t *testing.T) {
-	jumpKey, jump2Key, webKey := ed25519Signer(t), ed25519Signer(t), ed25519Signer(t)
+	jumpKey, jump2Key, webKey := sshtest.Ed25519Signer(t), sshtest.Ed25519Signer(t), sshtest.Ed25519Signer(t)
 	jump, n1 := startJumpServer(t, jumpKey)
 	jump2, n2 := startJumpServer(t, jump2Key)
 	web := startShellServer(t, webKey)
@@ -154,28 +157,28 @@ func TestDialThroughJumpHosts(t *testing.T) {
 
 	// Jump hosts get no password from the dialog: their prompts name the hop.
 	var titles []string
-	ask := func(title, msg string, fields []PromptField) ([]string, bool) {
+	ask := func(title, msg string, fields []terminal.PromptField) ([]string, bool) {
 		titles = append(titles, title)
 		return []string{"p"}, true
 	}
 	noPrompt := func(string, string) bool { t.Fatal("unexpected host key prompt"); return false }
 
-	hops, err := parseJumps(nil, "j1@"+jump+",j2@"+jump2, "u")
+	hops, err := ParseJumps(nil, "j1@"+jump+",j2@"+jump2, "u")
 	if err != nil {
 		t.Fatal(err)
 	}
-	clients, conn, err := dialJumps(hops, web, noPrompt, ask)
+	clients, conn, err := DialJumps(hops, web, noPrompt, ask)
 	if err != nil {
 		t.Fatal(err)
 	}
 	host, portStr, _ := net.SplitHostPort(web)
 	port, _ := strconv.Atoi(portStr)
-	sess, err := dialSSH(ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24}, noPrompt, ask, conn, nil)
+	sess, err := Dial(terminal.ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24}, noPrompt, ask, conn, nil)
 	if err != nil {
-		closeClients(clients)
+		CloseClients(clients)
 		t.Fatal(err)
 	}
-	sess.(*sshSession).jumps = clients
+	sess.(*Session).Jumps = clients
 	buf := make([]byte, 2)
 	if _, err := io.ReadFull(sess, buf); err != nil || string(buf) != "$ " {
 		t.Fatalf("shell output %q, %v", buf, err)
@@ -190,7 +193,7 @@ func TestDialThroughJumpHosts(t *testing.T) {
 	}
 
 	// A target the last jump host can't reach is reported, and nothing stays open.
-	if _, _, err := dialJumps(hops[:1], "127.0.0.1:1", noPrompt, ask); err == nil || !strings.Contains(err.Error(), "점프 호스트") {
+	if _, _, err := DialJumps(hops[:1], "127.0.0.1:1", noPrompt, ask); err == nil || !strings.Contains(err.Error(), "점프 호스트") {
 		t.Errorf("unreachable target: %v", err)
 	}
 }

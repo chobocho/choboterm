@@ -1,4 +1,4 @@
-package main
+package sshconn
 
 import (
 	"crypto/ed25519"
@@ -17,32 +17,33 @@ import (
 	"golang.org/x/crypto/ssh/knownhosts"
 
 	"choboterm/internal/dbg"
+	"choboterm/internal/terminal"
 )
 
-type sshSession struct {
-	client  *ssh.Client
-	jumps   []*ssh.Client // ProxyJump hosts the connection goes through, first to last
-	session *ssh.Session
+type Session struct {
+	Client  *ssh.Client
+	Jumps   []*ssh.Client // ProxyJump hosts the connection goes through, first to last
+	Session *ssh.Session
 	stdin   io.WriteCloser
 	stdout  io.Reader
 }
 
-func (s *sshSession) Write(p []byte) (int, error) { return s.stdin.Write(p) }
+func (s *Session) Write(p []byte) (int, error) { return s.stdin.Write(p) }
 
 // Read returns errConnLost when the output ends because the connection broke:
 // the output also ends when the shell exits, but then the server reports an
 // exit status first.
-func (s *sshSession) Read(p []byte) (int, error) {
+func (s *Session) Read(p []byte) (int, error) {
 	n, err := s.stdout.Read(p)
 	if err == io.EOF {
 		done := make(chan error, 1)
-		go func() { done <- s.session.Wait() }()
+		go func() { done <- s.Session.Wait() }()
 		select {
 		case werr := <-done:
 			dbg.Printf("ssh output EOF; session.Wait: %v", werr)
 			var missing *ssh.ExitMissingError
 			if errors.As(werr, &missing) {
-				err = errConnLost
+				err = terminal.ErrLost
 			}
 		case <-time.After(5 * time.Second):
 			dbg.Printf("ssh output EOF; session.Wait timed out")
@@ -51,31 +52,31 @@ func (s *sshSession) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// keepAlive asks the server for a reply, as OpenSSH's ServerAliveInterval does.
-func (s *sshSession) keepAlive() error {
+// KeepAlive asks the server for a reply, as OpenSSH's ServerAliveInterval does.
+func (s *Session) KeepAlive() error {
 	done := make(chan error, 1)
 	go func() {
 		// Servers answer even requests they don't know (with a failure), which is enough.
-		_, _, err := s.client.SendRequest("keepalive@openssh.com", true, nil)
+		_, _, err := s.Client.SendRequest("keepalive@openssh.com", true, nil)
 		done <- err
 	}()
 	select {
 	case err := <-done:
 		return err
-	case <-time.After(keepAliveTimeout):
-		return errNoReply
+	case <-time.After(terminal.KeepAliveTimeout):
+		return terminal.ErrNoReply
 	}
 }
-func (s *sshSession) Resize(cols, rows int) error { return s.session.WindowChange(rows, cols) }
-func (s *sshSession) Close() error {
-	_ = s.session.Close()
-	err := s.client.Close()
-	closeClients(s.jumps)
+func (s *Session) Resize(cols, rows int) error { return s.Session.WindowChange(rows, cols) }
+func (s *Session) Close() error {
+	_ = s.Session.Close()
+	err := s.Client.Close()
+	CloseClients(s.Jumps)
 	return err
 }
 
-// closeClients closes SSH connections, the last (innermost) one first.
-func closeClients(cs []*ssh.Client) {
+// CloseClients closes SSH connections, the last (innermost) one first.
+func CloseClients(cs []*ssh.Client) {
 	for i := len(cs) - 1; i >= 0; i-- {
 		_ = cs[i].Close()
 	}
@@ -92,7 +93,7 @@ const sshTimeout = 10 * time.Second
 // channel through a jump host) or nil to dial addr. keys are private key
 // files (IdentityFile in ~/.ssh/config) to try before the default ones.
 // ask prompts the user during login (key passphrases); nil cancels prompts.
-func sshLogin(addr, login, pass string, confirm hostKeyConfirmer, ask asker, conn net.Conn, keys []string) (*ssh.Client, error) {
+func sshLogin(addr, login, pass string, confirm hostKeyConfirmer, ask terminal.Asker, conn net.Conn, keys []string) (*ssh.Client, error) {
 	if login == "" {
 		return nil, errors.New("SSH 접속에는 Login이 필요합니다")
 	}
@@ -126,15 +127,15 @@ func sshLogin(addr, login, pass string, confirm hostKeyConfirmer, ask asker, con
 	return ssh.NewClient(c, chans, reqs), nil
 }
 
-// dialSSH opens an SSH shell (see sshLogin for conn, keys and ask).
-func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, ask asker, conn net.Conn, keys []string) (Session, error) {
+// Dial opens an SSH shell (see sshLogin for conn, keys and ask).
+func Dial(req terminal.ConnectRequest, confirm hostKeyConfirmer, ask terminal.Asker, conn net.Conn, keys []string) (terminal.Session, error) {
 	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
 	client, err := sshLogin(addr, req.Login, req.Pass, confirm, ask, conn, keys)
 	if err != nil {
 		return nil, err
 	}
 
-	sess, err := openPty(client, req.Cols, req.Rows, "")
+	sess, err := OpenPty(client, req.Cols, req.Rows, "")
 	if err != nil {
 		client.Close()
 		return nil, err
@@ -143,9 +144,9 @@ func dialSSH(req ConnectRequest, confirm hostKeyConfirmer, ask asker, conn net.C
 	return sess, nil
 }
 
-// openPty starts a session with a terminal on client: the login shell, or
+// OpenPty starts a session with a terminal on client: the login shell, or
 // command when it isn't "". Closing it on failure is left to the caller.
-func openPty(client *ssh.Client, cols, rows int, command string) (*sshSession, error) {
+func OpenPty(client *ssh.Client, cols, rows int, command string) (*Session, error) {
 	session, err := client.NewSession()
 	if err != nil {
 		return nil, err
@@ -178,7 +179,7 @@ func openPty(client *ssh.Client, cols, rows int, command string) (*sshSession, e
 		session.Close()
 		return nil, fmt.Errorf("셸 시작 실패: %w", err)
 	}
-	return &sshSession{client: client, session: session, stdin: stdin, stdout: stdout}, nil
+	return &Session{Client: client, Session: session, stdin: stdin, stdout: stdout}, nil
 }
 
 // knownHosts verifies host keys against ~/.ssh/known_hosts. Unknown hosts are

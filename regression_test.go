@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"choboterm/internal/terminal"
 	"choboterm/internal/version"
 )
 
@@ -102,7 +103,7 @@ func TestTermOpenComesBeforeTheSessionsOutput(t *testing.T) {
 	sess := newPipeSession()
 	tb := a.getTab(7)
 	enc := tb.codec.Set("EUC-KR")
-	tb.start(sess, "telnet", ConnectRequest{Host: "example", Port: 2323})
+	tb.start(sess, "telnet", terminal.ConnectRequest{Host: "example", Port: 2323})
 	defer sess.out.Close()
 	sess.out.Write([]byte("login: "))
 
@@ -172,7 +173,7 @@ func TestPromptRoundTrip(t *testing.T) {
 				p := <-shown
 				a.AnswerPrompt(p.ID, c.values, c.ok)
 			}()
-			vals, ok := a.ask(5, "OTP", "code?", []PromptField{{Label: "Code"}})
+			vals, ok := a.ask(5, "OTP", "code?", []terminal.PromptField{{Label: "Code"}})
 			if ok != c.wantOK || !reflect.DeepEqual(vals, c.want) {
 				t.Fatalf("got %v %v", vals, ok)
 			}
@@ -214,7 +215,7 @@ func TestPromptTimeout(t *testing.T) {
 		names = append(names, name)
 		mu.Unlock()
 	}
-	if _, ok := a.ask(1, "t", "m", []PromptField{{Label: "x"}}); ok {
+	if _, ok := a.ask(1, "t", "m", []terminal.PromptField{{Label: "x"}}); ok {
 		t.Fatal("timed out prompt answered")
 	}
 	mu.Lock()

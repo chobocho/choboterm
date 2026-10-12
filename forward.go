@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/sshconn"
 )
 
 // Forward is one SSH port forwarding rule.
@@ -265,8 +267,8 @@ func (t *tab) tabRules() []*forwardRule {
 
 // sshClient is the tab's SSH connection, or nil.
 func (t *tab) sshClient() *ssh.Client {
-	if s, _ := t.session().(*sshSession); s != nil {
-		return s.client
+	if s, _ := t.session().(*sshconn.Session); s != nil {
+		return s.Client
 	}
 	return nil
 }
@@ -407,11 +409,11 @@ func (a *App) sshTab(tabID int) (*tab, *ssh.Client, error) {
 	if t == nil {
 		return nil, nil, errors.New("연결되어 있지 않습니다")
 	}
-	sess, _ := t.session().(*sshSession)
+	sess, _ := t.session().(*sshconn.Session)
 	if sess == nil {
 		return nil, nil, errors.New("포트 포워딩은 SSH 접속에서만 사용할 수 있습니다")
 	}
-	return t, sess.client, nil
+	return t, sess.Client, nil
 }
 
 // ForwardList returns the forwarding rules of a tab's SSH connection.
@@ -504,12 +506,12 @@ func (t *tab) saveForwards() {
 
 // restoreForwards starts the rules saved for the host of a new SSH
 // connection; those another tab to the server already runs wait on standby.
-func (t *tab) restoreForwards(sess *sshSession, host string, port int) {
+func (t *tab) restoreForwards(sess *sshconn.Session, host string, port int) {
 	t.app.fwdMu.Lock()
 	defer t.app.fwdMu.Unlock()
 	for _, f := range historyForwards(host, port) {
 		if f, err := f.normalize(); err == nil {
-			t.startForward(sess.client, f, t.app.runningElsewhere(t, f))
+			t.startForward(sess.Client, f, t.app.runningElsewhere(t, f))
 		}
 	}
 	t.emit("fwd:changed")

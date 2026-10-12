@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"choboterm/internal/terminal"
 )
 
 func TestConnectLocalShellLinux(t *testing.T) {
@@ -17,7 +19,7 @@ func TestConnectLocalShellLinux(t *testing.T) {
 
 	a := NewApp()
 	o := newTabOutput(a)
-	proto, err := a.Connect(1, ConnectRequest{Host: "bash", Encoding: "EUC-KR", Cols: 80, Rows: 24})
+	proto, err := a.Connect(1, terminal.ConnectRequest{Host: "bash", Encoding: "EUC-KR", Cols: 80, Rows: 24})
 	if err != nil || proto != "local" {
 		t.Fatalf("connect: %q %v", proto, err)
 	}
@@ -38,7 +40,7 @@ func TestConnectLocalShellLinux(t *testing.T) {
 	}
 
 	// Closing the tab ends a shell that is still running.
-	if _, err := a.Connect(2, ConnectRequest{Host: "sh", Cols: 80, Rows: 24}); err != nil {
+	if _, err := a.Connect(2, terminal.ConnectRequest{Host: "sh", Cols: 80, Rows: 24}); err != nil {
 		t.Fatal(err)
 	}
 	a.Send(2, "echo M-$((6*7))\r")

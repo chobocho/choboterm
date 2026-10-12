@@ -11,6 +11,8 @@ import (
 	"syscall"
 
 	"github.com/creack/pty"
+
+	"choboterm/internal/terminal"
 )
 
 // ptySession is a local program (a shell, docker exec) in a pseudo terminal.
@@ -22,7 +24,7 @@ type ptySession struct {
 
 // startPty runs cmdline (shell syntax, see commandLine) in a new pseudo
 // terminal of cols x rows, in dir.
-func startPty(cmdline, dir string, cols, rows int) (Session, error) {
+func startPty(cmdline, dir string, cols, rows int) (terminal.Session, error) {
 	shell := "/bin/sh"
 	if _, err := os.Stat(shell); err != nil {
 		shell = "sh" // Termux keeps shell binaries in $PREFIX/bin, not /bin.

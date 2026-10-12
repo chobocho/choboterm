@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+
+	"choboterm/internal/terminal"
 )
 
 // A serial port opens in a tab like a connection: the Host field names the
@@ -60,7 +62,7 @@ func parseSerial(host string, port int) (serialConfig, error) {
 	if strings.HasPrefix(strings.ToLower(c.Name), "com") {
 		c.Name = strings.ToUpper(c.Name)
 	}
-	if c.Baud == 0 || Protocol(c.Baud) != "" {
+	if c.Baud == 0 || terminal.Protocol(c.Baud) != "" {
 		c.Baud = defaultBaud
 	}
 	for _, w := range f[1:] {
@@ -103,7 +105,7 @@ func (s *serialSession) Close() error {
 }
 
 // connectSerial opens a serial port in the tab.
-func (a *App) connectSerial(tabID int, req ConnectRequest) (string, error) {
+func (a *App) connectSerial(tabID int, req terminal.ConnectRequest) (string, error) {
 	c, err := parseSerial(req.Host, req.Port)
 	if err != nil {
 		return "", err

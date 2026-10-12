@@ -1,4 +1,4 @@
-package main
+package telnet
 
 import (
 	"fmt"
@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"choboterm/internal/terminal"
 )
 
 // Telnet commands and options (RFC 854, 857, 858, 1073, 1091).
@@ -32,7 +34,7 @@ const (
 
 const terminalType = "XTERM"
 
-type telnetSession struct {
+type Session struct {
 	conn net.Conn
 	wmu  sync.Mutex
 
@@ -62,9 +64,9 @@ const (
 	stSB
 )
 
-// dialTelnet opens a Telnet session. conn is an already connected socket
+// Dial opens a Telnet session. conn is an already connected socket
 // (from protocol detection) or nil to dial req.Host:req.Port.
-func dialTelnet(req ConnectRequest, conn net.Conn) (Session, error) {
+func Dial(req terminal.ConnectRequest, conn net.Conn) (terminal.Session, error) {
 	if conn == nil {
 		addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
 		var err error
@@ -72,7 +74,7 @@ func dialTelnet(req ConnectRequest, conn net.Conn) (Session, error) {
 			return nil, fmt.Errorf("Telnet 접속 실패: %w", err)
 		}
 	}
-	return &telnetSession{
+	return &Session{
 		conn:          conn,
 		cols:          req.Cols,
 		rows:          req.Rows,
@@ -84,23 +86,23 @@ func dialTelnet(req ConnectRequest, conn net.Conn) (Session, error) {
 	}, nil
 }
 
-func (t *telnetSession) Close() error { return t.conn.Close() }
+func (t *Session) Close() error { return t.conn.Close() }
 
-// keepAlive sends a Telnet NOP so idle connections aren't dropped by routers
+// KeepAlive sends a Telnet NOP so idle connections aren't dropped by routers
 // and a dead connection shows up as a write error.
-func (t *telnetSession) keepAlive() error {
+func (t *Session) KeepAlive() error {
 	t.wmu.Lock()
 	defer t.wmu.Unlock()
-	_ = t.conn.SetWriteDeadline(time.Now().Add(keepAliveTimeout))
+	_ = t.conn.SetWriteDeadline(time.Now().Add(terminal.KeepAliveTimeout))
 	_, err := t.conn.Write([]byte{tnIAC, tnNOP})
 	_ = t.conn.SetWriteDeadline(time.Time{})
-	if err != nil && isTimeout(err) {
-		err = errNoReply
+	if err != nil && terminal.IsTimeout(err) {
+		err = terminal.ErrNoReply
 	}
 	return err
 }
 
-func (t *telnetSession) rawWrite(p []byte) error {
+func (t *Session) rawWrite(p []byte) error {
 	t.wmu.Lock()
 	defer t.wmu.Unlock()
 	_, err := t.conn.Write(p)
@@ -108,7 +110,7 @@ func (t *telnetSession) rawWrite(p []byte) error {
 }
 
 // Write escapes IAC bytes and converts a bare CR to CR NUL as NVT requires.
-func (t *telnetSession) Write(p []byte) (int, error) {
+func (t *Session) Write(p []byte) (int, error) {
 	t.wmu.Lock()
 	binary := t.binary
 	t.wmu.Unlock()
@@ -125,7 +127,7 @@ func (t *telnetSession) Write(p []byte) (int, error) {
 	return len(p), t.rawWrite(out)
 }
 
-func (t *telnetSession) Resize(cols, rows int) error {
+func (t *Session) Resize(cols, rows int) error {
 	t.wmu.Lock()
 	t.cols, t.rows = cols, rows
 	naws := t.naws
@@ -136,13 +138,13 @@ func (t *telnetSession) Resize(cols, rows int) error {
 	return t.sendNAWS()
 }
 
-func (t *telnetSession) setBinary(on bool) {
+func (t *Session) setBinary(on bool) {
 	t.wmu.Lock()
 	t.binary = on
 	t.wmu.Unlock()
 }
 
-func (t *telnetSession) sendNAWS() error {
+func (t *Session) sendNAWS() error {
 	t.wmu.Lock()
 	cols, rows := t.cols, t.rows
 	t.wmu.Unlock()
@@ -163,7 +165,7 @@ func (t *telnetSession) sendNAWS() error {
 }
 
 // Read returns terminal data with telnet negotiation stripped out.
-func (t *telnetSession) Read(p []byte) (int, error) {
+func (t *Session) Read(p []byte) (int, error) {
 	for len(t.pend) == 0 {
 		buf := make([]byte, len(p))
 		n, err := t.conn.Read(buf)
@@ -183,7 +185,7 @@ func (t *telnetSession) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-func (t *telnetSession) parse(in []byte) []byte {
+func (t *Session) parse(in []byte) []byte {
 	out := make([]byte, 0, len(in))
 	for _, b := range in {
 		switch t.state {
@@ -232,7 +234,7 @@ func (t *telnetSession) parse(in []byte) []byte {
 	return out
 }
 
-func (t *telnetSession) negotiate(cmd, opt byte) {
+func (t *Session) negotiate(cmd, opt byte) {
 	reply := func(c byte) { _ = t.rawWrite([]byte{tnIAC, c, opt}) }
 	switch cmd {
 	case tnDO:
@@ -268,7 +270,7 @@ func (t *telnetSession) negotiate(cmd, opt byte) {
 	}
 }
 
-func (t *telnetSession) subnegotiate(sb []byte) {
+func (t *Session) subnegotiate(sb []byte) {
 	if len(sb) >= 2 && sb[0] == optTType && sb[1] == ttypeSEND {
 		msg := append([]byte{tnIAC, tnSB, optTType, ttypeIS}, terminalType...)
 		msg = append(msg, tnIAC, tnSE)
@@ -277,7 +279,7 @@ func (t *telnetSession) subnegotiate(sb []byte) {
 }
 
 // autoLogin answers the first login/password prompts with the dialog values.
-func (t *telnetSession) autoLogin(data []byte) {
+func (t *Session) autoLogin(data []byte) {
 	if t.sentLogin && t.sentPass {
 		return
 	}

@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"choboterm/internal/terminal"
 )
 
 // greetServer accepts one connection and writes greeting (in two pieces, to
@@ -39,9 +41,9 @@ func greetServer(t *testing.T, greeting string) string {
 }
 
 func TestDialDetect(t *testing.T) {
-	saved := detectWait
-	detectWait = 300 * time.Millisecond
-	defer func() { detectWait = saved }()
+	saved := terminal.DetectWait
+	terminal.DetectWait = 300 * time.Millisecond
+	defer func() { terminal.DetectWait = saved }()
 
 	for _, c := range []struct {
 		greeting, want string
@@ -53,7 +55,7 @@ func TestDialDetect(t *testing.T) {
 		{"Welcome to the BBS\r\nlogin: ", "telnet"},
 		{"", "telnet"}, // silent server
 	} {
-		conn, proto, err := dialDetect(greetServer(t, c.greeting))
+		conn, proto, err := terminal.DialDetect(greetServer(t, c.greeting))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -138,7 +140,7 @@ func TestLiveSSH(t *testing.T) {
 	for _, ch := range portStr {
 		port = port*10 + int(ch-'0')
 	}
-	proto, err := a.Connect(1, ConnectRequest{
+	proto, err := a.Connect(1, terminal.ConnectRequest{
 		Host: host, Port: port,
 		Login: os.Getenv("CHOBOTERM_SSH_USER"), Pass: os.Getenv("CHOBOTERM_SSH_PASS"),
 		Cols: 100, Rows: 30,

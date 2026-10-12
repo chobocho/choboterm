@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"choboterm/internal/terminal"
 )
 
 func TestParseSerial(t *testing.T) {
@@ -60,7 +62,7 @@ func TestConnectSerialMissingPort(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		name = "/dev/ttyUSB250"
 	}
-	_, err := a.Connect(1, ConnectRequest{Host: name, Port: 9600})
+	_, err := a.Connect(1, terminal.ConnectRequest{Host: name, Port: 9600})
 	if err == nil || !strings.Contains(err.Error(), "포트가 없습니다") {
 		t.Fatalf("Connect(%s) error = %v, want a missing port", name, err)
 	}

@@ -1,4 +1,4 @@
-package main
+package sshconn
 
 import (
 	"errors"
@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 
 	"choboterm/internal/dbg"
+	"choboterm/internal/terminal"
 )
 
 // errKeyCancelled means the user cancelled the passphrase prompt of a key the server accepts.
@@ -48,7 +49,7 @@ func (a *sshAuth) Close() {
 // ones in ~/.ssh). A file key protected by a passphrase is offered too, and
 // the passphrase is asked only when the server accepts that key. After the
 // keys come the password and keyboard-interactive (see interactive).
-func newSSHAuth(pass string, keys []string, ask asker) *sshAuth {
+func newSSHAuth(pass string, keys []string, ask terminal.Asker) *sshAuth {
 	a := &sshAuth{}
 	var signers []ssh.Signer
 	have := map[string]bool{} // public keys already offered
@@ -96,7 +97,7 @@ func newSSHAuth(pass string, keys []string, ask asker) *sshAuth {
 	if pass == "" && ask != nil {
 		// Servers taking only "password": ask for it, as ssh does.
 		a.methods = append(a.methods, ssh.PasswordCallback(func() (string, error) {
-			vals, ok := ask("SSH 로그인", "", []PromptField{{Label: "비밀번호", Secret: true}})
+			vals, ok := ask("SSH 로그인", "", []terminal.PromptField{{Label: "비밀번호", Secret: true}})
 			if !ok {
 				return "", errLoginCancelled
 			}
@@ -113,7 +114,7 @@ var errLoginCancelled = errors.New("로그인을 취소했습니다")
 // question that asks for a password gets the password from the Connect
 // dialog; anything else (a one-time code, a second password, Duo...) is
 // shown to the user as the server wrote it.
-func interactive(pass string, ask asker) ssh.KeyboardInteractiveChallenge {
+func interactive(pass string, ask terminal.Asker) ssh.KeyboardInteractiveChallenge {
 	passUsed := pass == ""
 	return func(name, instruction string, questions []string, echos []bool) ([]string, error) {
 		if len(questions) == 0 {
@@ -126,9 +127,9 @@ func interactive(pass string, ask asker) ssh.KeyboardInteractiveChallenge {
 		if ask == nil {
 			return nil, errLoginCancelled
 		}
-		fields := make([]PromptField, len(questions))
+		fields := make([]terminal.PromptField, len(questions))
 		for i, q := range questions {
-			fields[i] = PromptField{Label: strings.TrimSpace(q), Secret: !echos[i]}
+			fields[i] = terminal.PromptField{Label: strings.TrimSpace(q), Secret: !echos[i]}
 		}
 		title := strings.TrimSpace(name)
 		if title == "" {
@@ -174,7 +175,7 @@ func keyFiles(keys []string) []string {
 }
 
 // loadKeyFile returns a signer for a private key file, or nil if it can't be used.
-func loadKeyFile(path string, ask asker) ssh.Signer {
+func loadKeyFile(path string, ask terminal.Asker) ssh.Signer {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil
@@ -221,7 +222,7 @@ type lockedKey struct {
 	path string
 	data []byte
 	pub  ssh.PublicKey
-	ask  asker
+	ask  terminal.Asker
 
 	mu     sync.Mutex
 	signer ssh.Signer
@@ -262,7 +263,7 @@ func (k *lockedKey) unlock() (ssh.Signer, error) {
 	}
 	msg := fmt.Sprintf("%s 키의 암호를 입력하세요.", k.path)
 	for try := 0; try < 3; try++ {
-		vals, ok := k.ask("SSH 키 암호", msg, []PromptField{{Label: "암호", Secret: true}})
+		vals, ok := k.ask("SSH 키 암호", msg, []terminal.PromptField{{Label: "암호", Secret: true}})
 		if !ok {
 			return nil, errKeyCancelled
 		}

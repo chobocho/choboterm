@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/sshconn"
 )
 
 // listTree returns all files and folders under root as slash paths.
@@ -73,7 +75,7 @@ func TestFileOperationsOverSFTP(t *testing.T) {
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
 	a.hooks.downloadDir = downloads
-	a.getTab(1).sess = &sshSession{client: client}
+	a.getTab(1).sess = &sshconn.Session{Client: client}
 	res, err := a.FileOpen(1)
 	if err != nil || res.Protocol != "SFTP" {
 		t.Fatalf("open: %+v, %v", res, err)
@@ -179,7 +181,7 @@ func TestFileStartDir(t *testing.T) {
 
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
-	a.getTab(1).sess = &sshSession{client: client}
+	a.getTab(1).sess = &sshconn.Session{Client: client}
 	res, err := a.FileOpen(1)
 	if err != nil {
 		t.Fatal(err)

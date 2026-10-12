@@ -1,4 +1,4 @@
-package main
+package sshconn
 
 // ProxyJump: reaching an SSH server through one or more jump hosts
 // (bastions), as "ssh -J" and ProxyJump in ~/.ssh/config do. Each hop logs in
@@ -13,6 +13,8 @@ import (
 
 	"github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/terminal"
 )
 
 // jumpHost is one hop of a ProxyJump list.
@@ -23,8 +25,8 @@ type jumpHost struct {
 	keys  []string
 }
 
-// sshCommandJump returns the -J value of an ssh command line ("" if none).
-func sshCommandJump(s string) string {
+// CommandJump returns the -J value of an ssh command line ("" if none).
+func CommandJump(s string) string {
 	f := strings.Fields(s)
 	if len(f) < 2 || !strings.EqualFold(strings.TrimSuffix(f[0], ".exe"), "ssh") {
 		return ""
@@ -49,12 +51,12 @@ func sshCommandJump(s string) string {
 	return ""
 }
 
-// proxyJumpFor returns the jump list for host: the -J of an ssh command line
+// ProxyJumpFor returns the jump list for host: the -J of an ssh command line
 // first, then ProxyJump in ~/.ssh/config. "none" means no jump.
-func proxyJumpFor(cfg *ssh_config.Config, host, cmdJump string) string {
+func ProxyJumpFor(cfg *ssh_config.Config, host, cmdJump string) string {
 	j := strings.TrimSpace(cmdJump)
 	if j == "" {
-		j = strings.TrimSpace(configGet(cfg, host, "ProxyJump"))
+		j = strings.TrimSpace(ConfigGet(cfg, host, "ProxyJump"))
 	}
 	if strings.EqualFold(j, "none") {
 		return ""
@@ -62,10 +64,10 @@ func proxyJumpFor(cfg *ssh_config.Config, host, cmdJump string) string {
 	return j
 }
 
-// parseJumps splits "[user@]host[:port],..." into hops. A host may be an
+// ParseJumps splits "[user@]host[:port],..." into hops. A host may be an
 // alias of ~/.ssh/config; its HostName, User, Port and IdentityFile apply.
 // login is used for hops that name no user anywhere.
-func parseJumps(cfg *ssh_config.Config, spec, login string) ([]jumpHost, error) {
+func ParseJumps(cfg *ssh_config.Config, spec, login string) ([]jumpHost, error) {
 	var hops []jumpHost
 	for _, part := range strings.Split(spec, ",") {
 		part = strings.TrimSpace(part)
@@ -89,33 +91,33 @@ func parseJumps(cfg *ssh_config.Config, spec, login string) ([]jumpHost, error) 
 			return nil, fmt.Errorf("점프 호스트가 올바르지 않습니다: %q", spec)
 		}
 		if user == "" {
-			user = configGet(cfg, host, "User")
+			user = ConfigGet(cfg, host, "User")
 		}
 		if user == "" {
 			user = login
 		}
 		if port == 0 {
-			port, _ = strconv.Atoi(configGet(cfg, host, "Port"))
+			port, _ = strconv.Atoi(ConfigGet(cfg, host, "Port"))
 		}
 		if port <= 0 {
 			port = 22
 		}
 		hops = append(hops, jumpHost{
 			name:  host,
-			addr:  net.JoinHostPort(sshDialHost(cfg, host), strconv.Itoa(port)),
+			addr:  net.JoinHostPort(DialHost(cfg, host), strconv.Itoa(port)),
 			login: user,
-			keys:  sshIdentityFiles(cfg, host, user),
+			keys:  IdentityFiles(cfg, host, user),
 		})
 	}
 	return hops, nil
 }
 
-// dialJumps logs in to each hop in turn and returns the connections and a
+// DialJumps logs in to each hop in turn and returns the connections and a
 // channel from the last one to target (host:port).
-func dialJumps(hops []jumpHost, target string, confirm hostKeyConfirmer, ask asker) ([]*ssh.Client, net.Conn, error) {
+func DialJumps(hops []jumpHost, target string, confirm hostKeyConfirmer, ask terminal.Asker) ([]*ssh.Client, net.Conn, error) {
 	var clients []*ssh.Client
 	fail := func(err error) ([]*ssh.Client, net.Conn, error) {
-		closeClients(clients)
+		CloseClients(clients)
 		return nil, nil, err
 	}
 	for _, h := range hops {
@@ -127,9 +129,9 @@ func dialJumps(hops []jumpHost, target string, confirm hostKeyConfirmer, ask ask
 			}
 			conn = c
 		}
-		var hopAsk asker
+		var hopAsk terminal.Asker
 		if ask != nil {
-			hopAsk = func(title, message string, fields []PromptField) ([]string, bool) {
+			hopAsk = func(title, message string, fields []terminal.PromptField) ([]string, bool) {
 				return ask(fmt.Sprintf("%s (점프 호스트 %s@%s)", title, h.login, h.name), message, fields)
 			}
 		}

@@ -13,6 +13,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"choboterm/internal/terminal"
 )
 
 // tabOutput collects what the app sends to each tab.
@@ -119,7 +121,7 @@ func TestDockerLive(t *testing.T) {
 	a := NewApp()
 	o := newTabOutput(a)
 	a.hooks.confirmKey = func(string, string) bool { return true }
-	if p, err := a.Connect(1, ConnectRequest{Host: "dockertest", Port: 22, Cols: 80, Rows: 24}); err != nil || p != "ssh" {
+	if p, err := a.Connect(1, terminal.ConnectRequest{Host: "dockertest", Port: 22, Cols: 80, Rows: 24}); err != nil || p != "ssh" {
 		t.Fatalf("connect: %q %v", p, err)
 	}
 	defer a.CloseTab(1)

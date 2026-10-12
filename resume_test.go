@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/sshconn"
 )
 
 // openSFTPTab connects tab 1 of a new App to an SFTP server serving root.
@@ -22,7 +24,7 @@ func openSFTPTab(t *testing.T, root string) (*App, string) {
 	t.Cleanup(func() { client.Close() })
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
-	a.getTab(1).sess = &sshSession{client: client}
+	a.getTab(1).sess = &sshconn.Session{Client: client}
 	res, err := a.FileOpen(1)
 	if err != nil {
 		t.Fatal(err)

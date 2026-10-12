@@ -11,10 +11,12 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"choboterm/internal/terminal"
 )
 
 // readUntil reads s until its output contains want or ends.
-func readUntil(t *testing.T, s Session, want string) (string, error) {
+func readUntil(t *testing.T, s terminal.Session, want string) (string, error) {
 	t.Helper()
 	var out bytes.Buffer
 	done := make(chan error, 1)
@@ -99,7 +101,7 @@ func TestConnectLocalShell(t *testing.T) {
 			closed <- data[1].(string)
 		}
 	}
-	proto, err := a.Connect(1, ConnectRequest{Host: "cmd", Encoding: "EUC-KR", Cols: 80, Rows: 24})
+	proto, err := a.Connect(1, terminal.ConnectRequest{Host: "cmd", Encoding: "EUC-KR", Cols: 80, Rows: 24})
 	if err != nil || proto != "local" {
 		t.Fatalf("connect: %q %v", proto, err)
 	}

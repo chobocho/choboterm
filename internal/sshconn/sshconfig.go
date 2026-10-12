@@ -1,4 +1,4 @@
-package main
+package sshconn
 
 import (
 	"os"
@@ -22,8 +22,8 @@ type SSHTarget struct {
 	ConfigJump string `json:"configJump"` // ProxyJump of the config entry
 }
 
-// sshConfigPath is ~/.ssh/config (replaceable in tests).
-var sshConfigPath = func() string {
+// ConfigPath is ~/.ssh/config (replaceable in tests).
+var ConfigPath = func() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""
@@ -31,9 +31,9 @@ var sshConfigPath = func() string {
 	return filepath.Join(home, ".ssh", "config")
 }
 
-// loadSSHConfig reads ~/.ssh/config, or returns nil when there is none.
-func loadSSHConfig() *ssh_config.Config {
-	p := sshConfigPath()
+// LoadConfig reads ~/.ssh/config, or returns nil when there is none.
+func LoadConfig() *ssh_config.Config {
+	p := ConfigPath()
 	if p == "" {
 		return nil
 	}
@@ -49,9 +49,9 @@ func loadSSHConfig() *ssh_config.Config {
 	return cfg
 }
 
-// configAliases returns the plain names of the Host entries (not patterns
+// ConfigAliases returns the plain names of the Host entries (not patterns
 // like "*.corp" or "!x"), in file order.
-func configAliases(cfg *ssh_config.Config) []string {
+func ConfigAliases(cfg *ssh_config.Config) []string {
 	var names []string
 	seen := map[string]bool{}
 	if cfg == nil {
@@ -71,7 +71,7 @@ func configAliases(cfg *ssh_config.Config) []string {
 }
 
 func isAlias(cfg *ssh_config.Config, name string) bool {
-	for _, a := range configAliases(cfg) {
+	for _, a := range ConfigAliases(cfg) {
 		if a == name {
 			return true
 		}
@@ -79,7 +79,7 @@ func isAlias(cfg *ssh_config.Config, name string) bool {
 	return false
 }
 
-func configGet(cfg *ssh_config.Config, alias, key string) string {
+func ConfigGet(cfg *ssh_config.Config, alias, key string) string {
 	if cfg == nil {
 		return ""
 	}
@@ -108,9 +108,9 @@ func expandTokens(s, alias, remoteUser string) string {
 // sshArgFlags are the ssh options that take an argument.
 const sshArgFlags = "BbcDEeFIiJLlmOoPpQRSWw"
 
-// parseSSHCommand splits "ssh [options] [user@]host" into its parts. ok is
+// ParseCommand splits "ssh [options] [user@]host" into its parts. ok is
 // false when s is not an ssh command line.
-func parseSSHCommand(s string) (host, login string, port int, ok bool) {
+func ParseCommand(s string) (host, login string, port int, ok bool) {
 	f := strings.Fields(s)
 	if len(f) < 2 || !strings.EqualFold(strings.TrimSuffix(f[0], ".exe"), "ssh") {
 		return "", "", 0, false
@@ -145,51 +145,51 @@ func parseSSHCommand(s string) (host, login string, port int, ok bool) {
 	return host, login, port, host != ""
 }
 
-// lookupSSHTarget interprets the Host field: an ssh command line, a
+// LookupTarget interprets the Host field: an ssh command line, a
 // ~/.ssh/config alias, or "user@host". Anything else comes back unchanged
 // with Port 0.
-func lookupSSHTarget(cfg *ssh_config.Config, input string) SSHTarget {
+func LookupTarget(cfg *ssh_config.Config, input string) SSHTarget {
 	input = strings.TrimSpace(input)
-	host, login, port, isCmd := parseSSHCommand(input)
+	host, login, port, isCmd := ParseCommand(input)
 	if !isCmd {
 		host = input
 		if at := strings.LastIndex(host, "@"); at > 0 && !strings.Contains(host, " ") {
 			login, host = host[:at], host[at+1:]
 		}
 	}
-	t := SSHTarget{Host: host, Port: port, Login: login, FromConfig: isAlias(cfg, host), Jump: sshCommandJump(input)}
+	t := SSHTarget{Host: host, Port: port, Login: login, FromConfig: isAlias(cfg, host), Jump: CommandJump(input)}
 	if !isCmd && !t.FromConfig {
 		return t // a plain host: Telnet/FTP hosts must not pick up "Host *" settings
 	}
 	if t.Login == "" {
-		t.Login = configGet(cfg, host, "User")
+		t.Login = ConfigGet(cfg, host, "User")
 	}
 	if t.Port == 0 {
-		t.Port, _ = strconv.Atoi(configGet(cfg, host, "Port"))
+		t.Port, _ = strconv.Atoi(ConfigGet(cfg, host, "Port"))
 	}
 	if t.Port <= 0 {
 		t.Port = 22
 	}
-	if hn := configGet(cfg, host, "HostName"); hn != "" && t.FromConfig {
+	if hn := ConfigGet(cfg, host, "HostName"); hn != "" && t.FromConfig {
 		t.HostName = expandTokens(hn, host, t.Login)
 	}
 	if t.FromConfig {
-		t.ConfigJump = configGet(cfg, host, "ProxyJump")
+		t.ConfigJump = ConfigGet(cfg, host, "ProxyJump")
 	}
 	return t
 }
 
-// sshDialHost returns the address to connect to for a Host field value: the
+// DialHost returns the address to connect to for a Host field value: the
 // HostName of a ~/.ssh/config entry, or the name itself.
-func sshDialHost(cfg *ssh_config.Config, host string) string {
-	if hn := configGet(cfg, host, "HostName"); hn != "" {
+func DialHost(cfg *ssh_config.Config, host string) string {
+	if hn := ConfigGet(cfg, host, "HostName"); hn != "" {
 		return expandTokens(hn, host, "")
 	}
 	return host
 }
 
-// sshIdentityFiles returns the IdentityFile entries that apply to host.
-func sshIdentityFiles(cfg *ssh_config.Config, host, login string) []string {
+// IdentityFiles returns the IdentityFile entries that apply to host.
+func IdentityFiles(cfg *ssh_config.Config, host, login string) []string {
 	if cfg == nil {
 		return nil
 	}
@@ -206,20 +206,4 @@ type SSHConfigHost struct {
 	HostName string `json:"hostName"`
 	Port     int    `json:"port"`
 	Login    string `json:"login"`
-}
-
-// GetSSHConfigHosts lists the Host entries of ~/.ssh/config.
-func (a *App) GetSSHConfigHosts() []SSHConfigHost {
-	cfg := loadSSHConfig()
-	var out []SSHConfigHost
-	for _, alias := range configAliases(cfg) {
-		t := lookupSSHTarget(cfg, alias)
-		out = append(out, SSHConfigHost{Host: alias, HostName: t.HostName, Port: t.Port, Login: t.Login})
-	}
-	return out
-}
-
-// LookupSSH interprets what was typed in the Host field (see lookupSSHTarget).
-func (a *App) LookupSSH(input string) SSHTarget {
-	return lookupSSHTarget(loadSSHConfig(), input)
 }

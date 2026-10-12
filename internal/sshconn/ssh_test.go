@@ -1,19 +1,19 @@
-package main
+package sshconn
 
 import (
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"net"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
+
+	"choboterm/internal/sshconn/sshtest"
+	"choboterm/internal/terminal"
 )
 
 // startShellServer runs an SSH server with the given host keys that accepts
@@ -69,15 +69,6 @@ func serveShell(t *testing.T, cfg *ssh.ServerConfig, hostKeys ...ssh.Signer) str
 	return ln.Addr().String()
 }
 
-func ed25519Signer(t *testing.T) ssh.Signer {
-	_, priv, _ := ed25519.GenerateKey(rand.Reader)
-	s, err := ssh.NewSignerFromKey(priv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return s
-}
-
 func ecdsaSigner(t *testing.T) ssh.Signer {
 	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	s, err := ssh.NewSignerFromKey(priv)
@@ -87,25 +78,10 @@ func ecdsaSigner(t *testing.T) ssh.Signer {
 	return s
 }
 
-// useKnownHosts points the user profile at a temp dir whose known_hosts
-// trusts key for addr.
-func useKnownHosts(t *testing.T, addr string, key ssh.PublicKey) string {
-	home := t.TempDir()
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("HOME", home)
-	os.Mkdir(filepath.Join(home, ".ssh"), 0o700)
-	path := filepath.Join(home, ".ssh", "known_hosts")
-	line := knownhosts.Line([]string{knownhosts.Normalize(addr)}, key)
-	if err := os.WriteFile(path, []byte(line+"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return path
-}
-
-func dialTestSSH(t *testing.T, addr string) (Session, error) {
+func dialTestSSH(t *testing.T, addr string) (terminal.Session, error) {
 	host, portStr, _ := net.SplitHostPort(addr)
 	port, _ := strconv.Atoi(portStr)
-	return dialSSH(ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24},
+	return Dial(terminal.ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24},
 		func(string, string) bool { t.Fatal("unexpected host key prompt"); return false }, nil, nil, nil)
 }
 
@@ -113,9 +89,9 @@ func dialTestSSH(t *testing.T, addr string) (Session, error) {
 // (e.g. written by OpenSSH). The Go library prefers ECDSA, which used to be
 // reported as a changed key.
 func TestKnownHostsOtherKeyType(t *testing.T) {
-	ed := ed25519Signer(t)
+	ed := sshtest.Ed25519Signer(t)
 	addr := startShellServer(t, ecdsaSigner(t), ed)
-	useKnownHosts(t, addr, ed.PublicKey())
+	sshtest.UseKnownHosts(t, addr, ed.PublicKey())
 
 	sess, err := dialTestSSH(t, addr)
 	if err != nil {
@@ -125,8 +101,8 @@ func TestKnownHostsOtherKeyType(t *testing.T) {
 }
 
 func TestKnownHostsChangedKey(t *testing.T) {
-	addr := startShellServer(t, ed25519Signer(t))
-	path := useKnownHosts(t, addr, ed25519Signer(t).PublicKey()) // a different key
+	addr := startShellServer(t, sshtest.Ed25519Signer(t))
+	path := sshtest.UseKnownHosts(t, addr, sshtest.Ed25519Signer(t).PublicKey()) // a different key
 
 	_, err := dialTestSSH(t, addr)
 	if err == nil {

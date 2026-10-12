@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/sshconn"
 )
 
 func TestParseLsLine(t *testing.T) {
@@ -117,7 +119,7 @@ func TestSCPFallback(t *testing.T) {
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
 	t1 := a.getTab(1)
-	t1.sess = &sshSession{client: client}
+	t1.sess = &sshconn.Session{Client: client}
 	res, err := a.FileOpen(1)
 	if err != nil {
 		t.Fatal(err)

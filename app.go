@@ -21,26 +21,11 @@ import (
 	"choboterm/internal/dbg"
 	"choboterm/internal/i18n"
 	"choboterm/internal/osutil"
+	"choboterm/internal/sshconn"
+	"choboterm/internal/telnet"
+	"choboterm/internal/terminal"
 	"choboterm/internal/version"
 )
-
-// Session is a live terminal connection (SSH or Telnet).
-type Session interface {
-	io.Reader
-	Write(p []byte) (int, error)
-	Resize(cols, rows int) error
-	Close() error
-}
-
-// errConnLost means the connection broke instead of ending normally
-// (e.g. the shell exited); the frontend may reconnect automatically.
-var errConnLost = errors.New("네트워크 연결이 끊어졌습니다")
-
-// errNoReply is a keepalive that got no answer in time.
-var errNoReply = errors.New("응답이 없습니다")
-
-// keepAliveTimeout is how long one keepalive may wait for an answer.
-var keepAliveTimeout = 15 * time.Second
 
 // keepAliveMisses is how many keepalives in a row may fail before the
 // connection is considered dead and closed.
@@ -48,24 +33,7 @@ const keepAliveMisses = 3
 
 // keepAliver is a session that can check its connection is alive.
 type keepAliver interface {
-	keepAlive() error
-}
-
-func isTimeout(err error) bool {
-	var ne net.Error
-	return errors.As(err, &ne) && ne.Timeout()
-}
-
-// ConnectRequest carries the values from the Connect dialog.
-type ConnectRequest struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Login    string `json:"login"`
-	Pass     string `json:"pass"`
-	Encoding string `json:"encoding"`
-	Jump     string `json:"jump"` // SSH jump hosts (ssh -J); "" = ProxyJump of ~/.ssh/config, "none" = none
-	Cols     int    `json:"cols"`
-	Rows     int    `json:"rows"`
+	KeepAlive() error
 }
 
 // App is what the page calls (the methods Wails binds). The desktop window
@@ -104,7 +72,7 @@ type tab struct {
 	id    int
 	app   *App
 	mu    sync.Mutex
-	sess  Session
+	sess  terminal.Session
 	codec *codec.Codec
 	files fileState
 	zm    zmodemState
@@ -282,31 +250,17 @@ func (t *tab) emitOutput(out []byte) {
 	t.emit("term:data", base64.StdEncoding.EncodeToString(out))
 }
 
-func (t *tab) session() Session {
+func (t *tab) session() terminal.Session {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.sess
-}
-
-// Protocol returns the protocol of a well-known port ("ssh" 22, "ftp" 21,
-// "telnet" 23), or "" when it must be detected from the server greeting.
-func Protocol(port int) string {
-	switch port {
-	case 22:
-		return "ssh"
-	case 21:
-		return "ftp"
-	case 23:
-		return "telnet"
-	}
-	return ""
 }
 
 // Connect opens a session in the given tab and returns the protocol used
 // ("ssh", "telnet", "ftp", "local" or "serial"). Ports 22/21/23 decide the protocol directly;
 // for other ports it is detected from the server greeting (e.g. SSH on 8022).
 // An existing connection in that tab is closed first.
-func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
+func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 	req.Host = strings.TrimSpace(req.Host)
 	if req.Host == "" {
 		return "", errors.New("Host를 입력하세요")
@@ -326,46 +280,46 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 
 	// "ssh [-p port] [user@]name" and names from ~/.ssh/config: req keeps
 	// the name (tab title, history), dial holds the address to connect to.
-	cfg := loadSSHConfig()
-	if j := sshCommandJump(req.Host); j != "" {
+	cfg := sshconn.LoadConfig()
+	if j := sshconn.CommandJump(req.Host); j != "" {
 		req.Jump = j // ssh -J on the command line
 	}
-	if _, _, _, isCmd := parseSSHCommand(req.Host); isCmd {
-		st := lookupSSHTarget(cfg, req.Host)
+	if _, _, _, isCmd := sshconn.ParseCommand(req.Host); isCmd {
+		st := sshconn.LookupTarget(cfg, req.Host)
 		req.Host, req.Port = st.Host, st.Port
 		if st.Login != "" {
 			req.Login = st.Login
 		}
 	}
 	dial := req
-	dial.Host = sshDialHost(cfg, req.Host)
+	dial.Host = sshconn.DialHost(cfg, req.Host)
 
 	t := a.getTab(tabID)
 	t.disconnect()
 
-	proto := Protocol(req.Port)
+	proto := terminal.Protocol(req.Port)
 	var (
 		conn  net.Conn
 		jumps []*ssh.Client
 	)
 	// Through jump hosts (ssh -J, ProxyJump): only SSH makes sense, and the
 	// target may not be reachable from here, so it isn't probed first.
-	if spec := proxyJumpFor(cfg, req.Host, req.Jump); spec != "" && (proto == "" || proto == "ssh") {
+	if spec := sshconn.ProxyJumpFor(cfg, req.Host, req.Jump); spec != "" && (proto == "" || proto == "ssh") {
 		proto = "ssh"
 		if dial.Login == "" {
-			dial.Login = configGet(cfg, req.Host, "User")
+			dial.Login = sshconn.ConfigGet(cfg, req.Host, "User")
 		}
-		hops, err := parseJumps(cfg, spec, dial.Login)
+		hops, err := sshconn.ParseJumps(cfg, spec, dial.Login)
 		if err != nil {
 			return "", err
 		}
 		target := net.JoinHostPort(dial.Host, strconv.Itoa(req.Port))
-		if jumps, conn, err = dialJumps(hops, target, a.hostKeyConfirmer(tabID), a.asker(tabID)); err != nil {
+		if jumps, conn, err = sshconn.DialJumps(hops, target, a.hostKeyConfirmer(tabID), a.asker(tabID)); err != nil {
 			return "", err
 		}
 	}
 	if proto == "" {
-		c, p, err := dialDetect(net.JoinHostPort(dial.Host, strconv.Itoa(req.Port)))
+		c, p, err := terminal.DialDetect(net.JoinHostPort(dial.Host, strconv.Itoa(req.Port)))
 		if err != nil {
 			return "", fmt.Errorf("접속 실패: %w", err)
 		}
@@ -386,21 +340,21 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 	}
 
 	var (
-		sess Session
+		sess terminal.Session
 		err  error
 	)
 	if proto == "ssh" {
 		if dial.Login == "" {
-			dial.Login = configGet(cfg, req.Host, "User")
+			dial.Login = sshconn.ConfigGet(cfg, req.Host, "User")
 		}
-		sess, err = dialSSH(dial, a.hostKeyConfirmer(tabID), a.asker(tabID), conn, sshIdentityFiles(cfg, req.Host, dial.Login))
+		sess, err = sshconn.Dial(dial, a.hostKeyConfirmer(tabID), a.asker(tabID), conn, sshconn.IdentityFiles(cfg, req.Host, dial.Login))
 		if err != nil {
-			closeClients(jumps)
+			sshconn.CloseClients(jumps)
 		} else {
-			sess.(*sshSession).jumps = jumps
+			sess.(*sshconn.Session).Jumps = jumps
 		}
 	} else {
-		sess, err = dialTelnet(dial, conn)
+		sess, err = telnet.Dial(dial, conn)
 	}
 	if err != nil {
 		return "", err
@@ -419,7 +373,7 @@ func (a *App) Connect(tabID int, req ConnectRequest) (string, error) {
 
 // connectLocal runs a local shell (cmd, PowerShell, WSL) in the tab.
 // The pseudo console always speaks UTF-8.
-func (a *App) connectLocal(tabID int, req ConnectRequest, cmdline string) (string, error) {
+func (a *App) connectLocal(tabID int, req terminal.ConnectRequest, cmdline string) (string, error) {
 	t := a.getTab(tabID)
 	t.disconnect()
 	sess, err := startPty(cmdline, localHome(), req.Cols, req.Rows)
@@ -434,7 +388,7 @@ func (a *App) connectLocal(tabID int, req ConnectRequest, cmdline string) (strin
 }
 
 // start makes sess the tab's session and starts reading it.
-func (t *tab) start(sess Session, proto string, req ConnectRequest) {
+func (t *tab) start(sess terminal.Session, proto string, req terminal.ConnectRequest) {
 	t.mu.Lock()
 	t.sess = sess
 	t.host, t.port = req.Host, req.Port
@@ -445,7 +399,7 @@ func (t *tab) start(sess Session, proto string, req ConnectRequest) {
 	t.emit("term:open", t.codec.Name())
 	go t.pump(sess)
 	go t.keepAlive(sess, time.Duration(config.Load().KeepAlive)*time.Second)
-	if s, ok := sess.(*sshSession); ok {
+	if s, ok := sess.(*sshconn.Session); ok {
 		t.restoreForwards(s, req.Host, req.Port)
 	}
 	if t.log.active() != "" {
@@ -457,7 +411,7 @@ func (t *tab) start(sess Session, proto string, req ConnectRequest) {
 
 // keepAlive checks the connection every interval while sess is the tab's
 // session, and closes it after several checks in a row failed.
-func (t *tab) keepAlive(sess Session, every time.Duration) {
+func (t *tab) keepAlive(sess terminal.Session, every time.Duration) {
 	ka, ok := sess.(keepAliver)
 	if !ok || every <= 0 {
 		return
@@ -469,7 +423,7 @@ func (t *tab) keepAlive(sess Session, every time.Duration) {
 		if t.session() != sess {
 			return
 		}
-		err := ka.keepAlive()
+		err := ka.KeepAlive()
 		if err == nil {
 			misses = 0
 			continue
@@ -495,7 +449,7 @@ func (t *tab) keepAlive(sess Session, every time.Duration) {
 // so that bulk output (e.g. cat of a large file) doesn't flood the event bridge.
 // Output arriving after a quiet spell (a key echo) is sent at once; only output
 // within flushInterval of the previous emit waits for the ticker.
-func (t *tab) pump(sess Session) {
+func (t *tab) pump(sess terminal.Session) {
 	chunks := make(chan []byte, 64)
 	readErr := make(chan error, 1)
 	go func() {
@@ -594,7 +548,7 @@ func (t *tab) pump(sess Session) {
 					// is reported as lost, so the frontend can reconnect.
 					lost := err != nil && !errors.Is(err, io.EOF)
 					msg := "연결이 종료되었습니다"
-					if errors.Is(err, errConnLost) {
+					if errors.Is(err, terminal.ErrLost) {
 						msg = err.Error()
 					} else if lost {
 						msg = "연결이 끊어졌습니다: " + err.Error()

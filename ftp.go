@@ -11,6 +11,7 @@ import (
 	"github.com/jlaffaye/ftp"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/terminal"
 )
 
 // ftpFS is a plain FTP connection. File names are converted with the
@@ -24,7 +25,7 @@ type ftpFS struct {
 
 // dialFTP logs in to an FTP server. conn is an already connected control
 // socket (from protocol detection) or nil to dial req.Host:req.Port.
-func dialFTP(req ConnectRequest, conn net.Conn) (*ftpFS, error) {
+func dialFTP(req terminal.ConnectRequest, conn net.Conn) (*ftpFS, error) {
 	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
 	opts := []ftp.DialOption{ftp.DialWithTimeout(10 * time.Second)}
 	if conn != nil {

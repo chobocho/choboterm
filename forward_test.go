@@ -14,13 +14,16 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"choboterm/internal/sshconn/sshtest"
+	"choboterm/internal/terminal"
 )
 
 // startForwardingServer runs an SSH server that, like OpenSSH, connects
 // direct-tcpip channels (-L, -D) and listens for tcpip-forward requests (-R).
 func startForwardingServer(t *testing.T) (string, ssh.PublicKey) {
 	t.Helper()
-	key := ed25519Signer(t)
+	key := sshtest.Ed25519Signer(t)
 	cfg := &ssh.ServerConfig{
 		PasswordCallback: func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) { return nil, nil },
 	}
@@ -245,7 +248,7 @@ func socksThrough(t *testing.T, port int, target string) {
 
 func TestPortForwarding(t *testing.T) {
 	addr, key := startForwardingServer(t)
-	useKnownHosts(t, addr, key)
+	sshtest.UseKnownHosts(t, addr, key)
 	hist := filepath.Join(t.TempDir(), "hosts.json")
 	origHist := historyFile
 	historyFile = func() (string, error) { return hist, nil }
@@ -261,7 +264,7 @@ func TestPortForwarding(t *testing.T) {
 	a.hooks.confirmKey = func(string, string) bool { t.Fatal("unexpected host key prompt"); return false }
 	host, portStr, _ := net.SplitHostPort(addr)
 	port, _ := strconv.Atoi(portStr)
-	req := ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24}
+	req := terminal.ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24}
 	if p, err := a.Connect(1, req); err != nil || p != "ssh" {
 		t.Fatalf("connect: %q, %v", p, err)
 	}
@@ -343,7 +346,7 @@ func TestForwardOnlyOverSSH(t *testing.T) {
 // or removed in one tab reach the other.
 func TestForwardOneTabPerHost(t *testing.T) {
 	addr, key := startForwardingServer(t)
-	useKnownHosts(t, addr, key)
+	sshtest.UseKnownHosts(t, addr, key)
 	hist := filepath.Join(t.TempDir(), "hosts.json")
 	origHist := historyFile
 	historyFile = func() (string, error) { return hist, nil }
@@ -358,7 +361,7 @@ func TestForwardOneTabPerHost(t *testing.T) {
 	a.hooks.emit = func(string, ...interface{}) {}
 	host, portStr, _ := net.SplitHostPort(addr)
 	port, _ := strconv.Atoi(portStr)
-	req := ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24}
+	req := terminal.ConnectRequest{Host: host, Port: port, Login: "u", Pass: "p", Cols: 80, Rows: 24}
 	for _, id := range []int{1, 2} {
 		if _, err := a.Connect(id, req); err != nil {
 			t.Fatal(err)

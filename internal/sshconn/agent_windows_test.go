@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package sshconn
 
 import (
 	"crypto/ed25519"

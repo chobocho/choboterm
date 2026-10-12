@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"choboterm/internal/i18n"
+	"choboterm/internal/sshconn"
 )
 
 // RemoteFS is a remote file system reachable over SFTP or FTP.
@@ -257,14 +258,14 @@ func (a *App) FileOpen(tabID int) (FileOpenResult, error) {
 	defer t.files.mu.Unlock()
 
 	if t.files.fs == nil {
-		sess, _ := t.session().(*sshSession)
+		sess, _ := t.session().(*sshconn.Session)
 		if sess == nil {
 			return FileOpenResult{}, errors.New("파일 전송은 SSH(SFTP/SCP) 또는 FTP 접속에서 사용할 수 있습니다.\nTelnet에서는 sz / rz (Zmodem)를 사용하세요.")
 		}
-		if fs, err := newSFTP(sess.client); err == nil {
+		if fs, err := newSFTP(sess.Client); err == nil {
 			t.files.fs, t.files.proto = fs, "SFTP"
 		} else {
-			scp, serr := newSCP(sess.client, t.codec)
+			scp, serr := newSCP(sess.Client, t.codec)
 			if serr != nil {
 				return FileOpenResult{}, fmt.Errorf("SFTP를 열 수 없고 (%v), SCP도 사용할 수 없습니다 (%v)", err, serr)
 			}
@@ -746,8 +747,8 @@ func (a *App) FileStartDir(tabID int, dir string) string {
 // remoteHome is the login user's home folder: $HOME from the shell, or the
 // file system's start folder when commands can't be run.
 func (t *tab) remoteHome() string {
-	if sess, _ := t.session().(*sshSession); sess != nil {
-		if s, err := sess.client.NewSession(); err == nil {
+	if sess, _ := t.session().(*sshconn.Session); sess != nil {
+		if s, err := sess.Client.NewSession(); err == nil {
 			out, err := s.Output(`printf '%s' "$HOME"`)
 			s.Close()
 			if home := t.codec.DecodeString(string(out)); err == nil && path.IsAbs(home) {

@@ -1,4 +1,4 @@
-package main
+package telnet
 
 import (
 	"bytes"
@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-func newPipeTelnet(login, pass string) (*telnetSession, net.Conn) {
+func newPipeTelnet(login, pass string) (*Session, net.Conn) {
 	client, server := net.Pipe()
-	return &telnetSession{
+	return &Session{
 		conn:          client,
 		cols:          80,
 		rows:          24,
@@ -113,5 +113,18 @@ func TestTelnetAutoLogin(t *testing.T) {
 	_, _ = server.Write([]byte("Password: "))
 	if got := readN(t, server, 8); string(got) != "secret\r\x00" {
 		t.Fatalf("password reply %q", got)
+	}
+}
+
+func TestTelnetKeepAliveSendsNOP(t *testing.T) {
+	sess, remote := newPipeTelnet("", "")
+	defer remote.Close()
+	go func() {
+		if err := sess.KeepAlive(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if got := readN(t, remote, 2); got[0] != tnIAC || got[1] != tnNOP {
+		t.Fatalf("got % X, want IAC NOP", got)
 	}
 }
