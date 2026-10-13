@@ -1,15 +1,23 @@
-# Builds the release files and publishes a GitHub Release when a version tag
-# (v0.2.26, ...) is pushed: the same files build.bat and build_linux.sh make.
+# Builds the release files and publishes a GitHub Release: the same files
+# build.bat and build_linux.sh make. It runs
 #
-#   git tag v0.2.26 && git push origin v0.2.26
+# - when a commit that changes internal/version/version.go reaches main (a
+#   version bump merged): it releases v<Version> from that commit, unless that
+#   tag already exists. Merging the version PR is the release.
+# - when a version tag (v0.2.26, ...) is pushed:
 #
-# Can also be run by hand (Actions > release > Run workflow): with only a tag
-# it rebuilds that tag; with a ref too it builds that commit or branch and the
-# release creates the tag there (for when tags can't be pushed).
+#     git tag v0.2.26 && git push origin v0.2.26
+#
+# - by hand (Actions > release > Run workflow): with only a tag it rebuilds
+#   that tag; with a ref too it builds that commit or branch and the release
+#   creates the tag there (for when tags can't be pushed).
 name: release
 
 on:
   push:
+    branches: [main]
+    # Path filters only apply to the branch: every pushed v* tag runs.
+    paths: ['internal/version/version.go']
     tags: ['v*']
   workflow_dispatch:
     inputs:
@@ -17,25 +25,62 @@ on:
         description: 'Tag to release (e.g. v0.2.26)'
         required: true
       ref:
-        description: 'Commit or branch to build if the tag does not exist yet (e.g. release)'
+        description: 'Commit or branch to build if the tag does not exist yet (e.g. main)'
         required: false
 
 permissions:
   contents: read
 
 env:
-  TAG: ${{ github.event.inputs.tag || github.ref_name }}
-  # What to build: the pushed tag, or the given ref, or the existing tag.
-  SRC: ${{ github.event.inputs.ref || github.event.inputs.tag || github.ref_name }}
   WAILS_VERSION: v2.11.0
 
 jobs:
+  # What to release and from which commit; skip when main's version is
+  # already released (a later change to version.go that kept the number).
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.what.outputs.tag }}
+      src: ${{ steps.what.outputs.src }}
+      skip: ${{ steps.what.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' && github.ref_type == 'branch'
+        with:
+          fetch-depth: 1
+      - id: what
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          INPUT_REF: ${{ github.event.inputs.ref }}
+        run: |
+          skip=false
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            tag="$INPUT_TAG"
+            src="${INPUT_REF:-$INPUT_TAG}"
+          elif [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            tag="$GITHUB_REF_NAME"
+            src="$GITHUB_REF_NAME"
+          else
+            version=$(sed -n 's/^const Version = "\(.*\)"/\1/p' internal/version/version.go)
+            [[ -n "$version" ]] || { echo "no Version in internal/version/version.go" >&2; exit 1; }
+            tag="v$version"
+            src="$GITHUB_SHA"
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+              echo "$tag is already released: nothing to do"
+              skip=true
+            fi
+          fi
+          echo "release $tag from $src (skip=$skip)"
+          { echo "tag=$tag"; echo "src=$src"; echo "skip=$skip"; } >> "$GITHUB_OUTPUT"
+
   windows:
+    needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.SRC }}
+          ref: ${{ needs.prepare.outputs.src }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -61,6 +106,8 @@ jobs:
           if-no-files-found: error
 
   linux:
+    needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
     # Ubuntu 22.04, like tools/linux/Dockerfile: runs on glibc 2.35 and later.
     runs-on: ubuntu-22.04
     outputs:
@@ -68,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.SRC }}
+          ref: ${{ needs.prepare.outputs.src }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -95,7 +142,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [windows, linux]
+    needs: [prepare, windows, linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -108,6 +155,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           SHA: ${{ needs.linux.outputs.sha }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           version="${TAG#v}"
           # --target: where a tag that doesn't exist yet is created.
