@@ -234,7 +234,7 @@ Open the printed HTTPS URL in a browser. Use `--web=127.0.0.1:7681` to restrict 
 
 1. Bump `Version` in `internal/version/version.go` and `productVersion` in `wails.json`.
 2. Build `release\choboterm.exe` and `release\choboterm-headless.exe` with `build.bat`, then `release/choboterm-linux-amd64.tar.gz` and `release/choboterm-headless-linux-amd64` with `wsl -- ./build_linux.sh`. (Quit any running choboterm first.)
-3. Commit and push, then push the version tag: `git tag v0.2.22 && git push origin v0.2.22`. The `release` workflow (`.github/workflows/release.yml`) builds the four files on Windows and Ubuntu 22.04 and publishes the GitHub Release. Without pushing a tag: Actions > release > Run workflow with Tag `v0.2.22` and Ref `main` (the tag is created on the commit built). To do it by hand instead:
+3. Commit and push, then push the version tag: `git tag v0.2.22 && git push origin v0.2.22`. The `release` workflow (`.github/workflows/release.yml`) builds the four files on Windows and Ubuntu 22.04 and publishes the GitHub Release. Without pushing a tag: Actions > release > Run workflow with Tag `v0.2.22` and Ref `release` (the tag is created on the commit built). To do it by hand instead:
 
    ```sh
    gh release create v0.2.22 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.22" --notes "..."
