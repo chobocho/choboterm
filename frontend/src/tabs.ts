@@ -273,7 +273,10 @@ export function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     });
     // Ctrl+V / Shift+Insert go through the same multi-line check.
     pane.addEventListener('paste', ev => {
-        if (t.scriptBox?.el.contains(ev.target as Node)) return; // the Lua console's input pastes as text
+        const target = ev.target;
+        if (t.scriptBox?.el.contains(target as Node)) return; // the Lua console's input pastes as text
+        if (target instanceof HTMLInputElement ||
+            (target instanceof HTMLTextAreaElement && !target.classList.contains('xterm-helper-textarea'))) return;
         ev.preventDefault();
         ev.stopPropagation();
         pasteText(t, ev.clipboardData?.getData('text/plain') ?? '');

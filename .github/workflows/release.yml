@@ -1,7 +1,7 @@
 # Builds the release files and publishes a GitHub Release when a version tag
-# (v0.2.22, ...) is pushed: the same files build.bat and build_linux.sh make.
+# (v0.2.23, ...) is pushed: the same files build.bat and build_linux.sh make.
 #
-#   git tag v0.2.22 && git push origin v0.2.22
+#   git tag v0.2.23 && git push origin v0.2.23
 #
 # Can also be run by hand (Actions > release > Run workflow): with only a tag
 # it rebuilds that tag; with a ref too it builds that commit or branch and the
@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g. v0.2.22)'
+        description: 'Tag to release (e.g. v0.2.23)'
         required: true
       ref:
         description: 'Commit or branch to build if the tag does not exist yet (e.g. release)'
@@ -117,3 +117,10 @@ jobs:
             "dist/windows/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" \
             "dist/linux/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" \
             --title "choboterm V$version" --generate-notes
+          # Keep only V0.2.23 on the Releases page, as requested. Keep git tags
+          # so older source revisions remain addressable.
+          if [[ "$TAG" == "v0.2.23" ]]; then
+            while IFS= read -r old; do
+              [[ -z "$old" || "$old" == "$TAG" ]] || gh release delete "$old" --yes
+            done < <(gh release list --limit 100 --json tagName --jq '.[].tagName')
+          fi
