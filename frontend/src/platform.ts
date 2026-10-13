@@ -3,6 +3,12 @@
 
 export let isLinux = false;
 
+// The page runs in WebKitGTK: the Linux window (or a WebKitGTK browser such
+// as GNOME Web), not Chrome, Firefox or an Android WebView. Its IME events
+// differ from other browsers' (see createTab in tabs.ts).
+export const isWebKitGTK = /Linux/.test(navigator.userAgent) && /AppleWebKit/.test(navigator.userAgent)
+    && !/Chrome|Chromium|Android/.test(navigator.userAgent);
+
 // Set by the web server (web.go) when the page runs in a browser instead of
 // the choboterm window. base numbers this page's tabs apart from the window's
 // and other pages' (see clientOf in web.go).

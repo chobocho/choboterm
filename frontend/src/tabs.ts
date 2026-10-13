@@ -17,7 +17,7 @@ import {filesOpen, forgetFiles, showFilesFor} from './files';
 import {CloseTab, Resize} from '../wailsjs/go/app/App';
 import {terminal} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardSetText} from '../wailsjs/runtime/runtime';
-import {isLinux, webPage} from './platform';
+import {isWebKitGTK, webPage} from './platform';
 import {active, fitPane, focusActive, Group, orderedTabs, panesOf, setActive, SplitDir, Tab, tabs, tabsEl, termsEl} from './tabstate';
 import {notice, reconnectHint, toast} from './notify';
 import {updateTitle, version} from './title';
@@ -96,11 +96,46 @@ export function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
         }, true);
     }
 
-    // WebKitGTK/Linux IMEs can emit intermediate `input` events containing the
-    // whole Hangul composition (rather than just its final text). xterm handles
-    // the composition itself and sends it once on compositionend; forwarding
-    // those intermediate events as well duplicates the already typed syllables.
-    if (isLinux || import.meta.env.VITE_TERMUX === '1') {
+    // WebKitGTK (the Linux window) ends every Hangul syllable twice: it
+    // deletes the composed text and fires compositionend with no data, then
+    // inserts the text again (insertFromComposition, with no compositionstart)
+    // and fires compositionend once more with the syllable. xterm takes the
+    // first end as the real one, so the keydown (229) and text that follow
+    // reach it outside a composition: its textarea diff then sends the
+    // syllable again, or everything typed since the last Enter ("하이 하이"
+    // arrives as "하이 이 하이 하..."). Holding the empty end back keeps xterm
+    // composing until the second end, which carries the text, as in Chrome.
+    // A composition really cancelled (Backspace over its last jamo) has no
+    // second end: the held one is passed on before the next other key.
+    if (isWebKitGTK) {
+        const textarea = pane.querySelector('textarea')!;
+        let held = false; // an empty compositionend kept from xterm
+        let passing = false; // dispatching the held one: let it through
+        const release = () => {
+            if (!held) return;
+            held = false;
+            dbg(`tab ${id} IME: pass on the held compositionend`);
+            passing = true;
+            textarea.dispatchEvent(new CompositionEvent('compositionend', {data: ''}));
+            passing = false;
+        };
+        pane.addEventListener('compositionstart', () => { held = false; }, true);
+        pane.addEventListener('compositionend', ev => {
+            if (!passing && ev.data === '' && !held) {
+                held = true;
+                ev.stopImmediatePropagation();
+                return;
+            }
+            held = false;
+        }, true);
+        pane.addEventListener('keydown', ev => { if (ev.keyCode !== 229) release(); }, true);
+        pane.addEventListener('focusout', release, true);
+    }
+
+    // The Termux build: its IMEs can emit intermediate `input` events holding
+    // the whole Hangul composition. xterm sends the composition itself on
+    // compositionend, so those would repeat the typed syllables.
+    if (import.meta.env.VITE_TERMUX === '1') {
         let composing = false;
         let compositionEnd = 0;
         pane.addEventListener('compositionstart', () => {
@@ -108,7 +143,7 @@ export function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
             compositionEnd++;
         }, true);
         pane.addEventListener('compositionend', () => {
-            // Some Linux IMEs dispatch the final input event after compositionend.
+            // Some IMEs dispatch the final input event after compositionend.
             // Keep filtering until this event turn finishes so xterm doesn't send it
             // again after CompositionHelper has handled the committed text.
             const ended = ++compositionEnd;
