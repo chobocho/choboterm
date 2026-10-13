@@ -1,4 +1,4 @@
-# choboterm V0.2.21
+# choboterm V0.2.22
 
 [English](README.md) · **한국어**
 
@@ -121,6 +121,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 - **Lua 스크립트**: 자동 로그인, 반복 명령처럼 출력을 보고 입력하는 일을 Lua(5.1 문법, [gopher-lua](https://github.com/yuin/gopher-lua))로 자동화합니다.
   - 매크로 창에서 종류를 "Lua 스크립트"로 고르면 그 매크로(지정한 F키 포함)가 스크립트로 실행됩니다. 탭 우클릭 메뉴의 "Lua 스크립트 실행..."은 `문서\choboterm\scripts`의 `.lua` 파일을 실행합니다(처음 열 때 예제 3개를 넣어 둠).
   - 쓸 수 있는 함수: `send(문자열)` 입력 보내기(`"\r"` = Enter), `expect(패턴, 초)` 출력에 Lua 패턴이 나올 때까지 기다리기(색·제어 코드는 빼고 비교, 시간이 지나면 `nil`, 기본 30초), `sleep(밀리초)`, `screen()` 지금 화면의 글자, `print(...)`. 그 밖에 `string` · `table` · `math` · `os.time/clock/date`가 있고, 파일(`io`)·명령 실행·`require`는 쓸 수 없습니다.
+  - **메모장**(`Ctrl+Shift+B` 또는 탭 메뉴 → "메모장"): 터미널 위에 뜨는 메모 편집기입니다. 입력할 때마다 자동 저장하고 다시 열면 불러옵니다. **다른 이름으로 저장**으로 텍스트 파일로 내보낼 수 있습니다.
   - **Lua 콘솔**(`Ctrl+Shift+K` 또는 탭 우클릭 → "Lua 콘솔"): 한 줄씩 입력해 바로 실행하는 REPL입니다. 창 오른쪽 아래에 열리고, 닫을 때까지 변수와 함수가 남습니다. `1 + 2`나 `x`처럼 식을 입력하면 값을 보여 주고, `print`도 그 자리에 나옵니다. `Enter` 실행, `Shift+Enter` 줄바꿈, `↑` `↓` 이전 입력, `Ctrl+C`(또는 "중지")는 실행 중인 입력만 멈춥니다(콘솔과 변수는 그대로). `Ctrl+O`(또는 "열기")는 Lua 파일을 입력창으로 불러와 보여 주고(고친 뒤 `Enter`로 실행), `Ctrl+S`(또는 "저장")는 지금까지의 입력과 출력을 텍스트 파일로 저장합니다. `Esc`는 터미널로 돌아가고, ✕를 누르거나 `Ctrl+Shift+K`를 한 번 더 누르면 닫습니다(실행 중인 코드도 멈춤). 위쪽 테두리를 마우스로 끌면 높이를 바꿀 수 있고(최소: 제목줄·입력줄·출력 3줄, 최대: 창 높이의 80%), 바꾼 높이는 다음에 열 때도 그대로 씁니다. 콘솔의 `expect`는 입력을 실행한 뒤의 출력만 봅니다.
   - 실행 중인 탭에는 `▶ 0:42`처럼 걸린 시간이 붙고, 창 오른쪽 아래 상자에 `print` 출력과 결과(끝 · 멈춤 · 오류와 줄 번호)가 나옵니다. 오류는 닫을 때까지 남습니다. 멈추려면 탭 우클릭 → "스크립트 중지". 연결이 끊기거나 탭을 닫아도 멈춥니다.
   - **스크립트가 choboterm을 멈추게 하지 않습니다**: 스크립트는 별도 프로세스(`choboterm.exe --lua-host`)에서 돌고, 메모리는 256MB로 제한됩니다. 무한 루프, 메모리 폭주, 오류가 나도 그 스크립트만 끝나고 터미널은 그대로입니다. 스크립트가 출력을 따라오지 못해도 터미널 화면은 늦어지지 않습니다.
@@ -166,6 +167,7 @@ X11 포워딩은 지원하지 않습니다.
 | `Alt+C` / `Alt+A` / `Alt+S` / `Esc` | 접속 창에서 Connect / Cancel / 세션으로 저장 / 닫기 |
 | `Ctrl+Shift+H` | 세션 관리 창 |
 | `Ctrl+Shift+K` | Lua 콘솔 열기 / 닫기 |
+| `Ctrl+Shift+B` | 메모장 열기 / 닫기 |
 | `Ctrl+Shift+D` | 연결 끊기 (탭은 유지) |
 | `Ctrl+Shift+E` | UTF-8 ↔ EUC-KR 전환 |
 | `Ctrl+Shift+F` | 파일 전송 창 (SFTP / SCP / FTP) |
@@ -232,10 +234,10 @@ Termux에서 Go와 Node.js를 설치(`pkg install golang nodejs`)한 뒤 `./buil
 
 1. `internal/version/version.go`의 `Version`과 `wails.json`의 `productVersion`을 올립니다.
 2. `build.bat`으로 `release\choboterm.exe`와 `release\choboterm-headless.exe`를, 이어서 `wsl -- ./build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`와 `release/choboterm-headless-linux-amd64`를 만듭니다. (실행 중인 choboterm은 먼저 종료)
-3. 커밋·푸시 후 버전 태그를 푸시합니다: `git tag v0.2.21 && git push origin v0.2.21`. `release` 워크플로(`.github/workflows/release.yml`)가 Windows와 Ubuntu 22.04에서 파일 4개를 빌드하고 GitHub Release를 만듭니다. 태그를 푸시하지 않고 하려면 Actions > release > Run workflow에서 Tag `v0.2.21`, Ref `main`으로 실행합니다(빌드한 커밋에 태그가 생김). 손으로 만들 때는:
+3. 커밋·푸시 후 버전 태그를 푸시합니다: `git tag v0.2.22 && git push origin v0.2.22`. `release` 워크플로(`.github/workflows/release.yml`)가 Windows와 Ubuntu 22.04에서 파일 4개를 빌드하고 GitHub Release를 만듭니다. 태그를 푸시하지 않고 하려면 Actions > release > Run workflow에서 Tag `v0.2.22`, Ref `main`으로 실행합니다(빌드한 커밋에 태그가 생김). 손으로 만들 때는:
 
    ```sh
-   gh release create v0.2.0 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.0" --notes "..."
+   gh release create v0.2.22 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.22" --notes "..."
    ```
 
 소개 페이지(`docs/`, GitHub Pages 기준: `main` 브랜치 `/docs`)의 다운로드 버튼은 항상 최신 릴리스의 `choboterm.exe`를 가리키므로 따로 고칠 필요가 없습니다.
