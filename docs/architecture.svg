@@ -20,7 +20,7 @@
 
   <rect x="0" y="0" width="1010" height="800" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.23 · <tspan class="new">NEW</tspan> = 이번 버전에 바뀜 (메모장 붙여넣기 수정)</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.24 · <tspan class="new">NEW</tspan> = 이번 버전에 바뀜 (한글 입력 중복 수정 · Lua 콘솔 겹침 수정)</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>

@@ -17,7 +17,7 @@ import {filesOpen, forgetFiles, showFilesFor} from './files';
 import {CloseTab, Resize} from '../wailsjs/go/app/App';
 import {terminal} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardSetText} from '../wailsjs/runtime/runtime';
-import {webPage} from './platform';
+import {isLinux, webPage} from './platform';
 import {active, fitPane, focusActive, Group, orderedTabs, panesOf, setActive, SplitDir, Tab, tabs, tabsEl, termsEl} from './tabstate';
 import {notice, reconnectHint, toast} from './notify';
 import {updateTitle, version} from './title';
@@ -93,6 +93,19 @@ export function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
         pane.addEventListener('compositionend', () => { composing = false; }, true);
         pane.addEventListener('keydown', ev => {
             if (composing && (ev.key === 'Backspace' || ev.keyCode === 8)) ev.stopImmediatePropagation();
+        }, true);
+    }
+
+    // WebKitGTK/Linux IMEs can emit intermediate `input` events containing the
+    // whole Hangul composition (rather than just its final text). xterm handles
+    // the composition itself and sends it once on compositionend; forwarding
+    // those intermediate events as well duplicates the already typed syllables.
+    if (isLinux || import.meta.env.VITE_TERMUX === '1') {
+        let composing = false;
+        pane.addEventListener('compositionstart', () => { composing = true; }, true);
+        pane.addEventListener('compositionend', () => { composing = false; }, true);
+        pane.addEventListener('input', ev => {
+            if (composing || (ev as InputEvent).isComposing) ev.stopImmediatePropagation();
         }, true);
     }
 

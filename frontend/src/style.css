@@ -241,6 +241,7 @@ html, body {
 
 /* The Lua console: a bigger box with an input line at the bottom. */
 .script-box.console {
+    z-index: 7; /* The memo pad is at 6; an opened console must stay above it. */
     width: min(560px, calc(100% - 32px));
     height: 300px;
     max-height: 80%;
