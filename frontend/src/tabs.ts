@@ -102,8 +102,20 @@ export function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     // those intermediate events as well duplicates the already typed syllables.
     if (isLinux || import.meta.env.VITE_TERMUX === '1') {
         let composing = false;
-        pane.addEventListener('compositionstart', () => { composing = true; }, true);
-        pane.addEventListener('compositionend', () => { composing = false; }, true);
+        let compositionEnd = 0;
+        pane.addEventListener('compositionstart', () => {
+            composing = true;
+            compositionEnd++;
+        }, true);
+        pane.addEventListener('compositionend', () => {
+            // Some Linux IMEs dispatch the final input event after compositionend.
+            // Keep filtering until this event turn finishes so xterm doesn't send it
+            // again after CompositionHelper has handled the committed text.
+            const ended = ++compositionEnd;
+            setTimeout(() => {
+                if (compositionEnd === ended) composing = false;
+            }, 0);
+        }, true);
         pane.addEventListener('input', ev => {
             if (composing || (ev as InputEvent).isComposing) ev.stopImmediatePropagation();
         }, true);
