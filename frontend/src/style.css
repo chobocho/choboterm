@@ -175,6 +175,70 @@ html, body {
     color: #bbf7d0;
 }
 
+/* The memo pad floats over the terminal like the Lua console, but fills most of the pane. */
+.memo-box {
+    position: absolute;
+    right: 16px;
+    bottom: 8px;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    width: min(560px, calc(100% - 32px));
+    height: min(60%, 520px);
+    min-height: 180px;
+    border: 1px solid #3b5b85;
+    border-radius: 4px;
+    background: rgba(17, 24, 39, 0.97);
+    color: #e5e7eb;
+    font: 12px Consolas, "D2Coding", "Malgun Gothic", monospace;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.memo-box .top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    padding: 4px 6px 4px 8px;
+    background: #1e3a5f;
+    color: #93c5fd;
+}
+
+.memo-box .top span {
+    flex: 1;
+}
+
+.memo-box .top button {
+    border: 1px solid #93c5fd;
+    border-radius: 3px;
+    padding: 2px 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+}
+
+.memo-box .memo-input {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 8px;
+    border: 0;
+    outline: none;
+    resize: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.memo-box .memo-input::placeholder {
+    color: #6b7280;
+}
+
 /* The Lua console: a bigger box with an input line at the bottom. */
 .script-box.console {
     width: min(560px, calc(100% - 32px));

@@ -25,5 +25,5 @@ export function isAppShortcut(ev: KeyboardEvent): boolean {
     if (ev.ctrlKey && !ev.altKey && ['=', '+', '-', '0'].includes(ev.key)) return true; // font size
     if (ev.ctrlKey && (ev.key === 'Tab' || ev.key === 'PageUp' || ev.key === 'PageDown')) return true;
     if (isPaneKey(ev) || splitKey(ev)) return true;
-    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLHKJ]$/i.test(ev.key);
+    return ev.ctrlKey && ev.shiftKey && !ev.altKey && /^[TNWDEFCVSOMPLHKJB]$/i.test(ev.key);
 }

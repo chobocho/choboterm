@@ -38,6 +38,10 @@ export function ConsoleSave(arg1) {
   return window['go']['app']['App']['ConsoleSave'](arg1);
 }
 
+export function MemoSave(arg1) {
+  return window['go']['app']['App']['MemoSave'](arg1);
+}
+
 export function DebugEnabled() {
   return window['go']['app']['App']['DebugEnabled']();
 }

@@ -115,6 +115,7 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
   - Start / stop / restart (stop and restart after confirmation), show stopped containers, refresh (`F5`)
   - **Open port**: Forwards a published port on the server to the same port on this PC (`-L`) and opens it in the browser. For containers on this PC, it opens `http://localhost:port` directly.
   - If the server user is not in the docker group, a permission error is shown along with a hint to run `sudo usermod -aG docker $USER`.
+- **Memo pad** (`Ctrl+Shift+B` or the Memo button / tab context menu): A floating text editor over the terminal pane. Its text is automatically saved locally and restored whenever the memo pad is opened; use **Save as** to export it to a text file.
 - **Macros**: Open the macro window with `Ctrl+Shift+M` to save frequently used commands and send them (`Enter` / double-click in the list).
   - Assign one of `F2`–`F12`, `Shift+F1`–`F12` or `Ctrl+F1`–`F12` to a macro to send it with that key. Keys not assigned are passed through unchanged to programs such as mc or htop.
   - Line breaks in the content are sent as `Enter`, and you can use `\t` (Tab), `\e` (Esc), `\xHH` (e.g. `\x03` = Ctrl+C) and `\\` (backslash).
@@ -166,6 +167,7 @@ X11 forwarding is not supported.
 | `Alt+C` / `Alt+A` / `Alt+S` / `Esc` | In the connect window: Connect / Cancel / Save as session / Close |
 | `Ctrl+Shift+H` | Sessions window |
 | `Ctrl+Shift+K` | Open / close the Lua console |
+| `Ctrl+Shift+B` | Open / close the memo pad |
 | `Ctrl+Shift+D` | Disconnect (keeps the tab) |
 | `Ctrl+Shift+E` | Toggle UTF-8 ↔ EUC-KR |
 | `Ctrl+Shift+F` | File transfer window (SFTP / SCP / FTP) |

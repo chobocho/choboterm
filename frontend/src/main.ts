@@ -22,6 +22,7 @@ import {copySelection, pasteClipboard} from './clipboard';
 import {ARROWS, isPaneKey, splitKey} from './split';
 import {isAppShortcut, modalOpen} from './shortcuts';
 import {showConsole} from './luaconsole';
+import {showMemo} from './memo';
 import {disconnect, openFilesFor, toggleEncoding, toggleLog} from './connection';
 import {openDialog} from './connectdialog';
 import {activate, createTab, cycleTab, focusPane, requestClose, splitTab} from './tabs';
@@ -59,6 +60,7 @@ EventsOn('app:close', async () => {
 });
 
 $<HTMLButtonElement>('newTab').addEventListener('click', () => openDialog(null));
+$<HTMLButtonElement>('memoBtn').addEventListener('click', () => showMemo());
 tabsEl.addEventListener('dblclick', ev => {
     if (ev.target === tabsEl) openDialog(null); // double-click empty tab bar: new tab
 });
@@ -116,6 +118,9 @@ window.addEventListener('keydown', ev => {
             break;
         case 'K':
             if (t) showConsole(t);
+            break;
+        case 'B':
+            if (t) showMemo(t);
             break;
         case 'P':
             if (t) showForwards(t);

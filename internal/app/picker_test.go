@@ -291,6 +291,15 @@ func TestConsoleOpenSaveThroughPicker(t *testing.T) {
 	if b, _ := os.ReadFile(out); string(b) != "abc" {
 		t.Fatalf("saved %q", b)
 	}
+
+	memo := filepath.Join(t.TempDir(), "memo.txt")
+	p.file = memo
+	if got, err := a.MemoSave("memo text"); err != nil || got != "saved:memo.txt" {
+		t.Fatalf("memo save: %q %v", got, err)
+	}
+	if b, _ := os.ReadFile(memo); string(b) != "memo text" {
+		t.Fatalf("saved memo %q", b)
+	}
 	p.file = ""
 	if f, err := a.ConsoleOpen(); f.Name != "" || err != nil {
 		t.Fatalf("cancel open: %+v %v", f, err)

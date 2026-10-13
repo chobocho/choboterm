@@ -28,6 +28,7 @@ import {isAppShortcut} from './shortcuts';
 import {cancelRetry, connectTab, openFilesFor, retryNow, sendInput, startDocker} from './connection';
 import {hideDialog, loadDialog, openDialog, saveDialog} from './connectdialog';
 import {showMenu} from './tabmenu';
+import {disposeMemo} from './memo';
 
 // In a browser, this page's tab ids start at its base (see platform.ts).
 let nextId = (webPage?.base ?? 0) + 1;
@@ -403,6 +404,7 @@ export async function requestClose(t: Tab) {
 }
 
 export function closeTab(t: Tab) {
+    disposeMemo(t);
     cancelRetry(t);
     forwardsTabClosed(t.id);
     forgetFiles(t.id);

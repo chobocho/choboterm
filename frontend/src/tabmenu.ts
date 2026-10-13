@@ -8,6 +8,7 @@ import {active, focusActive, panesOf, Tab, tabs} from './tabstate';
 import {notice, toast} from './notify';
 import {chooseTheme} from './look';
 import {runScript, showConsole} from './luaconsole';
+import {showMemo} from './memo';
 import {disconnect, openFilesFor, setState, toggleLog} from './connection';
 import {duplicate, reconnect, requestClose, splitTab} from './tabs';
 import {showContainers, showForwards} from './panels';
@@ -161,6 +162,9 @@ menu.addEventListener('click', ev => {
             break;
         case 'console':
             showConsole(t);
+            break;
+        case 'memo':
+            showMemo(t);
             break;
         case 'stopScript':
             StopScript(t.id);

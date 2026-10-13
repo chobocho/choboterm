@@ -28,6 +28,8 @@ export function ConsoleOpen():Promise<app.ConsoleFile>;
 
 export function ConsoleSave(arg1:string):Promise<string>;
 
+export function MemoSave(arg1:string):Promise<string>;
+
 export function DebugEnabled():Promise<boolean>;
 
 export function DebugLog(arg1:string):Promise<void>;

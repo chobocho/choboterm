@@ -456,6 +456,25 @@ func (a *App) ConsoleSave(text string) (string, error) {
 	return finish(true), nil
 }
 
+// MemoSave asks where to save the current memo and writes it as UTF-8 text.
+// It returns an empty path when the user cancels.
+func (a *App) MemoSave(text string) (string, error) {
+	local, finish, err := a.picker().saveFile(pickOpts{
+		Title:   i18n.Tr("메모 저장"),
+		Dir:     transfer.DownloadsDir(),
+		Name:    "memo.txt",
+		Filters: []fileFilter{{Name: i18n.Tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
+	})
+	if err != nil || local == "" {
+		return "", err
+	}
+	if err := os.WriteFile(local, []byte(text), 0o644); err != nil {
+		finish(false)
+		return "", err
+	}
+	return finish(true), nil
+}
+
 // ConsoleEval runs code in the tab's console; the result comes back as a
 // "script:result" event with the same id.
 func (a *App) ConsoleEval(tabID, id int, code string) error {
