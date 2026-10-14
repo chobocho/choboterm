@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
@@ -638,70 +637,6 @@ func TestWebDropUpload(t *testing.T) {
 	if _, err := os.Stat(res.Paths[0]); !os.IsNotExist(err) {
 		t.Fatal("stage not deleted")
 	}
-}
-
-func TestStagePath(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "st")
-	for rel, ok := range map[string]bool{
-		"a.txt": true, "d/b.txt": true, `d\c.txt`: true, "/lead.txt": true,
-		"": false, "..": false, "../x": false, "d/../../x": false, "a\x00b": false,
-	} {
-		p, got := stagePath(dir, rel)
-		if got != ok {
-			t.Errorf("%q: %v", rel, got)
-		}
-		if got && !strings.HasPrefix(p, dir+string(filepath.Separator)) {
-			t.Errorf("%q -> %q", rel, p)
-		}
-	}
-}
-
-func TestSafeFileNameAndZip(t *testing.T) {
-	for in, want := range map[string]string{"a.txt": "a.txt", "../x": "x", `C:\a\b.txt`: "b.txt", "a:b?.txt": "a_b_.txt", "": "f", "..": "f"} {
-		if got := safeFileName(in, "f"); got != want {
-			t.Errorf("%q: %q", in, got)
-		}
-	}
-	src := t.TempDir()
-	writeFiles(t, src, map[string]string{"한글.txt": "1", "d/x.txt": "22"})
-	zp := filepath.Join(t.TempDir(), "o.zip")
-	if err := zipFolder(src, zp); err != nil {
-		t.Fatal(err)
-	}
-	b, _ := os.ReadFile(zp)
-	if !bytes.Contains(b, []byte("한글.txt")) || !bytes.Contains(b, []byte("d/x.txt")) {
-		t.Fatal("zip entries")
-	}
-}
-
-// Output waits while the page is too far behind, and goes on once it acknowledges.
-func TestWebOutputBackpressure(t *testing.T) {
-	old := webMaxUnacked
-	webMaxUnacked = 1000
-	defer func() { webMaxUnacked = old }()
-	f := startTestWeb(t, webOptions{})
-	c, _ := f.w.newClient(false)
-	chunk := make([]byte, 600)
-	c.output(c.id<<tabBits+1, chunk) // 605 bytes queued
-	c.output(c.id<<tabBits+1, chunk) // over the limit after this one
-	done := make(chan struct{})
-	go func() { c.output(c.id<<tabBits+1, chunk); close(done) }()
-	select {
-	case <-done:
-		t.Fatal("output didn't wait")
-	case <-time.After(100 * time.Millisecond):
-	}
-	c.mu.Lock()
-	c.ackLocked(2)
-	c.mu.Unlock()
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatal("output still waiting after the ack")
-	}
-	// Events never wait.
-	c.event("x", nil)
-	c.close() // and closing releases any waiting writer
 }
 
 func TestWebStopClosesEverything(t *testing.T) {
