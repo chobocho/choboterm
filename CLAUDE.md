@@ -8,7 +8,8 @@ Windows · Linux용 SSH / Telnet / FTP / 시리얼 터미널. Go + Wails v2(창)
 
 - `main.go`: 진입점일 뿐, 본체는 `internal/app/`. 연결 종류·전송·저장 등은 `internal/<패키지>/`.
 - `frontend/src/`: 화면(TypeScript). `frontend/dist`가 Go 프로그램에 임베드된다(`frontend/assets*.go`).
-- 웹 서버: `internal/app/web*.go` + `web_shim.js`. 창과 브라우저가 같은 `frontend/dist`를 쓴다.
+- 웹 서버: `internal/web/`(서버 · `web_shim.js`) + `internal/app/web_*.go`(설정 창의 웹 서버, `web.Host` 구현).
+  창과 브라우저가 같은 `frontend/dist`를 쓴다.
 - 빌드 태그 `headless`: Wails 창 코드가 빠진 웹 서버 전용 빌드(Linux는 `CGO_ENABLED=0` 정적 바이너리).
 
 ## 검사 (푸시 전에)

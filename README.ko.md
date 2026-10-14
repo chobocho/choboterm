@@ -313,7 +313,7 @@ npm run test:e2e
 - 화면은 WebView2 안의 TypeScript(xterm.js)가, 접속·파일 전송·저장은 Go가 맡습니다. 둘은 Wails 바인딩(Go 메서드 호출)과 이벤트로 주고받습니다.
 - 탭마다 Go 쪽에 `tab`이 하나 있고, 서버 출력은 16ms·256KB 단위로 묶어 `term:data` 이벤트로 보냅니다. 이때 인코딩 변환, Zmodem 감지, 세션 로그, Lua 스크립트 전달이 함께 일어납니다.
 - Lua 스크립트는 `choboterm.exe --lua-host`로 띄운 별도 프로세스에서 돌아서, 스크립트가 멈추거나 메모리를 다 써도 앱은 영향을 받지 않습니다.
-- 웹 서버(`web*.go`, `web_shim.js`): 같은 `frontend/dist`를 브라우저에 주고, Wails가 창에 넣어 주는 `window.go` · `window.runtime`을 WebSocket 하나로 흉내 냅니다. 페이지마다 `App`을 따로 두어(상태는 공유) 누가 불렀는지 압니다. 탭 번호는 페이지마다 `clientID<<20`부터 매기므로(창은 0부터, 지금과 같음) 이벤트를 탭 주인에게만 보냅니다. 출력은 base64 대신 바이너리 프레임으로 보내고, 페이지가 받았다고 알린 만큼만 지웁니다(다시 연결하면 빠진 것만 다시 보냄, 너무 밀리면 읽기를 멈춤).
+- 웹 서버(`internal/web`, `web_shim.js`): 같은 `frontend/dist`를 브라우저에 주고, Wails가 창에 넣어 주는 `window.go` · `window.runtime`을 WebSocket 하나로 흉내 냅니다. 서버는 페이지 · 소켓 · 파일만 다루고, 호출과 페이지가 닫힐 때의 처리는 앱 쪽(`web.Host`를 구현한 `internal/app/web_host.go`)이 맡습니다. 페이지마다 `App`을 따로 두어(상태는 공유) 누가 불렀는지 압니다. 탭 번호는 페이지마다 `clientID<<20`부터 매기므로(창은 0부터, 지금과 같음) 이벤트를 탭 주인에게만 보냅니다. 출력은 base64 대신 바이너리 프레임으로 보내고, 페이지가 받았다고 알린 만큼만 지웁니다(다시 연결하면 빠진 것만 다시 보냄, 너무 밀리면 읽기를 멈춤).
 - 파일 대화상자는 모두 `App.picker()`(`picker.go`)를 거칩니다. 창과 이 PC의 브라우저는 Wails 대화상자, 다른 PC의 브라우저는 업로드·다운로드입니다. "이 PC"는 주소(127.0.0.1)만이 아니라 choboterm이 직접 연 브라우저에 준 일회용 코드로 판단합니다(SSH 포워딩·프록시도 127.0.0.1로 오기 때문).
 - SSH는 점프 호스트를 거칠 수 있습니다(`sshjump.go`): 단계마다 앞 연결의 채널 위에서 다음 서버에 로그인합니다.
 - 키워드 강조(`highlight.ts`)는 서버 출력을 바꾸지 않고 xterm 데코레이션으로 화면 위에만 칠합니다.
@@ -325,8 +325,9 @@ npm run test:e2e
 | 파일 | 내용 |
 |---|---|
 | `main.go` · `icon.go` | 진입점: `internal/app`을 시작, 창 아이콘 임베드 |
-| `internal/app/` | 프로그램 본체: `app.go`(탭별 연결, 키 입력 전달, 출력 묶어 보내기, Zmodem 감지), `forward.go`(SSH 포트 포워딩 -L / -R / -D SOCKS5), `filexfer.go` · `viewer.go` · `zmodem_app.go`(파일 전송 창, 텍스트 뷰어, 탭의 Zmodem), `docker.go`(컨테이너 목록·동작, `docker exec` / `docker logs` 탭), `luarun.go`(탭에서 도는 Lua 스크립트), `prompt.go` · `picker.go`(입력 요청, 파일 대화상자: 창 · 이 PC의 브라우저 · 다른 PC의 브라우저), `app_*.go`(그 밖에 화면이 부르는 것) |
-| `internal/app/web*.go` · `handoff.go` · `cli.go` · `main_window.go` · `main_headless.go` · `web_shim.js` | 웹 서버: 로그인·페이지, 페이지별 WebSocket(호출·이벤트·재전송·흐름 제어), 업로드·다운로드, TLS, 브라우저 쪽 `window.go` · `window.runtime`. 설정 창의 웹 서버, 창 닫기 · 숨기기, 다시 실행하면 떠 있는 창 보이기, 창 없는 실행, 명령행 옵션 |
+| `internal/app/` | 프로그램 본체: `app.go`(탭별 연결, 키 입력 전달, 출력 묶어 보내기, Zmodem 감지), `forward.go`(SSH 포트 포워딩 -L / -R / -D SOCKS5), `filexfer.go` · `viewer.go` · `zmodem_app.go`(파일 전송 창, 텍스트 뷰어, 탭의 Zmodem), `docker.go`(컨테이너 목록·동작, `docker exec` / `docker logs` 탭), `luarun.go`(탭에서 도는 Lua 스크립트), `prompt.go` · `picker.go`(입력 요청, 파일 대화상자: 창 · 이 PC의 브라우저 · 다른 PC의 브라우저), `app_*.go`(그 밖에 화면이 부르는 것), `web_app.go` · `web_host.go` · `cli.go` · `main_window.go` · `main_headless.go` · `web_headless.go`(설정 창의 웹 서버, 창 닫기 · 숨기기, 웹 서버가 부르는 앱 쪽, 명령행 옵션, 창 · 창 없는 실행) |
+| `internal/web/` | 웹 서버: 로그인·페이지(`server.go`), 페이지별 WebSocket(호출·이벤트·재전송·흐름 제어, `client.go`), 업로드·다운로드(`files.go`), TLS(`tls.go`), 다시 실행하면 떠 있는 창 보이기(`handoff.go`), 브라우저 쪽 `window.go` · `window.runtime`(`web_shim.js`) |
+| `internal/dialog/` | 파일 대화상자 인터페이스(`Picker`): 창의 대화상자와 브라우저의 업로드·다운로드가 함께 구현 |
 | `internal/terminal/` | 모든 연결이 함께 쓰는 것: `Session`, 접속 요청, 입력 요청, 비표준 포트의 프로토콜 자동 판별(`detect.go`) |
 | `internal/sshconn/` · `internal/telnet/` · `internal/serial/` · `internal/localshell/` | 연결 종류: SSH(인증, known hosts, 점프 호스트 `sshjump.go`, `~/.ssh/config`), Telnet, 시리얼 포트(Windows: COM 포트 · Linux: termios), 로컬 셸(Windows: cmd · PowerShell · WSL을 ConPTY로, Linux: bash · zsh 등을 PTY로) |
 | `internal/transfer/` | 파일 전송: 공통 계층(RemoteFS)과 SFTP · SCP · FTP, 진행률, Zmodem 프로토콜 |
