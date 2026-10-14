@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 
+	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
 	"choboterm/internal/store"
 )
@@ -58,10 +59,10 @@ func (a *App) DeleteSession(id string) error {
 // ExportSessions asks for a file and writes the saved sessions (without
 // passwords) to it. It returns the path, or "" if the user cancelled.
 func (a *App) ExportSessions() (string, error) {
-	p, finish, err := a.picker().SaveFile(pickOpts{
+	p, finish, err := a.picker().SaveFile(dialog.Opts{
 		Title:   i18n.Tr("세션 내보내기"),
 		Name:    "choboterm-sessions.json",
-		Filters: []fileFilter{{Name: i18n.Tr("세션 파일 (*.json)"), Pattern: "*.json"}},
+		Filters: []dialog.Filter{{Name: i18n.Tr("세션 파일 (*.json)"), Pattern: "*.json"}},
 	})
 	if err != nil || p == "" {
 		return "", err
@@ -80,9 +81,9 @@ func (a *App) ExportSessions() (string, error) {
 // ImportSessions asks for a file written by ExportSessions and adds its
 // sessions. Cancelled = zero result.
 func (a *App) ImportSessions() (store.ImportResult, error) {
-	p, release, err := a.picker().OpenFile(pickOpts{
+	p, release, err := a.picker().OpenFile(dialog.Opts{
 		Title:   i18n.Tr("세션 가져오기"),
-		Filters: []fileFilter{{Name: i18n.Tr("세션 파일 (*.json)"), Pattern: "*.json"}},
+		Filters: []dialog.Filter{{Name: i18n.Tr("세션 파일 (*.json)"), Pattern: "*.json"}},
 	})
 	defer release()
 	if err != nil || p == "" {

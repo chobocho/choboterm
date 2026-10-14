@@ -22,6 +22,7 @@ import (
 	"choboterm/internal/codec"
 	"choboterm/internal/config"
 	"choboterm/internal/dbg"
+	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
 	"choboterm/internal/localshell"
 	"choboterm/internal/osutil"
@@ -99,7 +100,7 @@ type testHooks struct {
 	downloadDir string
 	confirmKey  func(host, fingerprint string) bool
 	prompt      func(Prompt) ([]string, bool)
-	picker      picker // replaces the file dialogs
+	picker      dialog.Picker // replaces the file dialogs
 }
 
 // NewApp creates a new App application struct

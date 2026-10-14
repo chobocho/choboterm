@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"choboterm/internal/dbg"
+	"choboterm/internal/dialog"
 	"choboterm/internal/transfer"
 )
 
@@ -336,7 +337,7 @@ func (w *webServer) dropFiles(c *webClient) {
 
 // ---- browserPicker ----
 
-func (c *webClient) browserPicker() picker { return browserPicker{c} }
+func (c *webClient) browserPicker() dialog.Picker { return browserPicker{c} }
 
 // browserPicker asks a browser on another PC for files by upload and
 // download (see the top of this file).
@@ -353,11 +354,11 @@ type webPick struct {
 // pickTimeout is how long a file chooser may stay open in the page.
 var pickTimeout = 10 * time.Minute
 
-func (p browserPicker) pick(o pickOpts, multiple bool) ([]string, func(), error) {
+func (p browserPicker) pick(o dialog.Opts, multiple bool) ([]string, func(), error) {
 	c := p.c
 	st, err := c.srv.newStage(c)
 	if err != nil {
-		return nil, noRelease, err
+		return nil, dialog.NoRelease, err
 	}
 	release := func() { c.srv.dropStage(st) }
 	ch := make(chan []string, 1)
@@ -365,7 +366,7 @@ func (p browserPicker) pick(o pickOpts, multiple bool) ([]string, func(), error)
 	if c.closed {
 		c.mu.Unlock()
 		release()
-		return nil, noRelease, nil
+		return nil, dialog.NoRelease, nil
 	}
 	c.picks[st.id] = ch
 	c.mu.Unlock()
@@ -383,18 +384,18 @@ func (p browserPicker) pick(o pickOpts, multiple bool) ([]string, func(), error)
 	case paths := <-ch:
 		if len(paths) == 0 {
 			release()
-			return nil, noRelease, nil
+			return nil, dialog.NoRelease, nil
 		}
 		return paths, release, nil
 	case <-time.After(pickTimeout):
 		c.answerPick(st.id, nil)
 		c.event("web:pickDone", []interface{}{st.id})
 		release()
-		return nil, noRelease, nil
+		return nil, dialog.NoRelease, nil
 	}
 }
 
-func (p browserPicker) OpenFile(o pickOpts) (string, func(), error) {
+func (p browserPicker) OpenFile(o dialog.Opts) (string, func(), error) {
 	paths, release, err := p.pick(o, false)
 	if len(paths) == 0 {
 		return "", release, err
@@ -402,14 +403,14 @@ func (p browserPicker) OpenFile(o pickOpts) (string, func(), error) {
 	return paths[0], release, err
 }
 
-func (p browserPicker) OpenFiles(o pickOpts) ([]string, func(), error) {
+func (p browserPicker) OpenFiles(o dialog.Opts) ([]string, func(), error) {
 	return p.pick(o, true)
 }
 
-func (p browserPicker) SaveFile(o pickOpts) (string, func(bool) string, error) {
+func (p browserPicker) SaveFile(o dialog.Opts) (string, func(bool) string, error) {
 	dir, err := p.c.tempDir()
 	if err != nil {
-		return "", keepPath(""), err
+		return "", dialog.KeepPath(""), err
 	}
 	name := safeFileName(o.Name, "download")
 	file := filepath.Join(dir, name)
@@ -423,10 +424,10 @@ func (p browserPicker) SaveFile(o pickOpts) (string, func(bool) string, error) {
 	}, nil
 }
 
-func (p browserPicker) SaveDir(o pickOpts) (string, func(bool) string, error) {
+func (p browserPicker) SaveDir(o dialog.Opts) (string, func(bool) string, error) {
 	dir, err := p.c.tempDir()
 	if err != nil {
-		return "", keepPath(""), err
+		return "", dialog.KeepPath(""), err
 	}
 	return dir, p.finishDir(dir), nil
 }
@@ -436,12 +437,12 @@ func (p browserPicker) ReceiveDir() (string, func(bool) string) {
 	if err != nil {
 		// Nowhere to stage: fall back to this PC's downloads folder.
 		d := transfer.DownloadsDir()
-		return d, keepPath(d)
+		return d, dialog.KeepPath(d)
 	}
 	return dir, p.finishDir(dir)
 }
 
-func (browserPicker) Folder(pickOpts) (string, error) { return "", errNotInBrowser }
+func (browserPicker) Folder(dialog.Opts) (string, error) { return "", dialog.ErrNotInBrowser }
 
 // finishDir offers what was saved into dir: a single file as it is, more
 // (or folders) as one .zip.

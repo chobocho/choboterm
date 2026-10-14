@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
 	"choboterm/internal/telnet"
 	"choboterm/internal/terminal"
@@ -88,7 +89,7 @@ func (t *tab) runZmodem(sess terminal.Session, receive bool, in <-chan []byte, d
 			msg = fmt.Sprintf("[Zmodem] %d개 파일을 받았습니다: %s\n  %s", len(saved), where, strings.Join(saved, "\n  "))
 		}
 	} else {
-		files, release, derr := pick.OpenFiles(pickOpts{Title: i18n.Tr("Zmodem으로 보낼 파일 선택")})
+		files, release, derr := pick.OpenFiles(dialog.Opts{Title: i18n.Tr("Zmodem으로 보낼 파일 선택")})
 		defer release()
 		if derr != nil || len(files) == 0 {
 			p.Abort()

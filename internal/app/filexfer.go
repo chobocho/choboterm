@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
 	"choboterm/internal/sshconn"
 	"choboterm/internal/transfer"
@@ -173,7 +174,7 @@ func (a *App) FileDownload(tabID int, remotePath string, size int64) (string, er
 	if t == nil {
 		return "", errors.New("연결되어 있지 않습니다")
 	}
-	local, finish, err := a.picker().SaveFile(pickOpts{
+	local, finish, err := a.picker().SaveFile(dialog.Opts{
 		Title: i18n.Tr("다운로드"),
 		Dir:   transfer.DownloadsDir(),
 		Name:  path.Base(remotePath),
@@ -196,7 +197,7 @@ func (a *App) FileUpload(tabID int, remoteDir string) (int, error) {
 	if t == nil {
 		return 0, errors.New("연결되어 있지 않습니다")
 	}
-	files, release, err := a.picker().OpenFiles(pickOpts{Title: i18n.Tr("업로드할 파일 선택")})
+	files, release, err := a.picker().OpenFiles(dialog.Opts{Title: i18n.Tr("업로드할 파일 선택")})
 	defer release()
 	if err != nil || len(files) == 0 {
 		return 0, err
@@ -356,9 +357,9 @@ func (a *App) FileDownloadMany(tabID int, dir string, entries []transfer.FileEnt
 		return DownloadResult{}, errors.New("연결되어 있지 않습니다")
 	}
 	localDir := a.hooks.downloadDir
-	finish := keepPath(localDir)
+	finish := dialog.KeepPath(localDir)
 	if localDir == "" {
-		d, f, err := a.picker().SaveDir(pickOpts{
+		d, f, err := a.picker().SaveDir(dialog.Opts{
 			Title: i18n.Tr("저장할 폴더 선택"),
 			Dir:   transfer.DownloadsDir(),
 		})

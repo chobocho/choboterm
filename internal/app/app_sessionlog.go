@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"choboterm/internal/config"
+	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
 	"choboterm/internal/osutil"
 	"choboterm/internal/sessionlog"
@@ -59,7 +60,7 @@ func (a *App) LogPath(tabID int) string {
 // Linux), or the log folder.
 func (a *App) ShowLogs(tabID int) error {
 	if !a.local() {
-		return errNotInBrowser // Explorer would open on the other PC
+		return dialog.ErrNotInBrowser // Explorer would open on the other PC
 	}
 	if p := a.LogPath(tabID); p != "" {
 		return osutil.ShowFile(p)
@@ -82,7 +83,7 @@ func (a *App) ChooseLogDir(current string) (string, error) {
 	if st, err := os.Stat(current); err != nil || !st.IsDir() {
 		current = ""
 	}
-	dir, err := a.picker().Folder(pickOpts{
+	dir, err := a.picker().Folder(dialog.Opts{
 		Title: i18n.Tr("로그 폴더 선택"),
 		Dir:   current,
 	})

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"choboterm/internal/codec"
+	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
 	"choboterm/internal/transfer"
 )
@@ -195,7 +196,7 @@ type SaveResult struct {
 // TextSaveAs asks for a local file and writes text to it in encoding enc.
 // Path is "" if the user cancelled the dialog.
 func (a *App) TextSaveAs(name, text, enc string) (SaveResult, error) {
-	local, finish, err := a.picker().SaveFile(pickOpts{
+	local, finish, err := a.picker().SaveFile(dialog.Opts{
 		Title: i18n.Tr("다른 인코딩으로 저장 (" + enc + ")"),
 		Dir:   transfer.DownloadsDir(),
 		Name:  name,

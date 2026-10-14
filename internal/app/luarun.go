@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"choboterm/internal/dbg"
+	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
 	"choboterm/internal/luahost"
 	"choboterm/internal/osutil"
@@ -413,10 +414,10 @@ type ConsoleFile struct {
 // input line.
 func (a *App) ConsoleOpen() (ConsoleFile, error) {
 	dir, _ := ensureScriptsDir()
-	p, release, err := a.picker().OpenFile(pickOpts{
+	p, release, err := a.picker().OpenFile(dialog.Opts{
 		Title:   i18n.Tr("Lua 파일 불러오기"),
 		Dir:     dir,
-		Filters: []fileFilter{{Name: i18n.Tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
+		Filters: []dialog.Filter{{Name: i18n.Tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
 	})
 	defer release()
 	if err != nil || p == "" {
@@ -440,11 +441,11 @@ func (a *App) ConsoleOpen() (ConsoleFile, error) {
 // ConsoleSave asks for a local file and writes the console's text to it.
 // It returns "" if the user cancelled the dialog.
 func (a *App) ConsoleSave(text string) (string, error) {
-	local, finish, err := a.picker().SaveFile(pickOpts{
+	local, finish, err := a.picker().SaveFile(dialog.Opts{
 		Title:   i18n.Tr("Lua 콘솔 저장"),
 		Dir:     transfer.DownloadsDir(),
 		Name:    "lua_console_" + time.Now().Format("20060102_150405") + ".txt",
-		Filters: []fileFilter{{Name: i18n.Tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
+		Filters: []dialog.Filter{{Name: i18n.Tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
 	})
 	if err != nil || local == "" {
 		return "", err
@@ -459,11 +460,11 @@ func (a *App) ConsoleSave(text string) (string, error) {
 // MemoSave asks where to save the current memo and writes it as UTF-8 text.
 // It returns an empty path when the user cancels.
 func (a *App) MemoSave(text string) (string, error) {
-	local, finish, err := a.picker().SaveFile(pickOpts{
+	local, finish, err := a.picker().SaveFile(dialog.Opts{
 		Title:   i18n.Tr("메모 저장"),
 		Dir:     transfer.DownloadsDir(),
 		Name:    "memo.txt",
-		Filters: []fileFilter{{Name: i18n.Tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
+		Filters: []dialog.Filter{{Name: i18n.Tr("텍스트 (*.txt)"), Pattern: "*.txt"}},
 	})
 	if err != nil || local == "" {
 		return "", err
@@ -548,10 +549,10 @@ func (a *App) RunScriptFile(tabID int) (string, error) {
 		return "", errors.New("탭이 없습니다")
 	}
 	dir, _ := ensureScriptsDir()
-	p, release, err := a.picker().OpenFile(pickOpts{
+	p, release, err := a.picker().OpenFile(dialog.Opts{
 		Title:   i18n.Tr("Lua 스크립트 실행"),
 		Dir:     dir,
-		Filters: []fileFilter{{Name: i18n.Tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
+		Filters: []dialog.Filter{{Name: i18n.Tr("Lua 스크립트 (*.lua)"), Pattern: "*.lua"}},
 	})
 	defer release()
 	if err != nil || p == "" {
@@ -580,7 +581,7 @@ func runScriptFile(t *tab, p string) (string, error) {
 // ShowScripts opens the scripts folder in Explorer (the file manager on Linux).
 func (a *App) ShowScripts() error {
 	if !a.local() {
-		return errNotInBrowser // Explorer would open on the other PC
+		return dialog.ErrNotInBrowser // Explorer would open on the other PC
 	}
 	dir, err := ensureScriptsDir()
 	if err != nil {

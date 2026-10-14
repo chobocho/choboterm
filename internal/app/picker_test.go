@@ -22,6 +22,7 @@ import (
 
 	"choboterm/internal/codec"
 	"choboterm/internal/config"
+	"choboterm/internal/dialog"
 	"choboterm/internal/store"
 	"choboterm/internal/transfer"
 )
@@ -36,10 +37,10 @@ type fakePicker struct {
 	calls    []string // "openFile:title" ...
 	finished []bool   // finish(ok) calls
 	released int
-	opts     []pickOpts
+	opts     []dialog.Opts
 }
 
-func (p *fakePicker) rec(op string, o pickOpts) {
+func (p *fakePicker) rec(op string, o dialog.Opts) {
 	p.mu.Lock()
 	p.calls = append(p.calls, op+":"+o.Title)
 	p.opts = append(p.opts, o)
@@ -60,27 +61,27 @@ func (p *fakePicker) finish(ret string) func(bool) string {
 	}
 }
 
-func (p *fakePicker) OpenFile(o pickOpts) (string, func(), error) {
+func (p *fakePicker) OpenFile(o dialog.Opts) (string, func(), error) {
 	p.rec("openFile", o)
 	return p.file, p.release, p.err
 }
-func (p *fakePicker) OpenFiles(o pickOpts) ([]string, func(), error) {
+func (p *fakePicker) OpenFiles(o dialog.Opts) ([]string, func(), error) {
 	p.rec("openFiles", o)
 	return p.files, p.release, p.err
 }
-func (p *fakePicker) SaveFile(o pickOpts) (string, func(bool) string, error) {
+func (p *fakePicker) SaveFile(o dialog.Opts) (string, func(bool) string, error) {
 	p.rec("saveFile", o)
 	return p.file, p.finish("saved:" + filepath.Base(p.file)), p.err
 }
-func (p *fakePicker) SaveDir(o pickOpts) (string, func(bool) string, error) {
+func (p *fakePicker) SaveDir(o dialog.Opts) (string, func(bool) string, error) {
 	p.rec("saveDir", o)
 	return p.dir, p.finish("dir:" + p.dir), p.err
 }
 func (p *fakePicker) ReceiveDir() (string, func(bool) string) {
-	p.rec("receiveDir", pickOpts{})
+	p.rec("receiveDir", dialog.Opts{})
 	return p.dir, p.finish(p.dir)
 }
-func (p *fakePicker) Folder(o pickOpts) (string, error) {
+func (p *fakePicker) Folder(o dialog.Opts) (string, error) {
 	p.rec("folder", o)
 	return p.dir, p.err
 }
@@ -395,7 +396,7 @@ func TestZmodemReceiveDirFromPicker(t *testing.T) {
 // Which picker a caller gets.
 func TestPickerSelection(t *testing.T) {
 	a := NewApp()
-	if _, ok := a.picker().(noPicker); !ok {
+	if _, ok := a.picker().(dialog.None); !ok {
 		t.Fatalf("no window, no caller: %T", a.picker())
 	}
 	remote := &App{appState: a.appState, caller: &webClient{}}
@@ -423,10 +424,10 @@ func TestPickerSelection(t *testing.T) {
 func TestExplorerOnlyForLocalCallers(t *testing.T) {
 	a := NewApp()
 	remote := &App{appState: a.appState, caller: &webClient{}}
-	if err := remote.ShowScripts(); !errors.Is(err, errNotInBrowser) {
+	if err := remote.ShowScripts(); !errors.Is(err, dialog.ErrNotInBrowser) {
 		t.Fatalf("ShowScripts: %v", err)
 	}
-	if err := remote.ShowLogs(1); !errors.Is(err, errNotInBrowser) {
+	if err := remote.ShowLogs(1); !errors.Is(err, dialog.ErrNotInBrowser) {
 		t.Fatalf("ShowLogs: %v", err)
 	}
 	// Quitting is the window's alone.
