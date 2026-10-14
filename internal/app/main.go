@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"choboterm/frontend"
+	"choboterm/internal/config"
 	"choboterm/internal/luahost"
 	"choboterm/internal/osutil"
 	"choboterm/internal/version"
@@ -33,6 +34,13 @@ func Main() {
 			os.Exit(2)
 		}
 		return
+	}
+	// Until the settings are first saved, the terminal font size is the
+	// desktop's (GNOME Terminal on Ubuntu: 13pt, 17px) rather than 15px.
+	config.FirstRun = func(s *config.Settings) {
+		if f := osutil.SystemMonoFont(); f.Size >= 8 && f.Size <= 40 {
+			s.FontSize = f.Size
+		}
 	}
 	page, err := fs.Sub(frontend.Assets, frontend.AssetDir)
 	if err != nil {

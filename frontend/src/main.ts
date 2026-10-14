@@ -11,7 +11,8 @@ import {Lang, startI18n} from './i18n';
 import {openSearch} from './search';
 import {loadSettings, settings} from './settings';
 import {filesOpen, setActiveTabProvider} from './files';
-import {GetLanguage, GetVersion, Quit, WebHideWindow} from '../wailsjs/go/app/App';
+import {GetLanguage, GetSystemFont, GetVersion, Quit, WebHideWindow} from '../wailsjs/go/app/App';
+import {setSystemFont, systemFontSize} from './cjkwidth';
 import {Environment, EventsOn, WindowUnminimise} from '../wailsjs/runtime/runtime';
 import {setPlatform} from './platform';
 import {checkUpdate} from './update';
@@ -90,7 +91,7 @@ window.addEventListener('keydown', ev => {
     if (ev.key === 'PageUp') return cycleTab(-1);
     if (ev.key === '=' || ev.key === '+') return setFontSize(settings.fontSize + 1);
     if (ev.key === '-') return setFontSize(settings.fontSize - 1);
-    if (ev.key === '0') return setFontSize(DEFAULT_FONT);
+    if (ev.key === '0') return setFontSize(systemFontSize() || DEFAULT_FONT);
     const dir = splitKey(ev);
     if (dir) return t && splitTab(t, dir);
     if (isPaneKey(ev)) {
@@ -164,9 +165,10 @@ initAuthPrompt(id => {
     return `${r.login ? r.login + '@' : ''}${r.host}:${r.port}`;
 }, focusActive);
 
-Promise.all([GetVersion(), loadSettings(), GetLanguage(), Environment()]).then(([v, , lang, env]) => {
+Promise.all([GetVersion(), loadSettings(), GetLanguage(), Environment(), GetSystemFont().catch(() => ({family: '', size: 0}))]).then(([v, , lang, env, font]) => {
     setVersion(v);
     setPlatform(env.platform);
+    setSystemFont(font.family, font.size);
     startI18n(lang === 'en' ? 'en' : 'ko' as Lang);
     initTranslucencyPreview(applyTranslucency);
     $<HTMLSpanElement>('connectTitle').textContent = `${appName} - Connect to`;
