@@ -107,15 +107,38 @@ export const FONTS: ReadonlyArray<{name: string; label: string; legacy?: boolean
     {name: 'DejaVu Sans Mono', label: 'DejaVu Sans Mono'},
 ];
 
-// Windows fonts first, then what Linux desktops usually have.
-const FALLBACK = '"D2Coding", "Consolas", "Malgun Gothic", "Noto Sans Mono CJK KR", "NanumGothicCoding", "DejaVu Sans Mono", monospace';
+// The desktop's fixed-width font (Linux: GNOME's or KDE's) and its size in
+// pixels; "" and 0 if unknown.
+let systemFont = '';
+let systemSize = 0;
+
+/** Sets the desktop's fixed-width font (from GetSystemFont), before terminals are made. */
+export function setSystemFont(family: string, size: number) {
+    systemFont = family.replace(/["\\]/g, '').trim();
+    systemSize = size;
+}
+
+/** The desktop terminal's font size in pixels, 0 if unknown: what Ctrl+0 goes back to. */
+export function systemFontSize(): number {
+    return systemSize;
+}
+
+// The fallbacks after the chosen font, per character: Windows fonts first;
+// then, on Linux, the desktop's fixed-width font and the generic monospace
+// (fontconfig's), so that Latin text looks as in the desktop's terminal; the
+// Korean fonts last, for what those lack. With "Noto Sans Mono CJK KR" ahead
+// of them, Linux drew Latin text with its narrow CJK-width Latin glyphs.
+function fallback(): string {
+    const system = systemFont ? `"${systemFont}", ` : '';
+    return `"D2Coding", "Consolas", "Malgun Gothic", ${system}monospace, "Noto Sans Mono CJK KR", "NanumGothicCoding"`;
+}
 
 /** The CSS font-family for a chosen font, in wide (EUC-KR) or narrow mode. */
 export function fontFamily(name: string, wide: boolean): string {
     const chosen = FONTS.find(f => f.name === name) ?? FONTS[0];
     // A modern font draws ambiguous symbols half-width; borrow them from a legacy font.
     const amb = wide && !chosen.legacy ? `"${AMBIGUOUS_FONT}", ` : '';
-    return `${amb}"${chosen.name}", ${FALLBACK}`;
+    return `${amb}"${chosen.name}", ${fallback()}`;
 }
 
 // Font for ambiguous-width characters in EUC-KR mode. D2Coding draws ▒─■ etc. as

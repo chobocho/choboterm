@@ -20,6 +20,7 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
 
   - Requires GTK 3 and WebKitGTK 4.1 (Ubuntu 22.04 · Debian 12 or later): `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0`
   - Saving passwords works only when a keyring (GNOME Keyring, KWallet, etc.) is available. Without a keyring, passwords are not saved.
+  - Terminal font: without D2Coding, text is drawn with the desktop's fixed-width font (the GNOME or KDE setting, as in the desktop's own terminal), and on first start the font size follows it too. Change the size with `Ctrl+wheel` or in Settings.
   - Window translucency and PuTTY session import are Windows-only. macOS is not supported.
 
 ![choboterm screenshot](./docs/screen_shot.png)

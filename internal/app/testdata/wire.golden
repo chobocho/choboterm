@@ -43,6 +43,7 @@ GetSSHConfigHosts() ([]SSHConfigHost)
 GetSerialPorts() ([]SerialPort)
 GetSessions() ([]SavedSession)
 GetSettings() (Settings)
+GetSystemFont() (MonoFont)
 GetVersion() (string)
 ImportPuTTY() (ImportResult, error)
 ImportSessions() (ImportResult, error)
@@ -193,6 +194,11 @@ macro {
     "key" string
     "text" string
     "kind" string
+}
+
+monoFont {
+    "family" string
+    "size" int
 }
 
 prompt {

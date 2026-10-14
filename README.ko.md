@@ -20,6 +20,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 
   - GTK 3와 WebKitGTK 4.1이 필요합니다(Ubuntu 22.04 · Debian 12 이후): `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0`
   - 비밀번호 저장은 키링(GNOME Keyring, KWallet 등)이 있을 때만 됩니다. 키링이 없으면 저장하지 않습니다.
+  - 터미널 글꼴: D2Coding이 없으면 데스크톱의 고정폭 글꼴(GNOME · KDE 설정, 기본 터미널과 같은 글꼴)로 그리고, 처음 실행할 때 글자 크기도 그 크기로 맞춥니다. 크기는 `Ctrl+휠`이나 설정 창에서 바꿉니다.
   - 반투명 창과 PuTTY 세션 가져오기는 Windows에서만 됩니다. macOS는 지원하지 않습니다.
 
 ![choboterm 스크린샷](./docs/screen_shot.png)

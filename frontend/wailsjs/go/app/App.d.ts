@@ -9,6 +9,7 @@ import {localshell} from '../models';
 import {sshconn} from '../models';
 import {serial} from '../models';
 import {config} from '../models';
+import {osutil} from '../models';
 
 export function AnswerPrompt(arg1:number,arg2:Array<string>,arg3:boolean):Promise<void>;
 
@@ -27,8 +28,6 @@ export function ConsoleInterrupt(arg1:number):Promise<void>;
 export function ConsoleOpen():Promise<app.ConsoleFile>;
 
 export function ConsoleSave(arg1:string):Promise<string>;
-
-export function MemoSave(arg1:string):Promise<string>;
 
 export function DebugEnabled():Promise<boolean>;
 
@@ -98,6 +97,8 @@ export function GetSessions():Promise<Array<store.SavedSession>>;
 
 export function GetSettings():Promise<config.Settings>;
 
+export function GetSystemFont():Promise<osutil.MonoFont>;
+
 export function GetVersion():Promise<string>;
 
 export function ImportPuTTY():Promise<store.ImportResult>;
@@ -107,6 +108,8 @@ export function ImportSessions():Promise<store.ImportResult>;
 export function LogPath(arg1:number):Promise<string>;
 
 export function LookupSSH(arg1:string):Promise<sshconn.SSHTarget>;
+
+export function MemoSave(arg1:string):Promise<string>;
 
 export function Quit():Promise<void>;
 

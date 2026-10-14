@@ -38,10 +38,6 @@ export function ConsoleSave(arg1) {
   return window['go']['app']['App']['ConsoleSave'](arg1);
 }
 
-export function MemoSave(arg1) {
-  return window['go']['app']['App']['MemoSave'](arg1);
-}
-
 export function DebugEnabled() {
   return window['go']['app']['App']['DebugEnabled']();
 }
@@ -178,6 +174,10 @@ export function GetSettings() {
   return window['go']['app']['App']['GetSettings']();
 }
 
+export function GetSystemFont() {
+  return window['go']['app']['App']['GetSystemFont']();
+}
+
 export function GetVersion() {
   return window['go']['app']['App']['GetVersion']();
 }
@@ -196,6 +196,10 @@ export function LogPath(arg1) {
 
 export function LookupSSH(arg1) {
   return window['go']['app']['App']['LookupSSH'](arg1);
+}
+
+export function MemoSave(arg1) {
+  return window['go']['app']['App']['MemoSave'](arg1);
 }
 
 export function Quit() {

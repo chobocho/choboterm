@@ -3,6 +3,8 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -141,6 +143,10 @@ func Load() Settings {
 	return readSettings()
 }
 
+// FirstRun, when set, adjusts the defaults while there is no settings file
+// yet: the Linux window starts with the desktop's terminal font size.
+var FirstRun func(*Settings)
+
 func readSettings() Settings {
 	s := Default()
 	p, err := File()
@@ -149,6 +155,9 @@ func readSettings() Settings {
 	}
 	data, err := os.ReadFile(p)
 	if err != nil {
+		if FirstRun != nil && errors.Is(err, fs.ErrNotExist) {
+			FirstRun(&s)
+		}
 		return s
 	}
 	if json.Unmarshal(data, &s) != nil {

@@ -447,6 +447,25 @@ export namespace localshell {
 
 }
 
+export namespace osutil {
+	
+	export class MonoFont {
+	    family: string;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MonoFont(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.family = source["family"];
+	        this.size = source["size"];
+	    }
+	}
+
+}
+
 export namespace serial {
 	
 	export class SerialPort {
