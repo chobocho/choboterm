@@ -1,4 +1,4 @@
-package app
+package web
 
 // Tests of the web server alone: no App behind it (nopHost).
 
@@ -16,19 +16,19 @@ import (
 // nopHost is a webHost without an app.
 type nopHost struct{}
 
-func (nopHost) Invoke(*webClient, string, []json.RawMessage) (interface{}, error) {
+func (nopHost) Invoke(*Client, string, []json.RawMessage) (interface{}, error) {
 	return nil, errors.New("no app")
 }
-func (nopHost) ClientClosed(int)         {}
-func (nopHost) HasWindow() bool          { return false }
-func (nopHost) ShowWindow()              {}
-func (nopHost) ServerStopped(*webServer) {}
+func (nopHost) ClientClosed(int)      {}
+func (nopHost) HasWindow() bool       { return false }
+func (nopHost) ShowWindow()           {}
+func (nopHost) ServerStopped(*Server) {}
 
 // bareServer is a server that isn't listening, for tests of its clients.
-func bareServer(t testing.TB) *webServer {
-	return &webServer{
-		host: nopHost{}, opts: webOptions{Grace: webGrace}, stageRoot: t.TempDir(),
-		clients: map[int]*webClient{}, codes: map[string]time.Time{},
+func bareServer(t testing.TB) *Server {
+	return &Server{
+		host: nopHost{}, opts: Options{Grace: webGrace}, stageRoot: t.TempDir(),
+		clients: map[int]*Client{}, codes: map[string]time.Time{},
 		stages: map[string]*webStage{}, downloads: map[string]*webDownload{},
 	}
 }
@@ -74,12 +74,12 @@ func TestWebOutputBackpressure(t *testing.T) {
 	old := webMaxUnacked
 	webMaxUnacked = 1000
 	defer func() { webMaxUnacked = old }()
-	c, _ := bareServer(t).newClient(false)
+	c, _ := bareServer(t).NewClient(false)
 	chunk := make([]byte, 600)
-	c.output(c.id<<tabBits+1, chunk) // 605 bytes queued
-	c.output(c.id<<tabBits+1, chunk) // over the limit after this one
+	c.output(c.id<<TabBits+1, chunk) // 605 bytes queued
+	c.output(c.id<<TabBits+1, chunk) // over the limit after this one
 	done := make(chan struct{})
-	go func() { c.output(c.id<<tabBits+1, chunk); close(done) }()
+	go func() { c.output(c.id<<TabBits+1, chunk); close(done) }()
 	select {
 	case <-done:
 		t.Fatal("output didn't wait")
@@ -95,19 +95,19 @@ func TestWebOutputBackpressure(t *testing.T) {
 	}
 	// Events never wait.
 	c.event("x", nil)
-	c.close() // and closing releases any waiting writer
+	c.Close() // and closing releases any waiting writer
 }
 
 // A web page's path: one binary frame (copy into a 5-byte header), queued
 // for the page's writer; the page acknowledges as it goes.
 func BenchmarkOutputWebPath(b *testing.B) {
-	c, _ := bareServer(b).newClient(false)
-	defer c.close()
+	c, _ := bareServer(b).NewClient(false)
+	defer c.Close()
 	chunk := make([]byte, 32<<10)
 	b.SetBytes(int64(len(chunk)))
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		c.output(c.id<<tabBits+1, chunk)
+		c.output(c.id<<TabBits+1, chunk)
 		if i%64 == 63 { // the page acknowledges every so often
 			c.mu.Lock()
 			c.ackLocked(c.nextSeq - 1)

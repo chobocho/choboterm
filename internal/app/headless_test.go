@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"choboterm/internal/store"
+	"choboterm/internal/web"
 )
 
 // Without a window (headless web, or a test) no method may reach the Wails
@@ -26,13 +27,13 @@ func TestEveryMethodWithoutWindow(t *testing.T) {
 	store.HistoryFile = func() (string, error) { return hist, nil }
 	t.Cleanup(func() { store.HistoryFile = origH })
 
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	for _, local := range []bool{false, true} {
-		c, err := f.w.newClient(local)
+		c, err := f.w.NewClient(local)
 		if err != nil {
 			t.Fatal(err)
 		}
-		c.close() // a file chooser for a closed page is cancelled at once
+		c.Close() // a file chooser for a closed page is cancelled at once
 		var names []string
 		for n := range webMethods {
 			names = append(names, n)

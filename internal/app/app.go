@@ -1,6 +1,7 @@
 // Package app is choboterm itself: the tabs and their connections, everything
-// the page calls (the methods of App, which Wails binds), the web server that
-// serves the same page to browsers, and the window.
+// the page calls (the methods of App, which Wails binds), the web server's
+// side of the app (internal/web serves the same page to browsers), and the
+// window.
 package app
 
 import (
@@ -34,6 +35,7 @@ import (
 	"choboterm/internal/terminal"
 	"choboterm/internal/transfer"
 	"choboterm/internal/version"
+	"choboterm/internal/web"
 )
 
 // keepAliveMisses is how many keepalives in a row may fail before the
@@ -46,12 +48,12 @@ type keepAliver interface {
 }
 
 // App is what the page calls (the methods Wails binds). The desktop window
-// uses the App made by NewApp; each web client (see web.go) calls through its
+// uses the App made by NewApp; each web client (see web_host.go) calls through its
 // own App that shares the same appState, so a method can tell who called it
 // (caller) and, for example, open the file dialog on the right screen.
 type App struct {
 	*appState
-	caller *webClient // nil: the desktop window (or a test)
+	caller *web.Client // nil: the desktop window (or a test)
 }
 
 // appState is the state shared by the window and every web client.
@@ -67,10 +69,10 @@ type appState struct {
 	shown sync.Once
 	quit  atomic.Bool // the user agreed to close the window (see beforeClose)
 	// web is the web server while it runs (see web.go).
-	web atomic.Pointer[webServer]
+	web atomic.Pointer[web.Server]
 	// webStart is the web server to start with the window (main's --web
 	// or Settings > Web); nil = none.
-	webStart *webOptions
+	webStart *web.Options
 	hidden   atomic.Bool            // the window was closed but the web server kept running (see WebHideWindow)
 	webErr   atomic.Pointer[string] // why the web server didn't start, for Settings
 }
@@ -141,7 +143,7 @@ func (a *App) beforeClose(ctx context.Context) bool {
 		return false
 	}
 	if w := a.web.Load(); w != nil {
-		if n := w.connectedCount(); n > 0 {
+		if n := w.ConnectedCount(); n > 0 {
 			a.emit("app:closeWeb", n)
 			return true
 		}
@@ -188,7 +190,7 @@ func (a *App) Quit() {
 
 func (a *App) shutdown(ctx context.Context) {
 	if w := a.web.Load(); w != nil {
-		w.stop()
+		w.Stop()
 	}
 	a.mu.Lock()
 	tabs := a.tabs
@@ -231,9 +233,9 @@ func (a *App) emitFor(tabID int, name string, data ...interface{}) {
 		a.hooks.emit(name, data...)
 		return
 	}
-	if c := clientOf(tabID); c != windowClient {
+	if c := web.ClientOf(tabID); c != web.WindowClient {
 		if w := a.web.Load(); w != nil {
-			w.event(c, name, data)
+			w.Event(c, name, data)
 		}
 		return
 	}
@@ -250,9 +252,9 @@ func (t *tab) emit(name string, data ...interface{}) {
 // bytes in base64 for the window, a binary message for a web client.
 // out may be reused by the caller once this returns.
 func (t *tab) emitOutput(out []byte) {
-	if c := clientOf(t.id); c != windowClient && t.app.hooks.emit == nil {
+	if c := web.ClientOf(t.id); c != web.WindowClient && t.app.hooks.emit == nil {
 		if w := t.app.web.Load(); w != nil {
-			w.output(c, t.id, out)
+			w.Output(c, t.id, out)
 		}
 		return
 	}

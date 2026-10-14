@@ -209,7 +209,7 @@ func (a *App) FileUpload(tabID int, remoteDir string) (int, error) {
 // remoteDir, e.g. ones dropped on the file window. Returns the number of files.
 func (a *App) FileUploadPaths(tabID int, remoteDir string, paths []string) (int, error) {
 	if a.caller != nil {
-		defer a.caller.releaseStaged(paths) // files a browser dropped (see web_files.go)
+		defer a.caller.ReleaseStaged(paths) // files a browser dropped (see internal/web/files.go)
 	}
 	t := a.findTab(tabID)
 	if t == nil {

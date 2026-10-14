@@ -1,4 +1,4 @@
-package app
+package web
 
 // Starting choboterm again while it runs with the web server (its window
 // maybe hidden, see WebHideWindow) shows that window instead of starting a
@@ -38,7 +38,7 @@ func showProof(token, nonce string) []byte {
 
 // handleShow brings the window to the front for a choboterm started again.
 // It needs no login: showing the window is harmless, and only this PC may ask.
-func (w *webServer) handleShow(rw http.ResponseWriter, r *http.Request) {
+func (w *Server) handleShow(rw http.ResponseWriter, r *http.Request) {
 	nonce := r.URL.Query().Get("nonce")
 	if r.Method != http.MethodPost || !loopbackRemote(r.RemoteAddr) || !w.host.HasWindow() ||
 		len(nonce) < 16 || len(nonce) > 128 {
@@ -62,16 +62,16 @@ func readWebToken() string {
 	return strings.TrimSpace(string(b))
 }
 
-// handoffToRunning asks a choboterm already serving o.Addr to show its
+// Handoff asks a choboterm already serving o.Addr to show its
 // window, and reports whether it did (then this process should quit).
-func handoffToRunning(o webOptions) bool {
+func Handoff(o Options) bool {
 	token := readWebToken()
 	if token == "" {
 		return false // no server has ever run for this user
 	}
 	addr := o.Addr
 	if addr == "" {
-		addr = webDefaultAddr
+		addr = DefaultAddr
 	}
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -83,7 +83,7 @@ func handoffToRunning(o webOptions) bool {
 		host = "127.0.0.1"
 	}
 	scheme := "http"
-	if o.CertFile != "" || (!loopbackHost(strings.Trim(addrHost(addr), "[]")) && !o.Insecure) {
+	if o.CertFile != "" || (!LoopbackHost(strings.Trim(addrHost(addr), "[]")) && !o.Insecure) {
 		scheme = "https"
 	}
 	nonce := randomHex(16)

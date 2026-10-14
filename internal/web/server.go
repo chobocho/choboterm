@@ -1,13 +1,14 @@
-package app
-
-// The web server (choboterm --web, or Settings > Web): the same page as the
-// window, served to browsers. Calls and events go over one WebSocket per page
-// (web_client.go); file dialogs become uploads and downloads for browsers on
-// other PCs (web_files.go). The window keeps working as before.
+// Package web is the web server (choboterm --web, or Settings > Web): the
+// same page as the window, served to browsers. Calls and events go over one
+// WebSocket per page (client.go); file dialogs become uploads and downloads
+// for browsers on other PCs (files.go). What a call or a page going away
+// means for the tabs is up to the Host (the app). The window keeps working
+// as before.
 //
-// Tab ids: the page picks them. A web page gets the base clientID<<tabBits
+// Tab ids: the page picks them. A web page gets the base clientID<<TabBits
 // and numbers its tabs base+1, base+2, ...; the window's base is 0, so the
-// window's tab ids are unchanged and clientOf(tab) says whose tab it is.
+// window's tab ids are unchanged and ClientOf(tab) says whose tab it is.
+package web
 
 import (
 	"bytes"
@@ -38,25 +39,25 @@ import (
 )
 
 const (
-	tabBits      = 20 // up to a million tabs per page
-	windowClient = 0
+	TabBits      = 20 // up to a million tabs per page
+	WindowClient = 0
 	// maxClientID keeps tab ids within 32 bits (the output frame's tab field).
-	maxClientID = 1<<(32-tabBits) - 1
-	// webDefaultAddr is where the server listens unless told otherwise:
+	maxClientID = 1<<(32-TabBits) - 1
+	// DefaultAddr is where the server listens unless told otherwise:
 	// this PC only.
-	webDefaultAddr = "127.0.0.1:7681"
+	DefaultAddr = "127.0.0.1:7681"
 )
 
-// clientOf returns the web client that owns tab tabID, or windowClient.
-func clientOf(tabID int) int {
-	if tabID < 1<<tabBits {
-		return windowClient
+// ClientOf returns the web client that owns tab tabID, or windowClient.
+func ClientOf(tabID int) int {
+	if tabID < 1<<TabBits {
+		return WindowClient
 	}
-	return tabID >> tabBits
+	return tabID >> TabBits
 }
 
-// webOptions configures the web server.
-type webOptions struct {
+// Options configures the web server.
+type Options struct {
 	Addr     string // host:port; "" = webDefaultAddr
 	CertFile string // TLS certificate and key; "" = self-signed when needed
 	KeyFile  string
@@ -71,13 +72,13 @@ type webOptions struct {
 // may suspend background pages for a few minutes, so allow time to reconnect.
 const webGrace = 10 * time.Minute
 
-// webWrongTokenDelay slows down guessing the token (tests shorten it).
-var webWrongTokenDelay = time.Second
+// WrongTokenDelay slows down guessing the token (tests shorten it).
+var WrongTokenDelay = time.Second
 
-// webServer serves the page and its WebSocket.
-type webServer struct {
-	host webHost
-	opts webOptions
+// Server serves the page and its WebSocket.
+type Server struct {
+	host Host
+	opts Options
 	srv  *http.Server
 	ln   net.Listener
 	tls  bool
@@ -91,7 +92,7 @@ type webServer struct {
 	stageRoot            string // temporary files of uploads and downloads
 
 	mu        sync.Mutex
-	clients   map[int]*webClient
+	clients   map[int]*Client
 	nextID    int
 	codes     map[string]time.Time // one-time codes that mark a browser as local
 	stages    map[string]*webStage
@@ -102,17 +103,17 @@ type webServer struct {
 	onChange func(clients int)
 }
 
-// serveWeb starts the web server for h and page (the frontend/dist folder).
-func serveWeb(h webHost, page fs.FS, opts webOptions) (*webServer, error) {
+// Start starts the web server for h and page (the frontend/dist folder).
+func Start(h Host, page fs.FS, opts Options) (*Server, error) {
 	if opts.Addr == "" {
-		opts.Addr = webDefaultAddr
+		opts.Addr = DefaultAddr
 	}
 	if opts.Grace <= 0 {
 		opts.Grace = webGrace
 	}
 	host, _, err := net.SplitHostPort(opts.Addr)
 	if err != nil {
-		return nil, fmt.Errorf("주소가 올바르지 않습니다 (예: %s): %w", webDefaultAddr, err)
+		return nil, fmt.Errorf("주소가 올바르지 않습니다 (예: %s): %w", DefaultAddr, err)
 	}
 	index, err := fs.ReadFile(page, "index.html")
 	if err != nil {
@@ -125,18 +126,18 @@ func serveWeb(h webHost, page fs.FS, opts webOptions) (*webServer, error) {
 		}
 	} else {
 		var err error
-		token, err = webToken(false)
+		token, err = Token(false)
 		if err != nil {
 			return nil, err
 		}
 	}
-	w := &webServer{
+	w := &Server{
 		host:      h,
 		opts:      opts,
 		page:      page,
 		token:     token,
 		localKey:  randomHex(32),
-		clients:   map[int]*webClient{},
+		clients:   map[int]*Client{},
 		codes:     map[string]time.Time{},
 		stages:    map[string]*webStage{},
 		downloads: map[string]*webDownload{},
@@ -145,7 +146,7 @@ func serveWeb(h webHost, page fs.FS, opts webOptions) (*webServer, error) {
 
 	// Other PCs may connect: the token travels in the clear without TLS.
 	var tlsCfg *tls.Config
-	if opts.CertFile != "" || (!loopbackHost(host) && !opts.Insecure) {
+	if opts.CertFile != "" || (!LoopbackHost(host) && !opts.Insecure) {
 		cert, fp, err := webCertificate(opts.CertFile, opts.KeyFile)
 		if err != nil {
 			return nil, err
@@ -180,15 +181,15 @@ func serveWeb(h webHost, page fs.FS, opts webOptions) (*webServer, error) {
 	return w, nil
 }
 
-// stop closes the server, every page's tabs and the temporary files.
-func (w *webServer) stop() {
+// Stop closes the server, every page's tabs and the temporary files.
+func (w *Server) Stop() {
 	w.mu.Lock()
 	if w.closed {
 		w.mu.Unlock()
 		return
 	}
 	w.closed = true
-	clients := make([]*webClient, 0, len(w.clients))
+	clients := make([]*Client, 0, len(w.clients))
 	for _, c := range w.clients {
 		clients = append(clients, c)
 	}
@@ -198,13 +199,13 @@ func (w *webServer) stop() {
 	defer cancel()
 	_ = w.srv.Shutdown(ctx) // stops accepting; WebSockets are hijacked, closed below
 	for _, c := range clients {
-		c.close()
+		c.Close()
 	}
 	_ = os.RemoveAll(w.stageRoot)
 }
 
 // URL is the address to open in a browser, with the token unless bare.
-func (w *webServer) URL(bare bool) string {
+func (w *Server) URL(bare bool) string {
 	scheme := "http"
 	if w.tls {
 		scheme = "https"
@@ -221,31 +222,31 @@ func (w *webServer) URL(bare bool) string {
 	return u + "?token=" + url.QueryEscape(w.token)
 }
 
-// options are the server's options, with the defaults filled in.
-func (w *webServer) options() webOptions { return w.opts }
+// Options are the server's options, with the defaults filled in.
+func (w *Server) Options() Options { return w.opts }
 
-// fingerprint is the TLS certificate's SHA-256 fingerprint ("" without TLS),
+// Fingerprint is the TLS certificate's SHA-256 fingerprint ("" without TLS),
 // to compare with the one the browser shows.
-func (w *webServer) fingerprint() string { return w.fp }
+func (w *Server) Fingerprint() string { return w.fp }
 
-// addr is the address the server listens on.
-func (w *webServer) addr() string { return w.ln.Addr().String() }
+// Addr is the address the server listens on.
+func (w *Server) Addr() string { return w.ln.Addr().String() }
 
-// stageDir is the folder of the pages' uploads and downloads.
-func (w *webServer) stageDir() string { return w.stageRoot }
+// StageDir is the folder of the pages' uploads and downloads.
+func (w *Server) StageDir() string { return w.stageRoot }
 
-// setOnChange sets what runs when a page was loaded or went away, with how
+// SetOnChange sets what runs when a page was loaded or went away, with how
 // many are open now.
-func (w *webServer) setOnChange(f func(clients int)) {
+func (w *Server) SetOnChange(f func(clients int)) {
 	w.mu.Lock()
 	w.onChange = f
 	w.mu.Unlock()
 }
 
-// localURL is URL plus a one-time code that marks the browser opening it as
+// LocalURL is URL plus a one-time code that marks the browser opening it as
 // one on this PC, which then gets the window's native file dialogs. Only
 // this process hands out codes, to a browser it opens itself.
-func (w *webServer) localURL() string {
+func (w *Server) LocalURL() string {
 	code := randomHex(16)
 	w.mu.Lock()
 	now := time.Now()
@@ -257,7 +258,7 @@ func (w *webServer) localURL() string {
 	w.codes[code] = now.Add(2 * time.Minute)
 	w.mu.Unlock()
 	u := w.URL(false)
-	if host, port, err := net.SplitHostPort(w.ln.Addr().String()); err == nil && !loopbackHost(host) {
+	if host, port, err := net.SplitHostPort(w.ln.Addr().String()); err == nil && !LoopbackHost(host) {
 		// Open the loopback address: the browser on this PC must arrive from it.
 		scheme := "http"
 		if w.tls {
@@ -275,19 +276,19 @@ func (w *webServer) localURL() string {
 	return u + sep + "local=" + code
 }
 
-// clientCount is the number of pages open now (including ones briefly
+// ClientCount is the number of pages open now (including ones briefly
 // disconnected, which keep their tabs for the grace time).
-func (w *webServer) clientCount() int {
+func (w *Server) ClientCount() int {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return len(w.clients)
 }
 
-// connectedCount is the number of pages connected right now: the browsers
+// ConnectedCount is the number of pages connected right now: the browsers
 // someone is looking at.
-func (w *webServer) connectedCount() int {
+func (w *Server) ConnectedCount() int {
 	w.mu.Lock()
-	clients := make([]*webClient, 0, len(w.clients))
+	clients := make([]*Client, 0, len(w.clients))
 	for _, c := range w.clients {
 		clients = append(clients, c)
 	}
@@ -304,7 +305,7 @@ func (w *webServer) connectedCount() int {
 }
 
 // changed tells onChange that the pages changed.
-func (w *webServer) changed() {
+func (w *Server) changed() {
 	w.mu.Lock()
 	f, closed := w.onChange, w.closed
 	n := len(w.clients)
@@ -314,7 +315,7 @@ func (w *webServer) changed() {
 	}
 }
 
-func (w *webServer) routes() http.Handler {
+func (w *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", w.handleLogin)
 	mux.HandleFunc("/web/show", w.handleShow)
@@ -340,7 +341,7 @@ func securityHeaders(h http.Handler) http.Handler {
 }
 
 // authed reports whether the request carries the access cookie.
-func (w *webServer) authed(r *http.Request) bool {
+func (w *Server) authed(r *http.Request) bool {
 	if w.opts.NoToken {
 		return true
 	}
@@ -348,11 +349,11 @@ func (w *webServer) authed(r *http.Request) bool {
 	return err == nil && w.tokenOK(c.Value)
 }
 
-func (w *webServer) tokenOK(s string) bool {
+func (w *Server) tokenOK(s string) bool {
 	return subtle.ConstantTimeCompare([]byte(s), []byte(w.token)) == 1
 }
 
-func (w *webServer) auth(h http.HandlerFunc) http.HandlerFunc {
+func (w *Server) auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		if !w.authed(r) {
 			http.Error(rw, "unauthorized", http.StatusUnauthorized)
@@ -366,7 +367,7 @@ func (w *webServer) auth(h http.HandlerFunc) http.HandlerFunc {
 // was opened by this process (it holds the local cookie). An address check
 // alone isn't enough: ssh -L forwarding and reverse proxies also arrive from
 // 127.0.0.1, and other users of this PC could connect too.
-func (w *webServer) isLocal(r *http.Request) bool {
+func (w *Server) isLocal(r *http.Request) bool {
 	if !loopbackRemote(r.RemoteAddr) {
 		return false
 	}
@@ -379,7 +380,7 @@ func (w *webServer) isLocal(r *http.Request) bool {
 	return err == nil && subtle.ConstantTimeCompare([]byte(c.Value), []byte(w.localKey)) == 1
 }
 
-func (w *webServer) setCookie(rw http.ResponseWriter, name, value string) {
+func (w *Server) setCookie(rw http.ResponseWriter, name, value string) {
 	http.SetCookie(rw, &http.Cookie{
 		Name: name, Value: value, Path: "/",
 		HttpOnly: true, Secure: w.tls, SameSite: http.SameSiteStrictMode,
@@ -389,7 +390,7 @@ func (w *webServer) setCookie(rw http.ResponseWriter, name, value string) {
 
 // handleRoot serves the page (a new client each time it is loaded), takes
 // the token from ?token=, and serves the page's files.
-func (w *webServer) handleRoot(rw http.ResponseWriter, r *http.Request) {
+func (w *Server) handleRoot(rw http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" && r.URL.Path != "/index.html" {
 		if !w.authed(r) {
 			http.Error(rw, "unauthorized", http.StatusUnauthorized)
@@ -421,13 +422,13 @@ func (w *webServer) handleRoot(rw http.ResponseWriter, r *http.Request) {
 		w.loginPage(rw, http.StatusUnauthorized, false)
 		return
 	}
-	c, err := w.newClient(w.isLocal(r))
+	c, err := w.NewClient(w.isLocal(r))
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
 	info, _ := json.Marshal(map[string]interface{}{
-		"id": c.id, "key": c.key, "base": c.id << tabBits, "local": c.local,
+		"id": c.id, "key": c.key, "base": c.id << TabBits, "local": c.local,
 		"platform": goruntime.GOOS, "arch": goruntime.GOARCH, "lang": i18n.Lang(),
 		"window": w.host.HasWindow(),
 	})
@@ -441,7 +442,7 @@ func (w *webServer) handleRoot(rw http.ResponseWriter, r *http.Request) {
 }
 
 // useCode spends a one-time local code.
-func (w *webServer) useCode(code string) bool {
+func (w *Server) useCode(code string) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	exp, ok := w.codes[code]
@@ -450,7 +451,7 @@ func (w *webServer) useCode(code string) bool {
 }
 
 // handleLogin takes the token typed into the login page.
-func (w *webServer) handleLogin(rw http.ResponseWriter, r *http.Request) {
+func (w *Server) handleLogin(rw http.ResponseWriter, r *http.Request) {
 	if w.opts.NoToken {
 		http.Redirect(rw, r, "/", http.StatusSeeOther)
 		return
@@ -467,9 +468,9 @@ func (w *webServer) handleLogin(rw http.ResponseWriter, r *http.Request) {
 	http.Redirect(rw, r, "/", http.StatusSeeOther)
 }
 
-func (w *webServer) loginPage(rw http.ResponseWriter, status int, wrong bool) {
+func (w *Server) loginPage(rw http.ResponseWriter, status int, wrong bool) {
 	if wrong {
-		time.Sleep(webWrongTokenDelay) // slow down guessing
+		time.Sleep(WrongTokenDelay) // slow down guessing
 	}
 	msg := ""
 	if wrong {
@@ -501,8 +502,8 @@ func splitIndex(index []byte) (head, rest []byte) {
 
 // ---- Clients ----
 
-// newClient registers a page that was just loaded.
-func (w *webServer) newClient(local bool) (*webClient, error) {
+// NewClient registers a page that was just loaded.
+func (w *Server) NewClient(local bool) (*Client, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.closed {
@@ -531,14 +532,14 @@ func (w *webServer) newClient(local bool) (*webClient, error) {
 	return c, nil
 }
 
-func (w *webServer) client(id int) *webClient {
+func (w *Server) Client(id int) *Client {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.clients[id]
 }
 
 // removeClient forgets a closed client.
-func (w *webServer) removeClient(c *webClient) {
+func (w *Server) removeClient(c *Client) {
 	w.mu.Lock()
 	if w.clients[c.id] == c {
 		delete(w.clients, c.id)
@@ -553,16 +554,16 @@ func (w *webServer) removeClient(c *webClient) {
 	}
 }
 
-// event sends an event to client id's page (see App.emitFor).
-func (w *webServer) event(id int, name string, data []interface{}) {
-	if c := w.client(id); c != nil {
+// Event sends an event to client id's page (the app's emitFor calls it).
+func (w *Server) Event(id int, name string, data []interface{}) {
+	if c := w.Client(id); c != nil {
 		c.event(name, data)
 	}
 }
 
-// output sends terminal output of a tab to client id's page.
-func (w *webServer) output(id, tabID int, out []byte) {
-	if c := w.client(id); c != nil {
+// Output sends terminal output of a tab to client id's page.
+func (w *Server) Output(id, tabID int, out []byte) {
+	if c := w.Client(id); c != nil {
 		c.output(tabID, out)
 	}
 }
@@ -577,9 +578,9 @@ func randomHex(n int) string {
 	return hex.EncodeToString(b)
 }
 
-// loopbackHost reports whether host (from an address to listen on) only
+// LoopbackHost reports whether host (from an address to listen on) only
 // accepts connections from this PC.
-func loopbackHost(host string) bool {
+func LoopbackHost(host string) bool {
 	if host == "localhost" {
 		return true
 	}
@@ -618,9 +619,9 @@ func webConfigDir() (string, error) {
 	return dir, os.MkdirAll(dir, 0o700)
 }
 
-// webToken returns the access token, creating it (or a new one) as needed.
+// Token returns the access token, creating it (or a new one) as needed.
 // Changing it logs every browser out.
-func webToken(renew bool) (string, error) {
+func Token(renew bool) (string, error) {
 	dir, err := webConfigDir()
 	if err != nil {
 		return "", err
@@ -640,10 +641,10 @@ func webToken(renew bool) (string, error) {
 	return t, nil
 }
 
-// webHost is what the web server needs of the app.
-type webHost interface {
-	// Invoke runs a method of App for page c, the way Wails would.
-	Invoke(c *webClient, method string, args []json.RawMessage) (interface{}, error)
+// Host is what the web server needs of the app.
+type Host interface {
+	// Invoke runs a method of the app for page c, the way Wails would.
+	Invoke(c *Client, method string, args []json.RawMessage) (interface{}, error)
 	// ClientClosed ends what page id left behind: its prompts and tabs.
 	ClientClosed(id int)
 	// HasWindow reports whether there is a desktop window (pages offer
@@ -652,5 +653,5 @@ type webHost interface {
 	// ShowWindow brings the window to the front (choboterm started again).
 	ShowWindow()
 	// ServerStopped is called once w has stopped.
-	ServerStopped(w *webServer)
+	ServerStopped(w *Server)
 }

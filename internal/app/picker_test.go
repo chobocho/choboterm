@@ -26,6 +26,7 @@ import (
 	"choboterm/internal/dialog"
 	"choboterm/internal/store"
 	"choboterm/internal/transfer"
+	"choboterm/internal/web"
 )
 
 // fakePicker answers dialogs from its fields and records what happened.
@@ -396,20 +397,20 @@ func TestZmodemReceiveDirFromPicker(t *testing.T) {
 
 // Which picker a caller gets.
 func TestPickerSelection(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	a := f.a
 	if _, ok := a.picker().(dialog.None); !ok {
 		t.Fatalf("no window, no caller: %T", a.picker())
 	}
 	page := func(local bool) *App {
-		c, err := f.w.newClient(local)
+		c, err := f.w.NewClient(local)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return &App{appState: a.appState, caller: c}
 	}
 	remote, local := page(false), page(true)
-	browser := reflect.TypeOf(remote.caller.browserPicker())
+	browser := reflect.TypeOf(remote.caller.BrowserPicker())
 	if reflect.TypeOf(remote.picker()) != browser {
 		t.Fatalf("remote browser: %T", remote.picker())
 	}
@@ -432,7 +433,7 @@ func TestPickerSelection(t *testing.T) {
 // Opening Explorer would happen on the wrong PC for a remote browser.
 func TestExplorerOnlyForLocalCallers(t *testing.T) {
 	a := NewApp()
-	remote := &App{appState: a.appState, caller: &webClient{}}
+	remote := &App{appState: a.appState, caller: &web.Client{}}
 	if err := remote.ShowScripts(); !errors.Is(err, dialog.ErrNotInBrowser) {
 		t.Fatalf("ShowScripts: %v", err)
 	}

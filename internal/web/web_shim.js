@@ -1,7 +1,7 @@
 // choboterm web shim: lets the page built for the Wails window run in a
 // browser. It provides what Wails injects into the window, window.go (calls
 // into Go) and window.runtime (events, clipboard, ...), over one WebSocket.
-// The protocol is described at the top of web_client.go.
+// The protocol is described at the top of client.go.
 (() => {
     'use strict';
     const cbt = window.__cbt; // {id, key, base, local, platform, arch, lang, window}

@@ -12,6 +12,7 @@ import (
 	"choboterm/frontend"
 	"choboterm/internal/config"
 	"choboterm/internal/osutil"
+	"choboterm/internal/web"
 )
 
 // headlessBuild is true in a build without the window (-tags headless).
@@ -32,15 +33,15 @@ func runWindow(opts cliOptions) {
 	if !opts.web {
 		webOpts = nil
 		if s := config.Load().Web; s != nil && s.Enabled {
-			webOpts = &webOptions{Addr: s.Addr}
+			webOpts = &web.Options{Addr: s.Addr}
 		}
 	}
 	app.webStart = webOpts
 
 	// With the web server, starting choboterm again shows the one already
 	// running (its window may be hidden) instead of a second choboterm,
-	// which couldn't serve the same port (see handoff.go).
-	if webOpts != nil && handoffToRunning(*webOpts) {
+	// which couldn't serve the same port (see internal/web/handoff.go).
+	if webOpts != nil && web.Handoff(*webOpts) {
 		return
 	}
 

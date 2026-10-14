@@ -1,4 +1,4 @@
-package app
+package web
 
 // Files for web pages on other PCs: what a native file dialog does in the
 // window becomes an upload or a download in the browser (browserPicker).
@@ -36,7 +36,7 @@ import (
 //go:embed web_shim.js
 var webShim []byte
 
-func (w *webServer) handleShim(rw http.ResponseWriter, r *http.Request) {
+func (w *Server) handleShim(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	rw.Header().Set("Cache-Control", "no-cache")
 	_, _ = rw.Write(webShim)
@@ -45,7 +45,7 @@ func (w *webServer) handleShim(rw http.ResponseWriter, r *http.Request) {
 // webStage is a folder receiving one upload.
 type webStage struct {
 	id     string
-	client *webClient
+	client *Client
 	dir    string
 }
 
@@ -54,7 +54,7 @@ type webDownload struct {
 	path    string
 	name    string
 	dir     string // removed with the file
-	client  *webClient
+	client  *Client
 	expires time.Time
 }
 
@@ -62,7 +62,7 @@ type webDownload struct {
 const webDownloadTTL = 30 * time.Minute
 
 // newStage makes an upload folder for client c.
-func (w *webServer) newStage(c *webClient) (*webStage, error) {
+func (w *Server) newStage(c *Client) (*webStage, error) {
 	dir, err := c.tempDir()
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (w *webServer) newStage(c *webClient) (*webStage, error) {
 }
 
 // dropStage deletes an upload folder.
-func (w *webServer) dropStage(st *webStage) {
+func (w *Server) dropStage(st *webStage) {
 	w.mu.Lock()
 	delete(w.stages, st.id)
 	w.mu.Unlock()
@@ -83,7 +83,7 @@ func (w *webServer) dropStage(st *webStage) {
 }
 
 // stageFor finds the stage of a request, which must come from its page.
-func (w *webServer) stageFor(r *http.Request, id string) *webStage {
+func (w *Server) stageFor(r *http.Request, id string) *webStage {
 	w.mu.Lock()
 	st := w.stages[id]
 	w.mu.Unlock()
@@ -95,9 +95,9 @@ func (w *webServer) stageFor(r *http.Request, id string) *webStage {
 	return st
 }
 
-// releaseStaged deletes the upload folders holding paths, once a call is
+// ReleaseStaged deletes the upload folders holding paths, once a call is
 // done with files dropped on the page.
-func (c *webClient) releaseStaged(paths []string) {
+func (c *Client) ReleaseStaged(paths []string) {
 	w := c.srv
 	var drop []*webStage
 	w.mu.Lock()
@@ -119,12 +119,12 @@ func (c *webClient) releaseStaged(paths []string) {
 }
 
 // handleStageNew starts an upload the page began itself (a drop).
-func (w *webServer) handleStageNew(rw http.ResponseWriter, r *http.Request) {
+func (w *Server) handleStageNew(rw http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(rw, "method", http.StatusMethodNotAllowed)
 		return
 	}
-	var c *webClient
+	var c *Client
 	w.mu.Lock()
 	for _, cl := range w.clients {
 		if cl.key == r.Header.Get("X-Cbt-Key") {
@@ -145,7 +145,7 @@ func (w *webServer) handleStageNew(rw http.ResponseWriter, r *http.Request) {
 }
 
 // handleStage receives a file (PUT .../file?p=) or finishes (POST .../done).
-func (w *webServer) handleStage(rw http.ResponseWriter, r *http.Request) {
+func (w *Server) handleStage(rw http.ResponseWriter, r *http.Request) {
 	rest := strings.TrimPrefix(r.URL.Path, "/web/stage/")
 	id, op, _ := strings.Cut(rest, "/")
 	st := w.stageFor(r, id)
@@ -237,7 +237,7 @@ func writeJSON(rw http.ResponseWriter, v interface{}) {
 
 // answerPick hands the uploaded paths (nil: cancelled) to the picker
 // waiting for stage id.
-func (c *webClient) answerPick(id string, paths []string) {
+func (c *Client) answerPick(id string, paths []string) {
 	c.mu.Lock()
 	ch := c.picks[id]
 	delete(c.picks, id)
@@ -250,7 +250,7 @@ func (c *webClient) answerPick(id string, paths []string) {
 
 // offer hands a finished file to the page as a download. dir (if not "")
 // is deleted with it.
-func (c *webClient) offer(p, name, dir string) {
+func (c *Client) offer(p, name, dir string) {
 	w := c.srv
 	tok := randomHex(16)
 	now := time.Now()
@@ -278,7 +278,7 @@ func (d *webDownload) remove() {
 }
 
 // handleDownload sends an offered file once (ranges are allowed while it lasts).
-func (w *webServer) handleDownload(rw http.ResponseWriter, r *http.Request) {
+func (w *Server) handleDownload(rw http.ResponseWriter, r *http.Request) {
 	tok := strings.TrimPrefix(r.URL.Path, "/web/dl/")
 	w.mu.Lock()
 	d := w.downloads[tok]
@@ -312,7 +312,7 @@ func (w *webServer) handleDownload(rw http.ResponseWriter, r *http.Request) {
 }
 
 // dropFiles deletes a closed client's uploads and downloads.
-func (w *webServer) dropFiles(c *webClient) {
+func (w *Server) dropFiles(c *Client) {
 	var stages []*webStage
 	var downs []*webDownload
 	w.mu.Lock()
@@ -337,14 +337,14 @@ func (w *webServer) dropFiles(c *webClient) {
 
 // ---- browserPicker ----
 
-func (c *webClient) browserPicker() dialog.Picker { return browserPicker{c} }
+func (c *Client) BrowserPicker() dialog.Picker { return browserPicker{c} }
 
 // browserPicker asks a browser on another PC for files by upload and
 // download (see the top of this file).
-type browserPicker struct{ c *webClient }
+type browserPicker struct{ c *Client }
 
-// webPick is the web:pick event: show the browser's file chooser.
-type webPick struct {
+// Pick is the web:pick event: show the browser's file chooser.
+type Pick struct {
 	ID       string `json:"id"`
 	Title    string `json:"title"`
 	Multiple bool   `json:"multiple"`
@@ -379,7 +379,7 @@ func (p browserPicker) pick(o dialog.Opts, multiple bool) ([]string, func(), err
 			}
 		}
 	}
-	c.event("web:pick", []interface{}{webPick{ID: st.id, Title: o.Title, Multiple: multiple, Accept: strings.Join(accept, ",")}})
+	c.event("web:pick", []interface{}{Pick{ID: st.id, Title: o.Title, Multiple: multiple, Accept: strings.Join(accept, ",")}})
 	select {
 	case paths := <-ch:
 		if len(paths) == 0 {

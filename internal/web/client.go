@@ -1,6 +1,6 @@
-package app
+package web
 
-// One web page (webClient) and its WebSocket.
+// One web page (Client) and its WebSocket.
 //
 // Server to page: every message gets the next sequence number (counted by
 // the page, not sent). Calls' results and events are JSON text messages;
@@ -11,7 +11,7 @@ package app
 // which slows the remote down like a slow terminal would.
 //
 // Page to server: {"c": id, "m": "Method", "a": [args]} calls a method of
-// App (as Wails would) and gets {"r": id, "v": result} or {"r": id, "x":
+// the app (Host.Invoke, as Wails would) and gets {"r": id, "v": result} or {"r": id, "x":
 // "error"}. A call resent after reconnecting runs only once.
 
 import (
@@ -44,8 +44,8 @@ const (
 	webMaxMessage = 64 << 20 // a call's arguments (a big paste, a file saved in the viewer)
 )
 
-// webOpOutput marks a binary message carrying terminal output.
-const webOpOutput = 1
+// OpOutput marks a binary message carrying terminal output.
+const OpOutput = 1
 
 type webMsg struct {
 	seq  uint64
@@ -53,12 +53,12 @@ type webMsg struct {
 	data []byte
 }
 
-// webClient is one loaded page.
-type webClient struct {
+// Client is one loaded page.
+type Client struct {
 	id    int
 	key   string // proves a WebSocket or upload belongs to this page
-	local bool   // the browser is on this PC (see webServer.isLocal)
-	srv   *webServer
+	local bool   // the browser is on this PC (see Server.isLocal)
+	srv   *Server
 	done  chan struct{}
 
 	mu       sync.Mutex
@@ -75,8 +75,8 @@ type webClient struct {
 	picks    map[string]chan []string // stage id -> picker waiting for the upload
 }
 
-func newWebClient(w *webServer, id int, local bool) *webClient {
-	c := &webClient{
+func newWebClient(w *Server, id int, local bool) *Client {
+	c := &Client{
 		id: id, key: randomHex(16), local: local, srv: w,
 		done: make(chan struct{}), nextSeq: 1,
 		seen: map[uint64]bool{}, picks: map[string]chan []string{},
@@ -89,24 +89,24 @@ func newWebClient(w *webServer, id int, local bool) *webClient {
 	return c
 }
 
-// atThisPC reports whether the page's browser is on this PC (see
-// webServer.isLocal): it may then use the window's native dialogs.
-func (c *webClient) atThisPC() bool { return c.local }
+// AtThisPC reports whether the page's browser is on this PC (see
+// Server.isLocal): it may then use the window's native dialogs.
+func (c *Client) AtThisPC() bool { return c.local }
 
 // expire closes the client if it is still disconnected (the timer may fire
 // just as the page reconnects).
-func (c *webClient) expire() {
+func (c *Client) expire() {
 	c.mu.Lock()
 	connected := c.conn != nil
 	c.mu.Unlock()
 	if !connected {
-		c.close()
+		c.Close()
 	}
 }
 
 // push queues a message. With wait, it first waits while the page is far
 // behind (terminal output only: results and events must never wait).
-func (c *webClient) push(bin bool, data []byte, wait bool) {
+func (c *Client) push(bin bool, data []byte, wait bool) {
 	c.mu.Lock()
 	for wait && !c.closed && c.outBytes >= webMaxUnacked {
 		c.cond.Wait()
@@ -121,7 +121,7 @@ func (c *webClient) push(bin bool, data []byte, wait bool) {
 }
 
 // event queues an event for the page's listeners (EventsOn).
-func (c *webClient) event(name string, data []interface{}) {
+func (c *Client) event(name string, data []interface{}) {
 	if data == nil {
 		data = []interface{}{}
 	}
@@ -137,16 +137,16 @@ func (c *webClient) event(name string, data []interface{}) {
 }
 
 // output queues terminal output of a tab.
-func (c *webClient) output(tabID int, out []byte) {
+func (c *Client) output(tabID int, out []byte) {
 	b := make([]byte, 5+len(out))
-	b[0] = webOpOutput
+	b[0] = OpOutput
 	binary.LittleEndian.PutUint32(b[1:], uint32(tabID))
 	copy(b[5:], out)
 	c.push(true, b, true)
 }
 
 // ackLocked forgets messages the page has received.
-func (c *webClient) ackLocked(seq uint64) {
+func (c *Client) ackLocked(seq uint64) {
 	n := 0
 	for n < len(c.out) && c.out[n].seq <= seq {
 		c.outBytes -= len(c.out[n].data)
@@ -159,8 +159,8 @@ func (c *webClient) ackLocked(seq uint64) {
 	}
 }
 
-// close ends the client: its tabs, uploads and downloads go away.
-func (c *webClient) close() {
+// Close ends the client: its tabs, uploads and downloads go away.
+func (c *Client) Close() {
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
@@ -215,11 +215,11 @@ func sameOrigin(r *http.Request) bool {
 }
 
 // handleWS connects (or reconnects) a page: /web/ws?c=id&k=key&seq=n.
-func (w *webServer) handleWS(rw http.ResponseWriter, r *http.Request) {
+func (w *Server) handleWS(rw http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	id, _ := strconv.Atoi(q.Get("c"))
 	seq, _ := strconv.ParseUint(q.Get("seq"), 10, 64)
-	c := w.client(id)
+	c := w.Client(id)
 	conn, err := webUpgrader.Upgrade(rw, r, nil)
 	if err != nil {
 		return // Upgrade already answered
@@ -234,7 +234,7 @@ func (w *webServer) handleWS(rw http.ResponseWriter, r *http.Request) {
 	c.serve(conn, seq)
 }
 
-func (c *webClient) serve(conn *websocket.Conn, seq uint64) {
+func (c *Client) serve(conn *websocket.Conn, seq uint64) {
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
@@ -277,7 +277,7 @@ func (c *webClient) serve(conn *websocket.Conn, seq uint64) {
 }
 
 // writeLoop sends queued messages after sent until the connection changes.
-func (c *webClient) writeLoop(conn *websocket.Conn, gen int, sent uint64) {
+func (c *Client) writeLoop(conn *websocket.Conn, gen int, sent uint64) {
 	for {
 		c.mu.Lock()
 		for !c.closed && c.gen == gen && c.nextSeq-1 <= sent {
@@ -314,7 +314,7 @@ func (c *webClient) writeLoop(conn *websocket.Conn, gen int, sent uint64) {
 	}
 }
 
-func (c *webClient) pingLoop(conn *websocket.Conn, stop <-chan struct{}) {
+func (c *Client) pingLoop(conn *websocket.Conn, stop <-chan struct{}) {
 	t := time.NewTicker(webPing)
 	defer t.Stop()
 	for {
@@ -336,11 +336,11 @@ type webIn struct {
 	Method string            `json:"m"`
 	Args   []json.RawMessage `json:"a"`
 	Ack    uint64            `json:"ack"`
-	// Pick cancels the file picker of a stage (see web_files.go).
+	// Pick cancels the file picker of a stage (see files.go).
 	Cancel string `json:"cancel"`
 }
 
-func (c *webClient) readLoop(conn *websocket.Conn) {
+func (c *Client) readLoop(conn *websocket.Conn) {
 	conn.SetReadLimit(webMaxMessage)
 	_ = conn.SetReadDeadline(time.Now().Add(webReadWait))
 	conn.SetPongHandler(func(string) error {
@@ -377,7 +377,7 @@ func (c *webClient) readLoop(conn *websocket.Conn) {
 
 // firstTime reports whether call id hasn't run yet (a page resends the
 // calls still unanswered when it reconnects).
-func (c *webClient) firstTime(id uint64) bool {
+func (c *Client) firstTime(id uint64) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.seen[id] || id+webSeenWindow <= c.maxSeen {
@@ -398,7 +398,7 @@ func (c *webClient) firstTime(id uint64) bool {
 }
 
 // call runs one method for the page and queues its result.
-func (c *webClient) call(id uint64, method string, args []json.RawMessage) {
+func (c *Client) call(id uint64, method string, args []json.RawMessage) {
 	v, err := c.srv.host.Invoke(c, method, args)
 	var b []byte
 	if err != nil {
@@ -424,7 +424,7 @@ func (c *webClient) call(id uint64, method string, args []json.RawMessage) {
 // ---- Files of a client ----
 
 // tempDir makes a folder for one upload or download of the client.
-func (c *webClient) tempDir() (string, error) {
+func (c *Client) tempDir() (string, error) {
 	dir := filepath.Join(c.srv.stageRoot, strconv.Itoa(c.id))
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err

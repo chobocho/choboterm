@@ -9,6 +9,7 @@ import (
 
 	"choboterm/internal/osutil"
 	"choboterm/internal/version"
+	"choboterm/internal/web"
 )
 
 // runHeadless runs only the web server (--headless, or a headless build)
@@ -18,7 +19,7 @@ func runHeadless(opts cliOptions) int {
 	app := NewApp()
 	o := opts.webOptions()
 	if o == nil {
-		o = &webOptions{}
+		o = &web.Options{}
 	}
 	w, err := startWeb(app, webPage, *o)
 	if err != nil {
@@ -29,7 +30,7 @@ func runHeadless(opts cliOptions) int {
 		return 1
 	}
 	fmt.Printf("choboterm V%s web server (no window)\n\n  %s\n\n", version.Version, w.URL(false))
-	if fp := w.fingerprint(); fp != "" {
+	if fp := w.Fingerprint(); fp != "" {
 		fmt.Printf("  TLS certificate SHA-256: %s\n  (compare it with the one your browser shows before trusting it)\n\n", fp)
 	}
 	if opts.noToken {
@@ -39,7 +40,7 @@ func runHeadless(opts cliOptions) int {
 	}
 	fmt.Println("Ctrl+C stops the server.")
 	if opts.open {
-		if err := osutil.OpenURL(w.localURL()); err != nil {
+		if err := osutil.OpenURL(w.LocalURL()); err != nil {
 			fmt.Fprintln(os.Stderr, "choboterm: open browser:", err)
 		}
 	}
@@ -48,7 +49,7 @@ func runHeadless(opts cliOptions) int {
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
 	fmt.Println("stopping...")
-	w.stop()
+	w.Stop()
 	app.shutdown(nil)
 	return 0
 }

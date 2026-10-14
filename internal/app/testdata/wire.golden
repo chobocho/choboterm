@@ -201,6 +201,13 @@ monoFont {
     "size" int
 }
 
+pick {
+    "id" string
+    "title" string
+    "multiple" bool
+    "accept" string
+}
+
 prompt {
     "id" int
     "tab" int
@@ -387,13 +394,6 @@ webInfo {
     "remote" bool
     "clients" int
     "error" string
-}
-
-webPick {
-    "id" string
-    "title" string
-    "multiple" bool
-    "accept" string
 }
 
 webSettings {

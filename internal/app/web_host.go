@@ -1,6 +1,6 @@
 package app
 
-// The app as the web server sees it (webHost): the server knows pages,
+// The app as the web server sees it (web.Host): the server knows pages,
 // sockets and files; what a page's call or its going away means for the
 // tabs is decided here.
 
@@ -11,19 +11,20 @@ import (
 	"reflect"
 
 	"choboterm/internal/dbg"
+	"choboterm/internal/web"
 )
 
 // showWindowHook shows the window (tests replace it: no real window there).
 var showWindowHook = (*App).showWindow
 
-// appHost is the webHost of an App: a is the window's view of the state
+// appHost is the web.Host of an App: a is the window's view of the state
 // (no caller).
 type appHost struct{ a *App }
 
 // startWeb starts the web server for a's state and page (the frontend/dist
 // folder). The returned server is also stored in a.web.
-func startWeb(a *App, page fs.FS, opts webOptions) (*webServer, error) {
-	w, err := serveWeb(appHost{&App{appState: a.appState}}, page, opts)
+func startWeb(a *App, page fs.FS, opts web.Options) (*web.Server, error) {
+	w, err := web.Start(appHost{&App{appState: a.appState}}, page, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -33,19 +34,19 @@ func startWeb(a *App, page fs.FS, opts webOptions) (*webServer, error) {
 
 // Invoke runs the call as an App whose caller is the page, so methods can
 // tell who called (see App.caller).
-func (h appHost) Invoke(c *webClient, method string, args []json.RawMessage) (interface{}, error) {
+func (h appHost) Invoke(c *web.Client, method string, args []json.RawMessage) (interface{}, error) {
 	return webInvoke(&App{appState: h.a.appState, caller: c}, method, args)
 }
 
 // ClientClosed cancels the page's prompts (nobody will answer them) and
 // closes its tabs.
 func (h appHost) ClientClosed(id int) {
-	cancelPrompts(func(tab int) bool { return clientOf(tab) == id })
+	cancelPrompts(func(tab int) bool { return web.ClientOf(tab) == id })
 	a := h.a
 	a.mu.Lock()
 	var ids []int
 	for tab := range a.tabs {
-		if clientOf(tab) == id {
+		if web.ClientOf(tab) == id {
 			ids = append(ids, tab)
 		}
 	}
@@ -59,7 +60,7 @@ func (h appHost) HasWindow() bool { return h.a.ctx != nil }
 
 func (h appHost) ShowWindow() { showWindowHook(h.a) }
 
-func (h appHost) ServerStopped(w *webServer) { h.a.web.CompareAndSwap(w, nil) }
+func (h appHost) ServerStopped(w *web.Server) { h.a.web.CompareAndSwap(w, nil) }
 
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 

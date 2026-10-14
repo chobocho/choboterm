@@ -15,20 +15,20 @@ func (a *App) picker() dialog.Picker {
 	// The window's dialogs show on this PC's screen: right for the window
 	// itself and for a browser on this PC, but nobody would see them from
 	// elsewhere. Without a window (headless web) there are no native dialogs.
-	if a.ctx != nil && (a.caller == nil || a.caller.atThisPC()) {
+	if a.ctx != nil && (a.caller == nil || a.caller.AtThisPC()) {
 		return wailsPicker{a}
 	}
 	if a.caller != nil {
-		return a.caller.browserPicker()
+		return a.caller.BrowserPicker()
 	}
 	return dialog.None{}
 }
 
 // local reports whether the caller sits at this PC: the window, or a
-// browser verified to run here (see webServer.isLocal). Opening a folder in
+// browser verified to run here (see web.Server). Opening a folder in
 // Explorer and similar only make sense then.
 func (a *App) local() bool {
-	return a.caller == nil || a.caller.atThisPC()
+	return a.caller == nil || a.caller.AtThisPC()
 }
 
 // wailsPicker uses the native dialogs of the Wails window.

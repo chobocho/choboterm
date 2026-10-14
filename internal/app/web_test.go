@@ -27,6 +27,7 @@ import (
 	"choboterm/internal/codec"
 	"choboterm/internal/config"
 	"choboterm/internal/version"
+	"choboterm/internal/web"
 )
 
 // isClosed and input read a pipeSession under its lock (the pump and the
@@ -52,18 +53,18 @@ var testPage = fstest.MapFS{
 type webFixture struct {
 	t    *testing.T
 	a    *App
-	w    *webServer
+	w    *web.Server
 	base string // http://127.0.0.1:port
 	jar  http.CookieJar
 	hc   *http.Client
 }
 
-func startTestWeb(t *testing.T, opts webOptions) *webFixture {
+func startTestWeb(t *testing.T, opts web.Options) *webFixture {
 	t.Helper()
 	isolateSettings(t)
-	old := webWrongTokenDelay
-	webWrongTokenDelay = 0
-	t.Cleanup(func() { webWrongTokenDelay = old })
+	old := web.WrongTokenDelay
+	web.WrongTokenDelay = 0
+	t.Cleanup(func() { web.WrongTokenDelay = old })
 	if opts.Addr == "" {
 		opts.Addr = "127.0.0.1:0"
 	}
@@ -75,12 +76,12 @@ func startTestWeb(t *testing.T, opts webOptions) *webFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(w.stop)
+	t.Cleanup(w.Stop)
 	return fixtureFor(t, a, w)
 }
 
 // fixtureFor is a logged-out browser for the running server w of a.
-func fixtureFor(t *testing.T, a *App, w *webServer) *webFixture {
+func fixtureFor(t *testing.T, a *App, w *web.Server) *webFixture {
 	jar, _ := cookiejar.New(nil)
 	f := &webFixture{t: t, a: a, w: w, base: strings.TrimSuffix(w.URL(true), "/"), jar: jar}
 	f.hc = &http.Client{Jar: jar, Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
@@ -99,7 +100,7 @@ func (f *webFixture) get(path string) (int, string) {
 }
 
 // webTokenOf is w's access token, as its URL carries it.
-func webTokenOf(w *webServer) string {
+func webTokenOf(w *web.Server) string {
 	u, err := url.Parse(w.URL(false))
 	if err != nil {
 		panic(err)
@@ -245,7 +246,7 @@ func (c *wsConn) callOK(method string, args ...interface{}) json.RawMessage {
 }
 
 func TestWebNeedsToken(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	for _, p := range []string{"/", "/assets/app.js", "/web/shim.js", "/web/ws", "/web/dl/x"} {
 		if code, _ := f.get(p); code != http.StatusUnauthorized {
 			t.Errorf("%s without token: %d", p, code)
@@ -270,32 +271,32 @@ func TestWebNeedsToken(t *testing.T) {
 
 func TestWebTokenIsKept(t *testing.T) {
 	isolateSettings(t)
-	a, err := webToken(false)
+	a, err := web.Token(false)
 	if err != nil || len(a) < 32 {
 		t.Fatalf("%q %v", a, err)
 	}
-	if b, _ := webToken(false); b != a {
+	if b, _ := web.Token(false); b != a {
 		t.Fatal("token changed")
 	}
-	if c, _ := webToken(true); c == a {
+	if c, _ := web.Token(true); c == a {
 		t.Fatal("renew kept the token")
 	}
 }
 
 func TestWebPageGetsItsOwnClient(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p1, p2 := f.page(), f.page()
-	if p1.ID == p2.ID || p1.Base != p1.ID<<tabBits || p1.ID < 1 || p1.Local {
+	if p1.ID == p2.ID || p1.Base != p1.ID<<web.TabBits || p1.ID < 1 || p1.Local {
 		t.Fatalf("pages %+v %+v", p1, p2)
 	}
-	if clientOf(p1.Base+1) != p1.ID || clientOf(p1.Base+(1<<tabBits)-1) != p1.ID || clientOf(5) != windowClient {
+	if web.ClientOf(p1.Base+1) != p1.ID || web.ClientOf(p1.Base+(1<<web.TabBits)-1) != p1.ID || web.ClientOf(5) != web.WindowClient {
 		t.Fatal("clientOf")
 	}
 }
 
 func TestWebCalls(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	c := f.connect(p)
@@ -331,7 +332,7 @@ func TestWebCalls(t *testing.T) {
 }
 
 func TestWebOutputAndEventsGoToTheTabsPage(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	c := f.connect(p)
@@ -344,7 +345,7 @@ func TestWebOutputAndEventsGoToTheTabsPage(t *testing.T) {
 	go tb.pump(sess)
 	sess.out.Write([]byte("hello\x1b[0m"))
 	m := c.readUntil(func(m msg) bool { return m.bin != nil })
-	if m.bin[0] != webOpOutput || int(binary.LittleEndian.Uint32(m.bin[1:5])) != id || string(m.bin[5:]) != "hello\x1b[0m" {
+	if m.bin[0] != web.OpOutput || int(binary.LittleEndian.Uint32(m.bin[1:5])) != id || string(m.bin[5:]) != "hello\x1b[0m" {
 		t.Fatalf("frame % X", m.bin)
 	}
 	// Events of the tab: JSON with the tab id first.
@@ -368,7 +369,7 @@ func TestWebOutputAndEventsGoToTheTabsPage(t *testing.T) {
 }
 
 func TestWebRejectsOtherOrigins(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	if _, resp, err := f.dial(p, 0, "http://evil.example"); err == nil || resp == nil || resp.StatusCode != http.StatusForbidden {
@@ -383,7 +384,7 @@ func TestWebRejectsOtherOrigins(t *testing.T) {
 }
 
 func TestWebUnknownPageIsGone(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	p.Key = "bad"
@@ -397,7 +398,7 @@ func TestWebUnknownPageIsGone(t *testing.T) {
 }
 
 func TestWebReconnectResends(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	c := f.connect(p)
@@ -437,9 +438,9 @@ func TestWebReconnectResends(t *testing.T) {
 }
 
 func TestWebDisconnectedPageClosesItsTabs(t *testing.T) {
-	f := startTestWeb(t, webOptions{Grace: 200 * time.Millisecond})
+	f := startTestWeb(t, web.Options{Grace: 200 * time.Millisecond})
 	var idle atomic.Int32 // onChange calls saying no page is left
-	f.w.setOnChange(func(n int) {
+	f.w.SetOnChange(func(n int) {
 		if n == 0 {
 			idle.Add(1)
 		}
@@ -465,9 +466,9 @@ func TestWebDisconnectedPageClosesItsTabs(t *testing.T) {
 	if !sess.isClosed() || win.isClosed() || f.a.findTab(1) == nil {
 		t.Fatalf("closed: page %v window %v", sess.isClosed(), win.isClosed())
 	}
-	for f.w.clientCount() != 0 || idle.Load() != 1 {
+	for f.w.ClientCount() != 0 || idle.Load() != 1 {
 		if time.Now().After(deadline) {
-			t.Fatalf("clients %d idle %d", f.w.clientCount(), idle.Load())
+			t.Fatalf("clients %d idle %d", f.w.ClientCount(), idle.Load())
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
@@ -490,8 +491,8 @@ func TestWebDisconnectedPageClosesItsTabs(t *testing.T) {
 }
 
 func TestWebLocalBrowser(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
-	u, _ := url.Parse(f.w.localURL())
+	f := startTestWeb(t, web.Options{})
+	u, _ := url.Parse(f.w.LocalURL())
 	if code, _ := f.get("/?" + u.RawQuery); code != 200 {
 		t.Fatalf("local login %d", code)
 	}
@@ -523,14 +524,14 @@ func TestWebLocalBrowser(t *testing.T) {
 // A remote browser picks files by uploading them and gets saved files as downloads.
 func TestWebBrowserPickerUploadAndDownload(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	c := f.connect(p)
 
 	call := c.callAsync("ConsoleOpen")
 	m := c.readUntil(func(m msg) bool { return m.E == "web:pick" })
-	var pick webPick
+	var pick web.Pick
 	json.Unmarshal(m.D[0], &pick)
 	if pick.Multiple || pick.Accept != ".lua" || pick.ID == "" {
 		t.Fatalf("pick %+v", pick)
@@ -599,7 +600,7 @@ func TestWebBrowserPickerUploadAndDownload(t *testing.T) {
 // Files dropped on the page are uploaded to a stage, then FileUploadPaths
 // sends them on and the stage is deleted.
 func TestWebDropUpload(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	c := f.connect(p)
@@ -649,26 +650,26 @@ func TestWebDropUpload(t *testing.T) {
 }
 
 func TestWebStopClosesEverything(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	f.connect(p)
 	sess := newPipeSession()
 	f.a.getTab(p.Base + 1).sess = sess
-	root := f.w.stageDir()
-	f.w.stop()
+	root := f.w.StageDir()
+	f.w.Stop()
 	if f.a.web.Load() != nil || f.a.findTab(p.Base+1) != nil || !sess.isClosed() {
 		t.Fatal("not stopped")
 	}
 	if _, err := os.Stat(root); !os.IsNotExist(err) {
 		t.Fatal("temporary files left")
 	}
-	f.w.stop() // twice is fine
+	f.w.Stop() // twice is fine
 }
 
 func TestWebTLSWhenOthersCanConnect(t *testing.T) {
-	f := startTestWeb(t, webOptions{Addr: "0.0.0.0:0"})
-	if f.w.fingerprint() == "" || !strings.HasPrefix(f.w.URL(true), "https://") {
+	f := startTestWeb(t, web.Options{Addr: "0.0.0.0:0"})
+	if f.w.Fingerprint() == "" || !strings.HasPrefix(f.w.URL(true), "https://") {
 		t.Fatal("no TLS on 0.0.0.0")
 	}
 	f.base = strings.Replace(f.base, f.base[strings.Index(f.base, "//")+2:strings.LastIndex(f.base, ":")], "127.0.0.1", 1)
@@ -678,16 +679,16 @@ func TestWebTLSWhenOthersCanConnect(t *testing.T) {
 	}
 	r.Body.Close()
 	sum := sha256.Sum256(r.TLS.PeerCertificates[0].Raw)
-	if fp := fmt.Sprintf("%X", sum[:]); strings.ReplaceAll(f.w.fingerprint(), ":", "") != fp {
-		t.Fatalf("fingerprint %s vs %s", f.w.fingerprint(), fp)
+	if fp := fmt.Sprintf("%X", sum[:]); strings.ReplaceAll(f.w.Fingerprint(), ":", "") != fp {
+		t.Fatalf("fingerprint %s vs %s", f.w.Fingerprint(), fp)
 	}
 	// The local URL points at the loopback address.
-	if !strings.HasPrefix(f.w.localURL(), "https://127.0.0.1:") {
-		t.Fatalf("local URL %s", f.w.localURL())
+	if !strings.HasPrefix(f.w.LocalURL(), "https://127.0.0.1:") {
+		t.Fatalf("local URL %s", f.w.LocalURL())
 	}
 	// --insecure: plain HTTP.
-	g := startTestWeb(t, webOptions{Addr: "0.0.0.0:0", Insecure: true})
-	if g.w.fingerprint() != "" {
+	g := startTestWeb(t, web.Options{Addr: "0.0.0.0:0", Insecure: true})
+	if g.w.Fingerprint() != "" {
 		t.Fatal("TLS despite Insecure")
 	}
 }
@@ -695,18 +696,18 @@ func TestWebTLSWhenOthersCanConnect(t *testing.T) {
 func TestWebStartErrors(t *testing.T) {
 	isolateSettings(t)
 	a := NewApp()
-	if _, err := startWeb(a, testPage, webOptions{Addr: "nonsense"}); err == nil {
+	if _, err := startWeb(a, testPage, web.Options{Addr: "nonsense"}); err == nil {
 		t.Fatal("bad address accepted")
 	}
-	if _, err := startWeb(a, fstest.MapFS{}, webOptions{Addr: "127.0.0.1:0"}); err == nil {
+	if _, err := startWeb(a, fstest.MapFS{}, web.Options{Addr: "127.0.0.1:0"}); err == nil {
 		t.Fatal("no index.html accepted")
 	}
-	w, err := startWeb(a, testPage, webOptions{Addr: "127.0.0.1:0"})
+	w, err := startWeb(a, testPage, web.Options{Addr: "127.0.0.1:0"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer w.stop()
-	if _, err := startWeb(NewApp(), testPage, webOptions{Addr: w.addr()}); err == nil {
+	defer w.Stop()
+	if _, err := startWeb(NewApp(), testPage, web.Options{Addr: w.Addr()}); err == nil {
 		t.Fatal("port in use accepted")
 	}
 }
@@ -714,14 +715,14 @@ func TestWebStartErrors(t *testing.T) {
 // The window asks before closing only for its own connected tabs; without
 // a Wails window there is nothing to hide.
 func TestBeforeCloseIgnoresWebTabs(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	asked := 0
 	f.a.hooks.emit = func(name string, _ ...interface{}) {
 		if name == "app:close" {
 			asked++
 		}
 	}
-	f.a.getTab(3<<tabBits + 1).sess = newPipeSession()
+	f.a.getTab(3<<web.TabBits + 1).sess = newPipeSession()
 	if f.a.beforeClose(nil) || asked != 0 {
 		t.Fatalf("asked %d for a web tab", asked)
 	}
@@ -735,7 +736,7 @@ func TestBeforeCloseIgnoresWebTabs(t *testing.T) {
 // with how many pages are open) instead of quitting or hiding by itself;
 // after Quit (the user chose "quit all") it closes.
 func TestBeforeCloseAsksWhenBrowsersAreConnected(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	var got []interface{}
 	f.a.hooks.emit = func(name string, data ...interface{}) {
 		if name == "app:closeWeb" {
@@ -810,7 +811,7 @@ func TestWebStatusEventsAndStartError(t *testing.T) {
 	// Another server on the same port: Settings shows why it's off.
 	b := NewApp()
 	b.hooks.emit = func(string, ...interface{}) {}
-	if _, err := b.WebStart(w.addr()); err == nil {
+	if _, err := b.WebStart(w.Addr()); err == nil {
 		t.Fatal("started on a port in use")
 	}
 	if s := b.WebStatus(); s.Running || !strings.Contains(s.Error, "address already in use") && !strings.Contains(s.Error, "Only one usage") {
@@ -829,10 +830,10 @@ func TestWebStatusEventsAndStartError(t *testing.T) {
 // Starting choboterm again finds the running one (same token) and makes it
 // show its window; a server of another token, or none, isn't taken for it.
 func TestHandoffToRunning(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
-	addr := f.w.addr()
+	f := startTestWeb(t, web.Options{})
+	addr := f.w.Addr()
 	// No window in tests: the running one refuses (nothing to show).
-	if handoffToRunning(webOptions{Addr: addr}) {
+	if web.Handoff(web.Options{Addr: addr}) {
 		t.Fatal("handoff without a window")
 	}
 	f.a.ctx = context.Background() // stands in for the window; showWindow is stubbed below
@@ -841,7 +842,7 @@ func TestHandoffToRunning(t *testing.T) {
 	oldShow := showWindowHook
 	showWindowHook = func(*App) { shown <- struct{}{} }
 	defer func() { showWindowHook = oldShow }()
-	if !handoffToRunning(webOptions{Addr: addr}) {
+	if !web.Handoff(web.Options{Addr: addr}) {
 		t.Fatal("no handoff to the running one")
 	}
 	select {
@@ -850,14 +851,14 @@ func TestHandoffToRunning(t *testing.T) {
 		t.Fatal("window not shown")
 	}
 	// A server with another token (another user's) doesn't count.
-	if _, err := webToken(true); err != nil {
+	if _, err := web.Token(true); err != nil {
 		t.Fatal(err)
 	}
-	if handoffToRunning(webOptions{Addr: addr}) {
+	if web.Handoff(web.Options{Addr: addr}) {
 		t.Fatal("handoff to a server of another token")
 	}
 	// Nothing listening.
-	if handoffToRunning(webOptions{Addr: "127.0.0.1:1"}) {
+	if web.Handoff(web.Options{Addr: "127.0.0.1:1"}) {
 		t.Fatal("handoff with nothing listening")
 	}
 	// Only this PC may ask, and only with POST and a nonce.
@@ -869,13 +870,13 @@ func TestHandoffToRunning(t *testing.T) {
 func TestWebNoTokenMode(t *testing.T) {
 	isolateSettings(t)
 	if !frontend.Termux {
-		if _, err := startWeb(NewApp(), testPage, webOptions{Addr: "127.0.0.1:0", NoToken: true}); err == nil {
+		if _, err := startWeb(NewApp(), testPage, web.Options{Addr: "127.0.0.1:0", NoToken: true}); err == nil {
 			t.Fatal("no-token mode should be rejected outside the Termux build")
 		}
 		return
 	}
 
-	f := startTestWeb(t, webOptions{NoToken: true})
+	f := startTestWeb(t, web.Options{NoToken: true})
 	if strings.Contains(f.w.URL(false), "token=") || f.w.URL(false) != f.w.URL(true) {
 		t.Fatalf("no-token URL contains a token: %s", f.w.URL(false))
 	}
@@ -903,7 +904,7 @@ func TestWebStatusAndSettings(t *testing.T) {
 	webPage = testPage
 	defer func() { webPage = old }()
 	a := NewApp()
-	if s := a.WebStatus(); s.Running || s.Addr != webDefaultAddr || s.Remote {
+	if s := a.WebStatus(); s.Running || s.Addr != web.DefaultAddr || s.Remote {
 		t.Fatalf("idle status %+v", s)
 	}
 	info, err := a.WebStart("127.0.0.1:0")

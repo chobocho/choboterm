@@ -13,6 +13,7 @@ import (
 	"choboterm/internal/config"
 	"choboterm/internal/dbg"
 	"choboterm/internal/osutil"
+	"choboterm/internal/web"
 )
 
 // webPage is the page the web server serves (frontend/dist, set by main).
@@ -36,7 +37,7 @@ type WebInfo struct {
 
 // WebStatus returns the web server's state.
 func (a *App) WebStatus() WebInfo {
-	info := WebInfo{Addr: webDefaultAddr}
+	info := WebInfo{Addr: web.DefaultAddr}
 	if s := config.Load().Web; s != nil {
 		info.Enabled = s.Enabled
 		if s.Addr != "" {
@@ -44,13 +45,13 @@ func (a *App) WebStatus() WebInfo {
 		}
 	}
 	if w := a.web.Load(); w != nil {
-		info.Running, info.Addr = true, w.options().Addr
-		info.URL, info.Fingerprint = w.URL(false), w.fingerprint()
+		info.Running, info.Addr = true, w.Options().Addr
+		info.URL, info.Fingerprint = w.URL(false), w.Fingerprint()
 		info.TLS = info.Fingerprint != ""
-		info.Clients = w.clientCount()
+		info.Clients = w.ClientCount()
 	}
 	if host, _, err := net.SplitHostPort(info.Addr); err == nil {
-		info.Remote = !loopbackHost(host)
+		info.Remote = !web.LoopbackHost(host)
 	}
 	if e := a.webErr.Load(); e != nil && !info.Running {
 		info.Error = *e
@@ -64,7 +65,7 @@ func (a *App) WebStart(addr string) (WebInfo, error) {
 	if a.caller != nil {
 		return WebInfo{}, errWindowOnly
 	}
-	if err := a.startWebServer(webOptions{Addr: addr}); err != nil {
+	if err := a.startWebServer(web.Options{Addr: addr}); err != nil {
 		return a.WebStatus(), err
 	}
 	_ = config.Update(func(s *config.Settings) { s.Web = &config.WebSettings{Enabled: true, Addr: addr} })
@@ -78,7 +79,7 @@ func (a *App) WebStop() error {
 		return errWindowOnly
 	}
 	if w := a.web.Load(); w != nil {
-		w.stop()
+		w.Stop()
 	}
 	a.webErr.Store(nil)
 	a.emitWebStatus()
@@ -99,7 +100,7 @@ func (a *App) WebOpen() error {
 	if w == nil {
 		return errors.New("웹 서버가 꺼져 있습니다")
 	}
-	return osutil.OpenURL(w.localURL())
+	return osutil.OpenURL(w.LocalURL())
 }
 
 // WebNewToken makes a new access token; every browser has to log in again.
@@ -107,11 +108,11 @@ func (a *App) WebNewToken() (WebInfo, error) {
 	if a.caller != nil {
 		return WebInfo{}, errWindowOnly
 	}
-	if _, err := webToken(true); err != nil {
+	if _, err := web.Token(true); err != nil {
 		return a.WebStatus(), err
 	}
 	if w := a.web.Load(); w != nil {
-		if err := a.startWebServer(w.options()); err != nil {
+		if err := a.startWebServer(w.Options()); err != nil {
 			return a.WebStatus(), err
 		}
 	}
@@ -120,12 +121,12 @@ func (a *App) WebNewToken() (WebInfo, error) {
 
 // startWebServer replaces the running web server (if any) with a new one.
 // A failure is kept for Settings to show (see WebStatus).
-func (a *App) startWebServer(opts webOptions) error {
+func (a *App) startWebServer(opts web.Options) error {
 	if webPage == nil {
 		return errors.New("no page to serve")
 	}
 	if w := a.web.Load(); w != nil {
-		w.stop()
+		w.Stop()
 	}
 	w, err := startWeb(a, webPage, opts)
 	if err != nil {
@@ -135,7 +136,7 @@ func (a *App) startWebServer(opts webOptions) error {
 		return err
 	}
 	a.webErr.Store(nil)
-	w.setOnChange(func(int) { a.emitWebStatus() })
+	w.SetOnChange(func(int) { a.emitWebStatus() })
 	a.emitWebStatus()
 	return nil
 }
@@ -148,7 +149,7 @@ func (a *App) emitWebStatus() {
 	}
 	running, clients := false, 0
 	if w := a.web.Load(); w != nil {
-		running, clients = true, w.connectedCount()
+		running, clients = true, w.ConnectedCount()
 	}
 	a.emit("web:status", running, clients)
 }
@@ -156,12 +157,12 @@ func (a *App) emitWebStatus() {
 // windowTabsConnected reports whether a tab of the window (not of a web
 // page) has a connection open.
 func (a *App) windowTabsConnected() bool {
-	return a.connectedWhere(func(id int) bool { return clientOf(id) == windowClient })
+	return a.connectedWhere(func(id int) bool { return web.ClientOf(id) == web.WindowClient })
 }
 
 // WebHideWindow closes the window's tabs and hides the window while the web
 // server keeps serving the browsers: the user chose that when closing the
-// window (app:closeWeb). Starting choboterm again shows it (see handoff.go).
+// window (app:closeWeb). Starting choboterm again shows it (see internal/web/handoff.go).
 func (a *App) WebHideWindow() error {
 	if a.caller != nil {
 		return errWindowOnly
@@ -172,7 +173,7 @@ func (a *App) WebHideWindow() error {
 	a.mu.Lock()
 	var ids []int
 	for id := range a.tabs {
-		if clientOf(id) == windowClient {
+		if web.ClientOf(id) == web.WindowClient {
 			ids = append(ids, id)
 		}
 	}
@@ -182,7 +183,7 @@ func (a *App) WebHideWindow() error {
 	}
 	a.hidden.Store(true)
 	runtime.WindowHide(a.ctx)
-	dbg.Printf("web: window hidden; %d page(s) connected", a.web.Load().connectedCount())
+	dbg.Printf("web: window hidden; %d page(s) connected", a.web.Load().ConnectedCount())
 	return nil
 }
 

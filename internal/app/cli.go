@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"choboterm/frontend"
+	"choboterm/internal/web"
 )
 
 // cliOptions are the command line options.
@@ -115,9 +116,9 @@ func parseArgs(args []string) (cliOptions, error) {
 }
 
 // webOptions returns the web server options asked for, or nil for none.
-func (o cliOptions) webOptions() *webOptions {
+func (o cliOptions) webOptions() *web.Options {
 	if !o.web {
 		return nil
 	}
-	return &webOptions{Addr: o.addr, CertFile: o.cert, KeyFile: o.key, Insecure: o.insecure, NoToken: o.noToken, Grace: o.grace}
+	return &web.Options{Addr: o.addr, CertFile: o.cert, KeyFile: o.key, Insecure: o.insecure, NoToken: o.noToken, Grace: o.grace}
 }

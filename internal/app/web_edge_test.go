@@ -22,6 +22,7 @@ import (
 
 	"choboterm/internal/terminal"
 	"choboterm/internal/transfer"
+	"choboterm/internal/web"
 )
 
 // noRedirect is a client of f that shows redirects instead of following them.
@@ -32,7 +33,7 @@ func (f *webFixture) noRedirect() *http.Client {
 }
 
 func TestWebLoginForm(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	hc := f.noRedirect()
 
 	// Without the cookie the page is the login form.
@@ -71,14 +72,14 @@ func TestWebLoginForm(t *testing.T) {
 	if r.StatusCode != http.StatusSeeOther || r.Header.Get("Location") != "/" {
 		t.Fatalf("right token: %d", r.StatusCode)
 	}
-	if p := f.page(); p.ID == 0 || p.Base != p.ID<<tabBits {
+	if p := f.page(); p.ID == 0 || p.Base != p.ID<<web.TabBits {
 		t.Fatalf("page %+v", p)
 	}
 }
 
 // The page learns who it is and where it runs from window.__cbt.
 func TestWebPageInfo(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	_, body := f.get("/")
 	m := cbtRe.FindStringSubmatch(body)
@@ -112,7 +113,7 @@ func TestWebPageInfo(t *testing.T) {
 
 // What only the window may do is refused to a browser, and changes nothing.
 func TestWebWindowOnlyMethods(t *testing.T) {
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	c := f.connect(f.page())
 	for _, m := range []string{"WebStart", "WebStop", "WebOpen", "WebNewToken", "WebHideWindow"} {
@@ -134,7 +135,7 @@ func TestWebWindowOnlyMethods(t *testing.T) {
 func browserTab(t *testing.T) (*webFixture, pageInfo, *wsConn, int, *memFS) {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
-	f := startTestWeb(t, webOptions{})
+	f := startTestWeb(t, web.Options{})
 	f.login()
 	p := f.page()
 	c := f.connect(p)
@@ -172,10 +173,10 @@ func (f *webFixture) upload(p pageInfo, stage string, files map[string]string, t
 	return res.Paths
 }
 
-func (c *wsConn) pick() webPick {
+func (c *wsConn) pick() web.Pick {
 	c.t.Helper()
 	m := c.readUntil(func(m msg) bool { return m.E == "web:pick" })
-	var p webPick
+	var p web.Pick
 	json.Unmarshal(m.D[0], &p)
 	return p
 }
@@ -274,10 +275,10 @@ func TestWebBrowserSavesAFolder(t *testing.T) {
 // are offered as a download when done; nothing is offered after a failure.
 func TestWebBrowserReceiveDir(t *testing.T) {
 	f, p, c, _, _ := browserTab(t)
-	view := &App{appState: f.a.appState, caller: f.w.client(p.ID)}
+	view := &App{appState: f.a.appState, caller: f.w.Client(p.ID)}
 	dir, finish := view.picker().ReceiveDir()
-	if !strings.HasPrefix(dir, f.w.stageDir()) {
-		t.Fatalf("dir %s outside %s", dir, f.w.stageDir())
+	if !strings.HasPrefix(dir, f.w.StageDir()) {
+		t.Fatalf("dir %s outside %s", dir, f.w.StageDir())
 	}
 	os.WriteFile(filepath.Join(dir, "r.bin"), []byte("zm"), 0o600)
 	if name := finish(true); name != "r.bin" {
@@ -298,7 +299,7 @@ func TestWebBrowserReceiveDir(t *testing.T) {
 // A page that goes away takes its prompts, downloads and uploads with it.
 func TestWebClosedPageDropsItsThings(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	f := startTestWeb(t, webOptions{Grace: 200 * time.Millisecond})
+	f := startTestWeb(t, web.Options{Grace: 200 * time.Millisecond})
 	f.login()
 	p := f.page()
 	c := f.connect(p)
@@ -336,7 +337,7 @@ func TestWebClosedPageDropsItsThings(t *testing.T) {
 		t.Fatal("prompt still waiting after the page closed")
 	}
 	// Prompts go first; the files when the page is forgotten.
-	for deadline := time.Now().Add(5 * time.Second); f.w.clientCount() != 0; time.Sleep(10 * time.Millisecond) {
+	for deadline := time.Now().Add(5 * time.Second); f.w.ClientCount() != 0; time.Sleep(10 * time.Millisecond) {
 		if time.Now().After(deadline) {
 			t.Fatal("page not closed")
 		}
@@ -344,7 +345,7 @@ func TestWebClosedPageDropsItsThings(t *testing.T) {
 	if code, _ := f.get(d.URL); code != http.StatusNotFound {
 		t.Fatalf("download after close: %d", code)
 	}
-	if _, err := os.Stat(filepath.Join(f.w.stageDir(), strconv.Itoa(p.ID))); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(f.w.StageDir(), strconv.Itoa(p.ID))); !os.IsNotExist(err) {
 		t.Fatal("page's files left")
 	}
 	r, _ = http.NewRequest("PUT", f.base+"/web/stage/"+st.ID+"/file?p=x", strings.NewReader("x"))
