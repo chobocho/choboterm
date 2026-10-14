@@ -79,7 +79,7 @@ func (t *tab) runZmodem(sess terminal.Session, receive bool, in <-chan []byte, d
 	)
 	if receive {
 		var finish func(bool) string
-		o.Dir, finish = pick.receiveDir()
+		o.Dir, finish = pick.ReceiveDir()
 		t.termMessage("[Zmodem] 파일을 받는 중입니다... (Ctrl+C: 취소)")
 		var saved []string
 		saved, err = transfer.ZmodemReceive(p, o)
@@ -88,7 +88,7 @@ func (t *tab) runZmodem(sess terminal.Session, receive bool, in <-chan []byte, d
 			msg = fmt.Sprintf("[Zmodem] %d개 파일을 받았습니다: %s\n  %s", len(saved), where, strings.Join(saved, "\n  "))
 		}
 	} else {
-		files, release, derr := pick.openFiles(pickOpts{Title: i18n.Tr("Zmodem으로 보낼 파일 선택")})
+		files, release, derr := pick.OpenFiles(pickOpts{Title: i18n.Tr("Zmodem으로 보낼 파일 선택")})
 		defer release()
 		if derr != nil || len(files) == 0 {
 			p.Abort()

@@ -60,27 +60,27 @@ func (p *fakePicker) finish(ret string) func(bool) string {
 	}
 }
 
-func (p *fakePicker) openFile(o pickOpts) (string, func(), error) {
+func (p *fakePicker) OpenFile(o pickOpts) (string, func(), error) {
 	p.rec("openFile", o)
 	return p.file, p.release, p.err
 }
-func (p *fakePicker) openFiles(o pickOpts) ([]string, func(), error) {
+func (p *fakePicker) OpenFiles(o pickOpts) ([]string, func(), error) {
 	p.rec("openFiles", o)
 	return p.files, p.release, p.err
 }
-func (p *fakePicker) saveFile(o pickOpts) (string, func(bool) string, error) {
+func (p *fakePicker) SaveFile(o pickOpts) (string, func(bool) string, error) {
 	p.rec("saveFile", o)
 	return p.file, p.finish("saved:" + filepath.Base(p.file)), p.err
 }
-func (p *fakePicker) saveDir(o pickOpts) (string, func(bool) string, error) {
+func (p *fakePicker) SaveDir(o pickOpts) (string, func(bool) string, error) {
 	p.rec("saveDir", o)
 	return p.dir, p.finish("dir:" + p.dir), p.err
 }
-func (p *fakePicker) receiveDir() (string, func(bool) string) {
+func (p *fakePicker) ReceiveDir() (string, func(bool) string) {
 	p.rec("receiveDir", pickOpts{})
 	return p.dir, p.finish(p.dir)
 }
-func (p *fakePicker) folder(o pickOpts) (string, error) {
+func (p *fakePicker) Folder(o pickOpts) (string, error) {
 	p.rec("folder", o)
 	return p.dir, p.err
 }
@@ -386,7 +386,7 @@ func TestZmodemReceiveDirFromPicker(t *testing.T) {
 	p := &fakePicker{dir: t.TempDir()}
 	a, _ := pickerApp(t, p)
 	pick := a.picker()
-	dir, finish := pick.receiveDir()
+	dir, finish := pick.ReceiveDir()
 	if dir != p.dir || finish(true) != p.dir {
 		t.Fatal("receiveDir")
 	}

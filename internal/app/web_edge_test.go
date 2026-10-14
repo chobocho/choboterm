@@ -274,7 +274,7 @@ func TestWebBrowserSavesAFolder(t *testing.T) {
 func TestWebBrowserReceiveDir(t *testing.T) {
 	f, p, c, _, _ := browserTab(t)
 	view := &App{appState: f.a.appState, caller: f.w.client(p.ID)}
-	dir, finish := view.picker().receiveDir()
+	dir, finish := view.picker().ReceiveDir()
 	if !strings.HasPrefix(dir, f.w.stageRoot) {
 		t.Fatalf("dir %s outside %s", dir, f.w.stageRoot)
 	}
@@ -285,7 +285,7 @@ func TestWebBrowserReceiveDir(t *testing.T) {
 	if d := c.download(); d.Name != "r.bin" {
 		t.Fatalf("offered %+v", d)
 	}
-	dir, finish = view.picker().receiveDir()
+	dir, finish = view.picker().ReceiveDir()
 	if name := finish(false); name != "" {
 		t.Fatalf("failed finish %q", name)
 	}

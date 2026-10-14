@@ -394,7 +394,7 @@ func (p browserPicker) pick(o pickOpts, multiple bool) ([]string, func(), error)
 	}
 }
 
-func (p browserPicker) openFile(o pickOpts) (string, func(), error) {
+func (p browserPicker) OpenFile(o pickOpts) (string, func(), error) {
 	paths, release, err := p.pick(o, false)
 	if len(paths) == 0 {
 		return "", release, err
@@ -402,11 +402,11 @@ func (p browserPicker) openFile(o pickOpts) (string, func(), error) {
 	return paths[0], release, err
 }
 
-func (p browserPicker) openFiles(o pickOpts) ([]string, func(), error) {
+func (p browserPicker) OpenFiles(o pickOpts) ([]string, func(), error) {
 	return p.pick(o, true)
 }
 
-func (p browserPicker) saveFile(o pickOpts) (string, func(bool) string, error) {
+func (p browserPicker) SaveFile(o pickOpts) (string, func(bool) string, error) {
 	dir, err := p.c.tempDir()
 	if err != nil {
 		return "", keepPath(""), err
@@ -423,7 +423,7 @@ func (p browserPicker) saveFile(o pickOpts) (string, func(bool) string, error) {
 	}, nil
 }
 
-func (p browserPicker) saveDir(o pickOpts) (string, func(bool) string, error) {
+func (p browserPicker) SaveDir(o pickOpts) (string, func(bool) string, error) {
 	dir, err := p.c.tempDir()
 	if err != nil {
 		return "", keepPath(""), err
@@ -431,7 +431,7 @@ func (p browserPicker) saveDir(o pickOpts) (string, func(bool) string, error) {
 	return dir, p.finishDir(dir), nil
 }
 
-func (p browserPicker) receiveDir() (string, func(bool) string) {
+func (p browserPicker) ReceiveDir() (string, func(bool) string) {
 	dir, err := p.c.tempDir()
 	if err != nil {
 		// Nowhere to stage: fall back to this PC's downloads folder.
@@ -441,7 +441,7 @@ func (p browserPicker) receiveDir() (string, func(bool) string) {
 	return dir, p.finishDir(dir)
 }
 
-func (browserPicker) folder(pickOpts) (string, error) { return "", errNotInBrowser }
+func (browserPicker) Folder(pickOpts) (string, error) { return "", errNotInBrowser }
 
 // finishDir offers what was saved into dir: a single file as it is, more
 // (or folders) as one .zip.

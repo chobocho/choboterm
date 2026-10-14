@@ -31,23 +31,23 @@ type pickOpts struct {
 // dialogs do. A picker may make temporary files; release and finish tell it
 // when the caller is done with them.
 type picker interface {
-	// openFile asks for an existing file. release frees what the picker made
+	// OpenFile asks for an existing file. release frees what the picker made
 	// for it (a browser upload) once the caller has read the file.
-	openFile(o pickOpts) (path string, release func(), err error)
-	// openFiles asks for one or more existing files.
-	openFiles(o pickOpts) (paths []string, release func(), err error)
-	// saveFile asks where to write a new file. Once the caller wrote it,
+	OpenFile(o pickOpts) (path string, release func(), err error)
+	// OpenFiles asks for one or more existing files.
+	OpenFiles(o pickOpts) (paths []string, release func(), err error)
+	// SaveFile asks where to write a new file. Once the caller wrote it,
 	// finish(true) completes it (a browser download) and returns the path
 	// or name to show the user; finish(false) drops it after a failure.
-	saveFile(o pickOpts) (path string, finish func(ok bool) string, err error)
-	// saveDir asks for a folder to save files into; finish as for saveFile
+	SaveFile(o pickOpts) (path string, finish func(ok bool) string, err error)
+	// SaveDir asks for a folder to save files into; finish as for saveFile
 	// (a browser gets the files in a .zip, or the file itself if only one).
-	saveDir(o pickOpts) (dir string, finish func(ok bool) string, err error)
-	// receiveDir is the folder for files that arrive without asking
+	SaveDir(o pickOpts) (dir string, finish func(ok bool) string, err error)
+	// ReceiveDir is the folder for files that arrive without asking
 	// (Zmodem sz): the downloads folder, or one handed to the browser.
-	receiveDir() (dir string, finish func(ok bool) string)
-	// folder asks for an existing folder of this PC (e.g. the log folder).
-	folder(o pickOpts) (string, error)
+	ReceiveDir() (dir string, finish func(ok bool) string)
+	// Folder asks for an existing Folder of this PC (e.g. the log Folder).
+	Folder(o pickOpts) (string, error)
 }
 
 // errNotInBrowser is returned for things a remote browser can't do, such as
@@ -102,7 +102,7 @@ func (p wailsPicker) front() {
 	}
 }
 
-func (p wailsPicker) openFile(o pickOpts) (string, func(), error) {
+func (p wailsPicker) OpenFile(o pickOpts) (string, func(), error) {
 	p.front()
 	path, err := runtime.OpenFileDialog(p.a.ctx, runtime.OpenDialogOptions{
 		Title: o.Title, DefaultDirectory: o.Dir, Filters: wailsFilters(o.Filters),
@@ -110,7 +110,7 @@ func (p wailsPicker) openFile(o pickOpts) (string, func(), error) {
 	return path, noRelease, err
 }
 
-func (p wailsPicker) openFiles(o pickOpts) ([]string, func(), error) {
+func (p wailsPicker) OpenFiles(o pickOpts) ([]string, func(), error) {
 	p.front()
 	paths, err := runtime.OpenMultipleFilesDialog(p.a.ctx, runtime.OpenDialogOptions{
 		Title: o.Title, DefaultDirectory: o.Dir, Filters: wailsFilters(o.Filters),
@@ -118,7 +118,7 @@ func (p wailsPicker) openFiles(o pickOpts) ([]string, func(), error) {
 	return paths, noRelease, err
 }
 
-func (p wailsPicker) saveFile(o pickOpts) (string, func(bool) string, error) {
+func (p wailsPicker) SaveFile(o pickOpts) (string, func(bool) string, error) {
 	p.front()
 	path, err := runtime.SaveFileDialog(p.a.ctx, runtime.SaveDialogOptions{
 		Title: o.Title, DefaultDirectory: o.Dir, DefaultFilename: o.Name, Filters: wailsFilters(o.Filters),
@@ -126,17 +126,17 @@ func (p wailsPicker) saveFile(o pickOpts) (string, func(bool) string, error) {
 	return path, keepPath(path), err
 }
 
-func (p wailsPicker) saveDir(o pickOpts) (string, func(bool) string, error) {
-	dir, err := p.folder(o)
+func (p wailsPicker) SaveDir(o pickOpts) (string, func(bool) string, error) {
+	dir, err := p.Folder(o)
 	return dir, keepPath(dir), err
 }
 
-func (p wailsPicker) receiveDir() (string, func(bool) string) {
+func (p wailsPicker) ReceiveDir() (string, func(bool) string) {
 	dir := p.a.downloadDir()
 	return dir, keepPath(dir)
 }
 
-func (p wailsPicker) folder(o pickOpts) (string, error) {
+func (p wailsPicker) Folder(o pickOpts) (string, error) {
 	p.front()
 	return runtime.OpenDirectoryDialog(p.a.ctx, runtime.OpenDialogOptions{Title: o.Title, DefaultDirectory: o.Dir})
 }
@@ -144,16 +144,16 @@ func (p wailsPicker) folder(o pickOpts) (string, error) {
 // noPicker is used when there is nobody to ask (no window, no web client).
 type noPicker struct{}
 
-func (noPicker) openFile(pickOpts) (string, func(), error)    { return "", noRelease, errNotInBrowser }
-func (noPicker) openFiles(pickOpts) ([]string, func(), error) { return nil, noRelease, errNotInBrowser }
-func (noPicker) saveFile(pickOpts) (string, func(bool) string, error) {
+func (noPicker) OpenFile(pickOpts) (string, func(), error)    { return "", noRelease, errNotInBrowser }
+func (noPicker) OpenFiles(pickOpts) ([]string, func(), error) { return nil, noRelease, errNotInBrowser }
+func (noPicker) SaveFile(pickOpts) (string, func(bool) string, error) {
 	return "", keepPath(""), errNotInBrowser
 }
-func (noPicker) saveDir(pickOpts) (string, func(bool) string, error) {
+func (noPicker) SaveDir(pickOpts) (string, func(bool) string, error) {
 	return "", keepPath(""), errNotInBrowser
 }
-func (noPicker) receiveDir() (string, func(bool) string) {
+func (noPicker) ReceiveDir() (string, func(bool) string) {
 	d := transfer.DownloadsDir()
 	return d, keepPath(d)
 }
-func (noPicker) folder(pickOpts) (string, error) { return "", errNotInBrowser }
+func (noPicker) Folder(pickOpts) (string, error) { return "", errNotInBrowser }

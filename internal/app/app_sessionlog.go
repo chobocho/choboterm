@@ -82,7 +82,7 @@ func (a *App) ChooseLogDir(current string) (string, error) {
 	if st, err := os.Stat(current); err != nil || !st.IsDir() {
 		current = ""
 	}
-	dir, err := a.picker().folder(pickOpts{
+	dir, err := a.picker().Folder(pickOpts{
 		Title: i18n.Tr("로그 폴더 선택"),
 		Dir:   current,
 	})
