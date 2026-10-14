@@ -23,7 +23,7 @@ func BenchmarkOutputWindowPath(b *testing.B) {
 // A web page's path: one binary frame (copy into a 5-byte header), queued
 // for the page's writer; the page acknowledges as it goes.
 func BenchmarkOutputWebPath(b *testing.B) {
-	w := &webServer{app: NewApp(), opts: webOptions{Grace: webGrace}}
+	w := &webServer{host: appHost{NewApp()}, opts: webOptions{Grace: webGrace}}
 	c := newWebClient(w, 1, false)
 	defer c.close()
 	chunk := make([]byte, 32<<10)

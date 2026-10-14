@@ -42,7 +42,7 @@ func TestEveryMethodWithoutWindow(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				_, _ = webInvoke(c.view, name, []json.RawMessage{})
+				_, _ = appHost{f.a}.Invoke(c, name, []json.RawMessage{})
 			}()
 			select {
 			case <-done:

@@ -61,7 +61,6 @@ type webClient struct {
 	key   string // proves a WebSocket or upload belongs to this page
 	local bool   // the browser is on this PC (see webServer.isLocal)
 	srv   *webServer
-	view  *App // calls from this page run as this App (caller = this client)
 	done  chan struct{}
 
 	mu       sync.Mutex
@@ -85,7 +84,6 @@ func newWebClient(w *webServer, id int, local bool) *webClient {
 		seen: map[uint64]bool{}, picks: map[string]chan []string{},
 	}
 	c.cond = sync.NewCond(&c.mu)
-	c.view = &App{appState: w.app.appState, caller: c}
 	// A page that never connects (closed right away) is dropped too.
 	c.mu.Lock()
 	c.timer = time.AfterFunc(w.opts.Grace, c.expire)
@@ -189,19 +187,7 @@ func (c *webClient) close() {
 	for _, ch := range picks {
 		close(ch) // the waiting picker sees a cancel
 	}
-	cancelPrompts(func(tab int) bool { return clientOf(tab) == c.id })
-	a := c.srv.app
-	a.mu.Lock()
-	var ids []int
-	for id := range a.tabs {
-		if clientOf(id) == c.id {
-			ids = append(ids, id)
-		}
-	}
-	a.mu.Unlock()
-	for _, id := range ids {
-		a.CloseTab(id)
-	}
+	c.srv.host.ClientClosed(c.id)
 	c.srv.dropFiles(c)
 	c.srv.removeClient(c)
 }
@@ -411,7 +397,7 @@ func (c *webClient) firstTime(id uint64) bool {
 
 // call runs one method for the page and queues its result.
 func (c *webClient) call(id uint64, method string, args []json.RawMessage) {
-	v, err := webInvoke(c.view, method, args)
+	v, err := c.srv.host.Invoke(c, method, args)
 	var b []byte
 	if err != nil {
 		b, _ = json.Marshal(struct {

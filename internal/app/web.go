@@ -76,7 +76,7 @@ var webWrongTokenDelay = time.Second
 
 // webServer serves the page and its WebSocket.
 type webServer struct {
-	app  *App // the shared state, as the window (caller nil)
+	host webHost
 	opts webOptions
 	srv  *http.Server
 	ln   net.Listener
@@ -102,9 +102,8 @@ type webServer struct {
 	onChange func(clients int)
 }
 
-// startWeb starts the web server for a's state and page (the frontend/dist
-// folder). The returned server is also stored in a.web.
-func startWeb(a *App, page fs.FS, opts webOptions) (*webServer, error) {
+// serveWeb starts the web server for h and page (the frontend/dist folder).
+func serveWeb(h webHost, page fs.FS, opts webOptions) (*webServer, error) {
 	if opts.Addr == "" {
 		opts.Addr = webDefaultAddr
 	}
@@ -132,7 +131,7 @@ func startWeb(a *App, page fs.FS, opts webOptions) (*webServer, error) {
 		}
 	}
 	w := &webServer{
-		app:       &App{appState: a.appState},
+		host:      h,
 		opts:      opts,
 		page:      page,
 		token:     token,
@@ -177,7 +176,6 @@ func startWeb(a *App, page fs.FS, opts webOptions) (*webServer, error) {
 		ErrorLog: nil,
 	}
 	go func() { _ = w.srv.Serve(ln) }()
-	a.web.Store(w)
 	dbg.Printf("web: listening on %s", w.URL(false))
 	return w, nil
 }
@@ -195,7 +193,7 @@ func (w *webServer) stop() {
 		clients = append(clients, c)
 	}
 	w.mu.Unlock()
-	w.app.web.CompareAndSwap(w, nil)
+	w.host.ServerStopped(w)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_ = w.srv.Shutdown(ctx) // stops accepting; WebSockets are hijacked, closed below
@@ -410,7 +408,7 @@ func (w *webServer) handleRoot(rw http.ResponseWriter, r *http.Request) {
 	info, _ := json.Marshal(map[string]interface{}{
 		"id": c.id, "key": c.key, "base": c.id << tabBits, "local": c.local,
 		"platform": goruntime.GOOS, "arch": goruntime.GOARCH, "lang": i18n.Lang(),
-		"window": w.app.ctx != nil,
+		"window": w.host.HasWindow(),
 	})
 	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.Header().Set("Cache-Control", "no-store")

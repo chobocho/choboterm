@@ -29,9 +29,6 @@ import (
 	"choboterm/internal/dbg"
 )
 
-// showWindowHook shows the window (tests replace it: no real window there).
-var showWindowHook = (*App).showWindow
-
 // showProof is the answer only the holder of token can give for nonce.
 func showProof(token, nonce string) []byte {
 	m := hmac.New(sha256.New, []byte(token))
@@ -43,12 +40,12 @@ func showProof(token, nonce string) []byte {
 // It needs no login: showing the window is harmless, and only this PC may ask.
 func (w *webServer) handleShow(rw http.ResponseWriter, r *http.Request) {
 	nonce := r.URL.Query().Get("nonce")
-	if r.Method != http.MethodPost || !loopbackRemote(r.RemoteAddr) || w.app.ctx == nil ||
+	if r.Method != http.MethodPost || !loopbackRemote(r.RemoteAddr) || !w.host.HasWindow() ||
 		len(nonce) < 16 || len(nonce) > 128 {
 		http.NotFound(rw, r)
 		return
 	}
-	go showWindowHook(w.app)
+	go w.host.ShowWindow()
 	writeJSON(rw, map[string]string{"proof": hex.EncodeToString(showProof(w.token, nonce))})
 }
 
