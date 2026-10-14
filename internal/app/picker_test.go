@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -395,16 +396,24 @@ func TestZmodemReceiveDirFromPicker(t *testing.T) {
 
 // Which picker a caller gets.
 func TestPickerSelection(t *testing.T) {
-	a := NewApp()
+	f := startTestWeb(t, webOptions{})
+	a := f.a
 	if _, ok := a.picker().(dialog.None); !ok {
 		t.Fatalf("no window, no caller: %T", a.picker())
 	}
-	remote := &App{appState: a.appState, caller: &webClient{}}
-	if _, ok := remote.picker().(browserPicker); !ok {
+	page := func(local bool) *App {
+		c, err := f.w.newClient(local)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return &App{appState: a.appState, caller: c}
+	}
+	remote, local := page(false), page(true)
+	browser := reflect.TypeOf(remote.caller.browserPicker())
+	if reflect.TypeOf(remote.picker()) != browser {
 		t.Fatalf("remote browser: %T", remote.picker())
 	}
-	local := &App{appState: a.appState, caller: &webClient{local: true}}
-	if _, ok := local.picker().(browserPicker); !ok {
+	if reflect.TypeOf(local.picker()) != browser {
 		t.Fatalf("local browser without a window: %T", local.picker())
 	}
 	a.ctx = context.Background() // stands in for the Wails window
@@ -415,7 +424,7 @@ func TestPickerSelection(t *testing.T) {
 	if _, ok := local.picker().(wailsPicker); !ok {
 		t.Fatalf("local browser with a window: %T", local.picker())
 	}
-	if _, ok := remote.picker().(browserPicker); !ok {
+	if reflect.TypeOf(remote.picker()) != browser {
 		t.Fatalf("remote browser with a window: %T", remote.picker())
 	}
 }

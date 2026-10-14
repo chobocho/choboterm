@@ -920,8 +920,8 @@ func TestWebStatusAndSettings(t *testing.T) {
 	if s := config.Load().Web; s == nil || !s.Enabled {
 		t.Fatal("SaveSettings dropped the web settings")
 	}
-	oldTok := a.web.Load().token
-	if info, err := a.WebNewToken(); err != nil || !info.Running || a.web.Load().token == oldTok {
+	oldTok := webTokenOf(a.web.Load())
+	if info, err := a.WebNewToken(); err != nil || !info.Running || webTokenOf(a.web.Load()) == oldTok {
 		t.Fatalf("new token %+v %v", info, err)
 	}
 	if err := a.WebStop(); err != nil || a.web.Load() != nil || config.Load().Web.Enabled {
