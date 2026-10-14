@@ -221,6 +221,27 @@ func (w *webServer) URL(bare bool) string {
 	return u + "?token=" + url.QueryEscape(w.token)
 }
 
+// options are the server's options, with the defaults filled in.
+func (w *webServer) options() webOptions { return w.opts }
+
+// fingerprint is the TLS certificate's SHA-256 fingerprint ("" without TLS),
+// to compare with the one the browser shows.
+func (w *webServer) fingerprint() string { return w.fp }
+
+// addr is the address the server listens on.
+func (w *webServer) addr() string { return w.ln.Addr().String() }
+
+// stageDir is the folder of the pages' uploads and downloads.
+func (w *webServer) stageDir() string { return w.stageRoot }
+
+// setOnChange sets what runs when a page was loaded or went away, with how
+// many are open now.
+func (w *webServer) setOnChange(f func(clients int)) {
+	w.mu.Lock()
+	w.onChange = f
+	w.mu.Unlock()
+}
+
 // localURL is URL plus a one-time code that marks the browser opening it as
 // one on this PC, which then gets the window's native file dialogs. Only
 // this process hands out codes, to a browser it opens itself.
@@ -617,4 +638,19 @@ func webToken(renew bool) (string, error) {
 		return "", err
 	}
 	return t, nil
+}
+
+// webHost is what the web server needs of the app.
+type webHost interface {
+	// Invoke runs a method of App for page c, the way Wails would.
+	Invoke(c *webClient, method string, args []json.RawMessage) (interface{}, error)
+	// ClientClosed ends what page id left behind: its prompts and tabs.
+	ClientClosed(id int)
+	// HasWindow reports whether there is a desktop window (pages offer
+	// window features only then, and only it can be shown).
+	HasWindow() bool
+	// ShowWindow brings the window to the front (choboterm started again).
+	ShowWindow()
+	// ServerStopped is called once w has stopped.
+	ServerStopped(w *webServer)
 }

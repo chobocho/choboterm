@@ -26,21 +26,21 @@ func runWindow(opts cliOptions) {
 	// Create an instance of the app structure
 	app := NewApp()
 
-	// The web server starts with the window when asked on the command line
+	// The webOpts server starts with the window when asked on the command line
 	// or in Settings > Web.
-	web := opts.webOptions()
+	webOpts := opts.webOptions()
 	if !opts.web {
-		web = nil
+		webOpts = nil
 		if s := config.Load().Web; s != nil && s.Enabled {
-			web = &webOptions{Addr: s.Addr}
+			webOpts = &webOptions{Addr: s.Addr}
 		}
 	}
-	app.webStart = web
+	app.webStart = webOpts
 
 	// With the web server, starting choboterm again shows the one already
 	// running (its window may be hidden) instead of a second choboterm,
 	// which couldn't serve the same port (see handoff.go).
-	if web != nil && handoffToRunning(*web) {
+	if webOpts != nil && handoffToRunning(*webOpts) {
 		return
 	}
 

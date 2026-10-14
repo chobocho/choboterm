@@ -66,7 +66,7 @@ func TestWebLoginForm(t *testing.T) {
 		t.Fatalf("logged in by a wrong token: %d", code)
 	}
 	// The right one (spaces around it are fine) sets the cookie.
-	r = post("  " + f.w.token + "\n")
+	r = post("  " + webTokenOf(f.w) + "\n")
 	r.Body.Close()
 	if r.StatusCode != http.StatusSeeOther || r.Header.Get("Location") != "/" {
 		t.Fatalf("right token: %d", r.StatusCode)
@@ -104,7 +104,8 @@ func TestWebPageInfo(t *testing.T) {
 	if !strings.Contains(body, `<script src="/web/shim.js"></script>`) {
 		t.Fatal("no shim")
 	}
-	if code, js := f.get("/web/shim.js"); code != 200 || !bytes.Equal([]byte(js), webShim) {
+	// The shim stands in for Wails: it provides window.go.app.
+	if code, js := f.get("/web/shim.js"); code != 200 || !strings.Contains(js, "window.go") {
 		t.Fatalf("shim %d", code)
 	}
 }
@@ -275,8 +276,8 @@ func TestWebBrowserReceiveDir(t *testing.T) {
 	f, p, c, _, _ := browserTab(t)
 	view := &App{appState: f.a.appState, caller: f.w.client(p.ID)}
 	dir, finish := view.picker().ReceiveDir()
-	if !strings.HasPrefix(dir, f.w.stageRoot) {
-		t.Fatalf("dir %s outside %s", dir, f.w.stageRoot)
+	if !strings.HasPrefix(dir, f.w.stageDir()) {
+		t.Fatalf("dir %s outside %s", dir, f.w.stageDir())
 	}
 	os.WriteFile(filepath.Join(dir, "r.bin"), []byte("zm"), 0o600)
 	if name := finish(true); name != "r.bin" {
@@ -343,7 +344,7 @@ func TestWebClosedPageDropsItsThings(t *testing.T) {
 	if code, _ := f.get(d.URL); code != http.StatusNotFound {
 		t.Fatalf("download after close: %d", code)
 	}
-	if _, err := os.Stat(filepath.Join(f.w.stageRoot, strconv.Itoa(p.ID))); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(f.w.stageDir(), strconv.Itoa(p.ID))); !os.IsNotExist(err) {
 		t.Fatal("page's files left")
 	}
 	r, _ = http.NewRequest("PUT", f.base+"/web/stage/"+st.ID+"/file?p=x", strings.NewReader("x"))

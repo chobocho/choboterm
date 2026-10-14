@@ -98,9 +98,18 @@ func (f *webFixture) get(path string) (int, string) {
 	return r.StatusCode, string(b)
 }
 
+// webTokenOf is w's access token, as its URL carries it.
+func webTokenOf(w *webServer) string {
+	u, err := url.Parse(w.URL(false))
+	if err != nil {
+		panic(err)
+	}
+	return u.Query().Get("token")
+}
+
 func (f *webFixture) login() {
 	f.t.Helper()
-	if code, _ := f.get("/?token=" + url.QueryEscape(f.w.token)); code != 200 {
+	if code, _ := f.get("/?token=" + url.QueryEscape(webTokenOf(f.w))); code != 200 {
 		f.t.Fatalf("login: %d", code)
 	}
 }
@@ -246,7 +255,7 @@ func TestWebNeedsToken(t *testing.T) {
 		t.Fatalf("wrong token: %d", code)
 	}
 	// The login form works too.
-	r, err := f.hc.PostForm(f.base+"/login", url.Values{"token": {f.w.token}})
+	r, err := f.hc.PostForm(f.base+"/login", url.Values{"token": {webTokenOf(f.w)}})
 	if err != nil || r.StatusCode != 200 {
 		t.Fatalf("login form: %v %v", r, err)
 	}
@@ -430,11 +439,11 @@ func TestWebReconnectResends(t *testing.T) {
 func TestWebDisconnectedPageClosesItsTabs(t *testing.T) {
 	f := startTestWeb(t, webOptions{Grace: 200 * time.Millisecond})
 	var idle atomic.Int32 // onChange calls saying no page is left
-	f.w.onChange = func(n int) {
+	f.w.setOnChange(func(n int) {
 		if n == 0 {
 			idle.Add(1)
 		}
-	}
+	})
 	f.login()
 	p := f.page()
 	c := f.connect(p)
@@ -646,7 +655,7 @@ func TestWebStopClosesEverything(t *testing.T) {
 	f.connect(p)
 	sess := newPipeSession()
 	f.a.getTab(p.Base + 1).sess = sess
-	root := f.w.stageRoot
+	root := f.w.stageDir()
 	f.w.stop()
 	if f.a.web.Load() != nil || f.a.findTab(p.Base+1) != nil || !sess.isClosed() {
 		t.Fatal("not stopped")
@@ -659,7 +668,7 @@ func TestWebStopClosesEverything(t *testing.T) {
 
 func TestWebTLSWhenOthersCanConnect(t *testing.T) {
 	f := startTestWeb(t, webOptions{Addr: "0.0.0.0:0"})
-	if !f.w.tls || !strings.HasPrefix(f.w.URL(true), "https://") {
+	if f.w.fingerprint() == "" || !strings.HasPrefix(f.w.URL(true), "https://") {
 		t.Fatal("no TLS on 0.0.0.0")
 	}
 	f.base = strings.Replace(f.base, f.base[strings.Index(f.base, "//")+2:strings.LastIndex(f.base, ":")], "127.0.0.1", 1)
@@ -669,8 +678,8 @@ func TestWebTLSWhenOthersCanConnect(t *testing.T) {
 	}
 	r.Body.Close()
 	sum := sha256.Sum256(r.TLS.PeerCertificates[0].Raw)
-	if fp := fmt.Sprintf("%X", sum[:]); strings.ReplaceAll(f.w.fp, ":", "") != fp {
-		t.Fatalf("fingerprint %s vs %s", f.w.fp, fp)
+	if fp := fmt.Sprintf("%X", sum[:]); strings.ReplaceAll(f.w.fingerprint(), ":", "") != fp {
+		t.Fatalf("fingerprint %s vs %s", f.w.fingerprint(), fp)
 	}
 	// The local URL points at the loopback address.
 	if !strings.HasPrefix(f.w.localURL(), "https://127.0.0.1:") {
@@ -678,7 +687,7 @@ func TestWebTLSWhenOthersCanConnect(t *testing.T) {
 	}
 	// --insecure: plain HTTP.
 	g := startTestWeb(t, webOptions{Addr: "0.0.0.0:0", Insecure: true})
-	if g.w.tls {
+	if g.w.fingerprint() != "" {
 		t.Fatal("TLS despite Insecure")
 	}
 }
@@ -697,7 +706,7 @@ func TestWebStartErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer w.stop()
-	if _, err := startWeb(NewApp(), testPage, webOptions{Addr: w.ln.Addr().String()}); err == nil {
+	if _, err := startWeb(NewApp(), testPage, webOptions{Addr: w.addr()}); err == nil {
 		t.Fatal("port in use accepted")
 	}
 }
@@ -801,7 +810,7 @@ func TestWebStatusEventsAndStartError(t *testing.T) {
 	// Another server on the same port: Settings shows why it's off.
 	b := NewApp()
 	b.hooks.emit = func(string, ...interface{}) {}
-	if _, err := b.WebStart(w.ln.Addr().String()); err == nil {
+	if _, err := b.WebStart(w.addr()); err == nil {
 		t.Fatal("started on a port in use")
 	}
 	if s := b.WebStatus(); s.Running || !strings.Contains(s.Error, "address already in use") && !strings.Contains(s.Error, "Only one usage") {
@@ -821,7 +830,7 @@ func TestWebStatusEventsAndStartError(t *testing.T) {
 // show its window; a server of another token, or none, isn't taken for it.
 func TestHandoffToRunning(t *testing.T) {
 	f := startTestWeb(t, webOptions{})
-	addr := f.w.ln.Addr().String()
+	addr := f.w.addr()
 	// No window in tests: the running one refuses (nothing to show).
 	if handoffToRunning(webOptions{Addr: addr}) {
 		t.Fatal("handoff without a window")
@@ -841,7 +850,9 @@ func TestHandoffToRunning(t *testing.T) {
 		t.Fatal("window not shown")
 	}
 	// A server with another token (another user's) doesn't count.
-	f.w.token = "someone-else-0123456789abcdef0123456789"
+	if _, err := webToken(true); err != nil {
+		t.Fatal(err)
+	}
 	if handoffToRunning(webOptions{Addr: addr}) {
 		t.Fatal("handoff to a server of another token")
 	}

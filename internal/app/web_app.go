@@ -44,8 +44,9 @@ func (a *App) WebStatus() WebInfo {
 		}
 	}
 	if w := a.web.Load(); w != nil {
-		info.Running, info.Addr = true, w.opts.Addr
-		info.URL, info.TLS, info.Fingerprint = w.URL(false), w.tls, w.fp
+		info.Running, info.Addr = true, w.options().Addr
+		info.URL, info.Fingerprint = w.URL(false), w.fingerprint()
+		info.TLS = info.Fingerprint != ""
 		info.Clients = w.clientCount()
 	}
 	if host, _, err := net.SplitHostPort(info.Addr); err == nil {
@@ -110,7 +111,7 @@ func (a *App) WebNewToken() (WebInfo, error) {
 		return a.WebStatus(), err
 	}
 	if w := a.web.Load(); w != nil {
-		if err := a.startWebServer(w.opts); err != nil {
+		if err := a.startWebServer(w.options()); err != nil {
 			return a.WebStatus(), err
 		}
 	}
@@ -134,9 +135,7 @@ func (a *App) startWebServer(opts webOptions) error {
 		return err
 	}
 	a.webErr.Store(nil)
-	w.mu.Lock()
-	w.onChange = func(int) { a.emitWebStatus() }
-	w.mu.Unlock()
+	w.setOnChange(func(int) { a.emitWebStatus() })
 	a.emitWebStatus()
 	return nil
 }

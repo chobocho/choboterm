@@ -17,12 +17,10 @@ package app
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -90,6 +88,10 @@ func newWebClient(w *webServer, id int, local bool) *webClient {
 	c.mu.Unlock()
 	return c
 }
+
+// atThisPC reports whether the page's browser is on this PC (see
+// webServer.isLocal): it may then use the window's native dialogs.
+func (c *webClient) atThisPC() bool { return c.local }
 
 // expire closes the client if it is still disconnected (the timer may fire
 // just as the page reconnects).
@@ -417,58 +419,6 @@ func (c *webClient) call(id uint64, method string, args []json.RawMessage) {
 		}
 	}
 	c.push(false, b, false)
-}
-
-// ---- Calling App methods ----
-
-var errorType = reflect.TypeOf((*error)(nil)).Elem()
-
-// webMethods are the methods a page may call: those Wails binds.
-var webMethods = func() map[string]reflect.Method {
-	m := map[string]reflect.Method{}
-	t := reflect.TypeOf(&App{})
-	for i := 0; i < t.NumMethod(); i++ {
-		m[t.Method(i).Name] = t.Method(i)
-	}
-	return m
-}()
-
-// webInvoke calls method on a with JSON arguments, the way Wails does: a
-// missing argument is the zero value, a trailing error result becomes the
-// error, and other results are returned as they are.
-func webInvoke(a *App, method string, args []json.RawMessage) (result interface{}, err error) {
-	m, ok := webMethods[method]
-	if !ok {
-		return nil, fmt.Errorf("unknown method %q", method)
-	}
-	ft := m.Type
-	in := []reflect.Value{reflect.ValueOf(a)}
-	for i := 1; i < ft.NumIn(); i++ {
-		v := reflect.New(ft.In(i))
-		if i-1 < len(args) && len(args[i-1]) > 0 && string(args[i-1]) != "null" {
-			if err := json.Unmarshal(args[i-1], v.Interface()); err != nil {
-				return nil, fmt.Errorf("%s: argument %d: %w", method, i, err)
-			}
-		}
-		in = append(in, v.Elem())
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			dbg.Printf("web: %s panicked: %v", method, r)
-			result, err = nil, fmt.Errorf("%s: %v", method, r)
-		}
-	}()
-	out := m.Func.Call(in)
-	if n := len(out); n > 0 && ft.Out(n-1) == errorType {
-		if e := out[n-1].Interface(); e != nil {
-			return nil, e.(error)
-		}
-		out = out[:n-1]
-	}
-	if len(out) == 0 {
-		return nil, nil
-	}
-	return out[0].Interface(), nil
 }
 
 // ---- Files of a client ----

@@ -6,23 +6,12 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
-)
+	"reflect"
 
-// webHost is what the web server needs of the app.
-type webHost interface {
-	// Invoke runs a method of App for page c, the way Wails would.
-	Invoke(c *webClient, method string, args []json.RawMessage) (interface{}, error)
-	// ClientClosed ends what page id left behind: its prompts and tabs.
-	ClientClosed(id int)
-	// HasWindow reports whether there is a desktop window (pages offer
-	// window features only then, and only it can be shown).
-	HasWindow() bool
-	// ShowWindow brings the window to the front (choboterm started again).
-	ShowWindow()
-	// ServerStopped is called once w has stopped.
-	ServerStopped(w *webServer)
-}
+	"choboterm/internal/dbg"
+)
 
 // showWindowHook shows the window (tests replace it: no real window there).
 var showWindowHook = (*App).showWindow
@@ -71,3 +60,53 @@ func (h appHost) HasWindow() bool { return h.a.ctx != nil }
 func (h appHost) ShowWindow() { showWindowHook(h.a) }
 
 func (h appHost) ServerStopped(w *webServer) { h.a.web.CompareAndSwap(w, nil) }
+
+var errorType = reflect.TypeOf((*error)(nil)).Elem()
+
+// webMethods are the methods a page may call: those Wails binds.
+var webMethods = func() map[string]reflect.Method {
+	m := map[string]reflect.Method{}
+	t := reflect.TypeOf(&App{})
+	for i := 0; i < t.NumMethod(); i++ {
+		m[t.Method(i).Name] = t.Method(i)
+	}
+	return m
+}()
+
+// webInvoke calls method on a with JSON arguments, the way Wails does: a
+// missing argument is the zero value, a trailing error result becomes the
+// error, and other results are returned as they are.
+func webInvoke(a *App, method string, args []json.RawMessage) (result interface{}, err error) {
+	m, ok := webMethods[method]
+	if !ok {
+		return nil, fmt.Errorf("unknown method %q", method)
+	}
+	ft := m.Type
+	in := []reflect.Value{reflect.ValueOf(a)}
+	for i := 1; i < ft.NumIn(); i++ {
+		v := reflect.New(ft.In(i))
+		if i-1 < len(args) && len(args[i-1]) > 0 && string(args[i-1]) != "null" {
+			if err := json.Unmarshal(args[i-1], v.Interface()); err != nil {
+				return nil, fmt.Errorf("%s: argument %d: %w", method, i, err)
+			}
+		}
+		in = append(in, v.Elem())
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			dbg.Printf("web: %s panicked: %v", method, r)
+			result, err = nil, fmt.Errorf("%s: %v", method, r)
+		}
+	}()
+	out := m.Func.Call(in)
+	if n := len(out); n > 0 && ft.Out(n-1) == errorType {
+		if e := out[n-1].Interface(); e != nil {
+			return nil, e.(error)
+		}
+		out = out[:n-1]
+	}
+	if len(out) == 0 {
+		return nil, nil
+	}
+	return out[0].Interface(), nil
+}

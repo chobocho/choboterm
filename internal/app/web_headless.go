@@ -29,8 +29,8 @@ func runHeadless(opts cliOptions) int {
 		return 1
 	}
 	fmt.Printf("choboterm V%s web server (no window)\n\n  %s\n\n", version.Version, w.URL(false))
-	if w.tls {
-		fmt.Printf("  TLS certificate SHA-256: %s\n  (compare it with the one your browser shows before trusting it)\n\n", w.fp)
+	if fp := w.fingerprint(); fp != "" {
+		fmt.Printf("  TLS certificate SHA-256: %s\n  (compare it with the one your browser shows before trusting it)\n\n", fp)
 	}
 	if opts.noToken {
 		fmt.Println("WARNING: browser token authentication is disabled. Anyone who can reach this server can use its shells and saved sessions.")
