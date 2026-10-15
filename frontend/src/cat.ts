@@ -372,7 +372,11 @@ function openLuaBox() {
             void go();
         } else if (ev.key === 'Escape') {
             ev.stopPropagation();
-            closeBubble();
+            // The code box keeps the focus after a run, so its Esc closes
+            // the result window first (as Esc in that window does), and the
+            // box only on the next one.
+            if (!result.hidden) closeResult();
+            else closeBubble();
         }
     });
 }
