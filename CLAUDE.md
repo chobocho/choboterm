@@ -53,4 +53,3 @@ tools/vet_all.sh                   # Go 파일을 옮기거나 OS·빌드 태그
 - 릴리스는 자동이다: `version.go`가 바뀐 커밋이 `main`에 머지되면 `release` 워크플로가 4개 파일을 빌드하고
   `v<Version>` 태그와 GitHub Release를 만든다(태그가 이미 있으면 건너뜀). 따로 실행할 것은 없다.
   손으로 할 때는 Actions > release > Run workflow에서 Tag와 Ref `main`.
-- `history*.html`은 고치지 않는다.
