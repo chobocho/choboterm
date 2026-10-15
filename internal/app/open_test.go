@@ -176,3 +176,33 @@ func TestScriptOpens(t *testing.T) {
 		t.Fatalf("opened %q", got)
 	}
 }
+
+func TestConsoleOpens(t *testing.T) {
+	f := newScriptFixture(t, "host")
+	rec := recordOpens(t, f.app)
+	results := consoleResults(f)
+	if err := f.app.StartConsole(1); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	for id, c := range []struct{ code, want string }{
+		{"open_url('example.com/console') return 'ok'", "ok"},
+		{"open_folder([[" + dir + "]])", ":"},
+		{"open_folder([[" + filepath.Join(dir, "no") + "]])", "!console:1: open_folder: 폴더가 없습니다"},
+	} {
+		if err := f.app.ConsoleEval(1, id+1, c.code); err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case got := <-results:
+			if !strings.Contains(got, c.want) {
+				t.Fatalf("%s: got %q, want %q", c.code, got, c.want)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatalf("%s: no result", c.code)
+		}
+	}
+	if got := rec.list(); got != "url https://example.com/console|folder "+dir {
+		t.Fatalf("opened %q", got)
+	}
+}
