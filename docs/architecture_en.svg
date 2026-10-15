@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1010" height="800" viewBox="0 0 1010 800" font-family="'Segoe UI', 'Malgun Gothic', 'Noto Sans', sans-serif" font-size="11" fill="#202124">
+<svg xmlns="http://www.w3.org/2000/svg" width="1010" height="868" viewBox="0 0 1010 868" font-family="'Segoe UI', 'Malgun Gothic', 'Noto Sans', sans-serif" font-size="11" fill="#202124">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#5f6368"/>
@@ -18,12 +18,12 @@
     </style>
   </defs>
 
-  <rect x="0" y="0" width="1010" height="800" rx="10" fill="#ffffff"/>
+  <rect x="0" y="0" width="1010" height="868" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm Architecture</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.30 · <tspan class="new">NEW</tspan> = changed in this version (the cat's Lua: runs gather in one log to scroll and copy)</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.30 · <tspan class="new">NEW</tspan> = changed lately (the cat: walks about, click it to run Lua without a tab, a log of the runs)</text>
 
   <!-- Frontend -->
-  <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
+  <rect x="20" y="60" width="270" height="621" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
   <text x="35" y="82" class="head" fill="#1a4fa3">Frontend (WebView2 · WebKitGTK)</text>
   <g class="item" stroke="#4a7bd0">
     <rect x="35" y="95" width="240" height="48" rx="5"/>
@@ -35,6 +35,7 @@
     <rect x="35" y="443" width="240" height="48" rx="5"/>
     <rect x="35" y="501" width="240" height="48" rx="5"/>
     <rect x="35" y="559" width="240" height="48" rx="5"/>
+    <rect x="35" y="617" width="240" height="48" rx="5"/>
   </g>
   <text x="47" y="115" class="title">main · tabs · connection</text>
   <text x="47" y="132" class="sub">Tabs · terminal · main.ts split into modules</text>
@@ -44,7 +45,7 @@
   <text x="47" y="248" class="sub">File transfer window (SFTP · SCP · FTP)</text>
   <text x="47" y="289" class="title">viewer.ts · imageview.ts</text>
   <text x="47" y="306" class="sub">Text viewer/editor (CodeMirror), images</text>
-  <text x="47" y="347" class="title">luaconsole.ts · memo.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="347" class="title">luaconsole.ts · memo.ts</text>
   <text x="47" y="364" class="sub">Lua REPL · memo autosave · Ctrl+Shift+B</text>
   <text x="47" y="405" class="title">containers.ts</text>
   <text x="47" y="422" class="sub">Docker window (shell · logs · open port)</text>
@@ -54,13 +55,15 @@
   <text x="47" y="538" class="sub">English UI: translates text via dictionary</text>
   <text x="47" y="579" class="title">sessions · help · search · platform</text>
   <text x="47" y="596" class="sub">Sessions, help, search, platform</text>
+  <text x="47" y="637" class="title">cat.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="654" class="sub">The cat: walks · drag · click for Lua · log</text>
 
   <!-- Wails bridge -->
   <line x1="292" y1="160" x2="398" y2="160" class="link" marker-end="url(#arrow)"/>
   <text x="345" y="96" text-anchor="middle" class="note" font-weight="bold">Go method calls</text>
   <text x="345" y="112" text-anchor="middle" class="note">Connect · Send</text>
   <text x="345" y="128" text-anchor="middle" class="note">Resize · ConsoleEval</text>
-  <text x="345" y="144" text-anchor="middle" class="note">DockerList etc.</text>
+  <text x="345" y="144" text-anchor="middle" class="note">EvalLua etc.</text>
   <line x1="398" y1="300" x2="292" y2="300" class="link" marker-end="url(#arrow)"/>
   <text x="345" y="320" text-anchor="middle" class="note" font-weight="bold">Events</text>
   <text x="345" y="336" text-anchor="middle" class="note">term:data</text>
@@ -70,16 +73,16 @@
   <text x="345" y="246" text-anchor="middle" class="note">bindings</text>
 
   <!-- Browser (web server clients) -->
-  <rect x="20" y="645" width="270" height="140" rx="8" fill="#fce8e6" stroke="#c5221f" stroke-width="1.5" stroke-dasharray="6 4"/>
-  <text x="35" y="667" class="head" fill="#a50e0e">Browser (this PC · other PCs)</text>
-  <text x="35" y="687" class="sub">Same page (frontend/dist) + web_shim.js</text>
-  <text x="35" y="705" class="sub">window.go · runtime over one WebSocket</text>
-  <text x="35" y="723" class="sub">Output: binary frames · acknowledged</text>
-  <text x="35" y="741" class="sub">Reconnects and gets only what it missed</text>
-  <text x="35" y="759" class="sub">Files: this PC uses the window's dialogs,</text>
-  <text x="35" y="777" class="sub">other PCs upload · download (.zip)</text>
+  <rect x="20" y="703" width="270" height="140" rx="8" fill="#fce8e6" stroke="#c5221f" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="35" y="725" class="head" fill="#a50e0e">Browser (this PC · other PCs)</text>
+  <text x="35" y="745" class="sub">Same page (frontend/dist) + web_shim.js</text>
+  <text x="35" y="763" class="sub">window.go · runtime over one WebSocket</text>
+  <text x="35" y="781" class="sub">Output: binary frames · acknowledged</text>
+  <text x="35" y="799" class="sub">Reconnects and gets only what it missed</text>
+  <text x="35" y="817" class="sub">Files: this PC uses the window's dialogs,</text>
+  <text x="35" y="835" class="sub">other PCs upload · download (.zip)</text>
 
-  <path d="M292,715 L306,715 L306,557 L413,557" class="web" marker-start="url(#arrowWeb)" marker-end="url(#arrowWeb)"/>
+  <path d="M292,773 L306,773 L306,557 L413,557" class="web" marker-start="url(#arrowWeb)" marker-end="url(#arrowWeb)"/>
   <text x="313" y="612" class="note" font-weight="bold" fill="#a50e0e">HTTPS</text>
   <text x="313" y="627" class="note" fill="#a50e0e">WebSocket</text>
   <text x="313" y="642" class="note" fill="#a50e0e">token login</text>
@@ -147,11 +150,13 @@
 
   <!-- Lua host -->
   <line x1="585" y1="662" x2="585" y2="698" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
-  <text x="597" y="684" class="note">app/luarun.go ⇄ luahost · JSON lines</text>
-  <rect x="400" y="700" width="370" height="85" rx="8" fill="#fff4e5" stroke="#d9822b" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="597" y="684" class="note">luarun · luaeval ⇄ luahost · JSON lines</text>
+  <rect x="400" y="700" width="370" height="103" rx="8" fill="#fff4e5" stroke="#d9822b" stroke-width="1.5" stroke-dasharray="6 4"/>
   <text x="415" y="722" class="head" fill="#a35a10">Lua runner — choboterm.exe --lua-host</text>
   <text x="415" y="742" class="sub">Separate process · gopher-lua (Lua 5.1) · send · expect · screen</text>
   <text x="415" y="760" class="sub">luahost/luajob: memory limit (Job Object · Linux /proc)</text>
+  <text x="415" y="778" class="sub">Tabs: console · scripts (luarun) <tspan class="new">NEW</tspan> the cat: once, no tab (luaeval)</text>
+  <text x="415" y="795" class="sub">Several lines show the last one's value · 10 s · 64KB output</text>
 
   <!-- External -->
   <line x1="772" y1="230" x2="808" y2="230" class="link" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
@@ -183,7 +188,7 @@
   <text x="825" y="523" class="head" fill="#6a1b9a">Releases</text>
   <text x="825" y="543" class="sub">Windows: choboterm.exe</text>
   <text x="825" y="561" class="sub">Linux x86_64: tar.gz</text>
-  <text x="825" y="579" class="sub">Built by GitHub Actions (release)</text>
+  <text x="825" y="579" class="sub">Built by GitHub Actions</text>
   <text x="825" y="597" class="sub">GTK 3 · WebKitGTK 4.1</text>
   <text x="825" y="615" class="sub">Get via curl · install.sh</text>
   <text x="825" y="633" class="sub">Update check: releases API</text>

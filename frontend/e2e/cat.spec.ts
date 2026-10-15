@@ -128,7 +128,10 @@ test('clicking the cat runs Lua; the runs gather in one log to copy', async ({ap
     await expect(log).toHaveValue(/^> print\("meow"\)[^]*\n\n> 1 \+ 2\n= 3\n-- \d+ms$/);
     await result.getByRole('button', {name: '지우기'}).click();
     await expect(log).toHaveValue('');
-    await log.press('Escape');
+    // the 닫기 button closes it too, back to the code
+    await result.getByRole('button', {name: '닫기', exact: true}).click();
+    await expect(result).toBeHidden();
+    await expect(input).toBeFocused();
     await input.press('Escape');
     await expect(bubble(page)).toBeHidden();
 });
@@ -146,4 +149,12 @@ test('in English, a Lua error is translated after its place and function', async
     await input.press('Control+Enter');
     await expect(page.locator('#luaResult textarea.log')).toHaveValue(
         /\nError: console:1: send: send\(\) can't be used when running without a tab\n-- \d+ms$/);
+});
+
+test('the help tells about the cat and its setting', async ({app}) => {
+    await app.key('F1');
+    const help = app.page.locator('#help');
+    await expect(help).toBeVisible();
+    await expect(help).toContainText('고양이 보이기');
+    await expect(help.locator('td, th, dt, div').filter({hasText: /^고양이$/})).toHaveCount(1);
 });

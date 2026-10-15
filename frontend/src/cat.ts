@@ -421,9 +421,10 @@ result.innerHTML = `
     <div class="buttons">
         <button type="button" class="copy">모두 복사</button>
         <button type="button" class="clear">지우기</button>
+        <button type="button" class="done">닫기</button>
     </div>`;
 const log = result.querySelector<HTMLTextAreaElement>('.log')!;
-result.querySelector('.close')!.addEventListener('click', () => closeResult());
+result.querySelectorAll('.close, .done').forEach(b => b.addEventListener('click', () => closeResult()));
 result.querySelector('.copy')!.addEventListener('click', () => {
     if (!log.value) return;
     ClipboardSetText(log.value).then(
