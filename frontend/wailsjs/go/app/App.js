@@ -66,6 +66,10 @@ export function DockerOpen(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
   return window['go']['app']['App']['DockerOpen'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 
+export function EvalLua(arg1) {
+  return window['go']['app']['App']['EvalLua'](arg1);
+}
+
 export function ExportSessions() {
   return window['go']['app']['App']['ExportSessions']();
 }

@@ -16,6 +16,7 @@ Disconnect(int)
 DockerAction(int, string, string) (error)
 DockerList(int, bool) ([]Container, error)
 DockerOpen(int, int, string, string, string, int, int) (error)
+EvalLua(string) (LuaResult, error)
 ExportSessions() (string, error)
 FileCancel(int)
 FileClose(int)
@@ -189,6 +190,13 @@ luaMsg {
     "limit,omitempty" uint64
 }
 
+luaResult {
+    "output" string
+    "value" string
+    "error" string
+    "ms" int64
+}
+
 macro {
     "name" string
     "key" string
@@ -309,6 +317,8 @@ settings {
     "consoleHeight" int
     "macros" []macro
     "updateCheck" bool
+    "cat" bool
+    "catIntro" bool
     "window,omitempty" *windowState
     "update,omitempty" *updateState
     "web,omitempty" *webSettings
@@ -450,5 +460,7 @@ xferProgress {
   },
   "consoleHeight": 0,
   "macros": [],
-  "updateCheck": false
+  "updateCheck": false,
+  "cat": true,
+  "catIntro": false
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 	"testing"
@@ -46,15 +45,7 @@ type scriptFixture struct {
 
 func newScriptFixture(t *testing.T, mode string) *scriptFixture {
 	t.Helper()
-	origCmd, origLimit := luaHostCommand, luaMemoryLimit
-	luaHostCommand = func() (*exec.Cmd, error) {
-		cmd := exec.Command(os.Args[0], "-test.run=^TestLuaHostHelper$")
-		cmd.Env = append(os.Environ(), "CHOBOTERM_LUA_HELPER="+mode)
-		return cmd, nil
-	}
-	luaMemoryLimit = 128 << 20
-	t.Cleanup(func() { luaHostCommand, luaMemoryLimit = origCmd, origLimit })
-
+	useLuaHelper(t, mode)
 	f := &scriptFixture{app: NewApp(), sess: newPipeSession(), ends: make(chan string, 4)}
 	f.app.hooks.emit = func(name string, data ...interface{}) {
 		f.mu.Lock()

@@ -193,13 +193,14 @@ export class App {
 export const test = base.extend<{app: App; server: FakeServer}>({
     app: async ({page}, use, testInfo) => {
         // Its own settings, history, sessions and home folder: nothing of the user's is read or changed.
+        // No cat: it would walk over what the tests click (cat.spec.ts turns it on).
         const root = testInfo.outputPath('profile');
         const config = path.join(root, 'config');
         const home = path.join(root, 'home');
         const dir = path.join(config, 'choboterm');
         fs.mkdirSync(dir, {recursive: true});
         fs.mkdirSync(home, {recursive: true});
-        fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({language: 'ko', autoReconnect: true, updateCheck: false}));
+        fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({language: 'ko', autoReconnect: true, updateCheck: false, cat: false}));
         fs.writeFileSync(path.join(dir, 'web-token'), TOKEN + '\n');
 
         const port = await freePort();

@@ -119,6 +119,9 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 - **매크로**: `Ctrl+Shift+M`으로 매크로 창을 열어 자주 쓰는 명령을 저장해 두고 보냅니다(목록에서 `Enter` / 더블클릭).
   - 매크로마다 `F2`~`F12`, `Shift+F1`~`F12`, `Ctrl+F1`~`F12` 중 하나를 지정하면 그 키로 바로 보냅니다. 지정하지 않은 키는 mc, htop 같은 프로그램에 그대로 전달됩니다.
   - 내용의 줄바꿈은 `Enter`로 보내고, `\t`(Tab), `\e`(Esc), `\xHH`(예: `\x03` = Ctrl+C), `\\`(역슬래시)를 쓸 수 있습니다.
+- **고양이**: 창 아래쪽을 치즈냥 한 마리가 돌아다닙니다. 걷고, 앉아서 두리번거리고, 그루밍하고, 기지개를 켜고, 뛰어오르고, 구르고, 웅크려 잡니다(zZ).
+  - **끌어서** 다른 곳에 옮기면 그 높이에서 계속 다닙니다. **클릭**하면 Lua 입력 상자가 열리고, `Ctrl+Enter`(또는 "실행")로 실행하면 결과 창에 출력·값·오류가 나옵니다. 탭 없이 따로 실행하므로 연결이 없어도 계산기처럼 쓸 수 있습니다(`send` · `screen`은 못 씀, 10초가 지나면 멈춤).
+  - 처음 한 번 클릭·끌기와 숨기는 방법을 알려 줍니다. 설정 창(`Ctrl+Shift+O`)의 "고양이 보이기"로 켜고 끕니다.
 - **Lua 스크립트**: 자동 로그인, 반복 명령처럼 출력을 보고 입력하는 일을 Lua(5.1 문법, [gopher-lua](https://github.com/yuin/gopher-lua))로 자동화합니다.
   - 매크로 창에서 종류를 "Lua 스크립트"로 고르면 그 매크로(지정한 F키 포함)가 스크립트로 실행됩니다. 탭 우클릭 메뉴의 "Lua 스크립트 실행..."은 `문서\choboterm\scripts`의 `.lua` 파일을 실행합니다(처음 열 때 예제 3개를 넣어 둠).
   - 쓸 수 있는 함수: `send(문자열)` 입력 보내기(`"\r"` = Enter), `expect(패턴, 초)` 출력에 Lua 패턴이 나올 때까지 기다리기(색·제어 코드는 빼고 비교, 시간이 지나면 `nil`, 기본 30초), `sleep(밀리초)`, `screen()` 지금 화면의 글자, `print(...)`. 그 밖에 `string` · `table` · `math` · `os.time/clock/date`가 있고, 파일(`io`)·명령 실행·`require`는 쓸 수 없습니다.
@@ -344,6 +347,7 @@ npm run test:e2e
 | `frontend/src/tabmenu.ts` / `panels.ts` / `shortcuts.ts` | 탭 메뉴와 색 테마, 설정·세션·매크로·포워딩·컨테이너 창 열기, 앱이 쓰는 키 판별 |
 | `frontend/src/look.ts` / `clipboard.ts` / `title.ts` / `notify.ts` | 렌더러·글꼴·색·반투명, 복사와 붙여넣기, 창 제목, 토스트와 터미널 안내 |
 | `frontend/src/luaconsole.ts` | Lua 스크립트 상자와 Lua 콘솔 |
+| `frontend/src/cat.ts` · `internal/app/luaeval.go` | 고양이(동작, 끌기, 클릭하면 Lua 입력 상자와 결과 창, 첫 안내), 탭 없이 Lua 한 번 실행하기 |
 | `frontend/e2e/` | 화면 E2E 테스트(Playwright, 창 없는 choboterm에 접속): `frontend`에서 `npm run test:e2e` |
 | `frontend/src/files.ts` | 파일 전송 창(여러 개 선택, 끌어 놓기 업로드, 삭제·이름 바꾸기·새 폴더), 진행률 상자 |
 | `frontend/src/viewer.ts` / `internal/app/viewer.go` | 텍스트 뷰어·편집기(CodeMirror, 인코딩 자동 판별·강제 지정, 서버 저장·충돌 확인, 변환 저장) |
@@ -364,6 +368,7 @@ npm run test:e2e
 | `frontend/src/imageview.ts` | 이미지 보기 창 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
 | `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
+| `tools/make_cat.py` | 고양이 그림 시트에서 스프라이트 만들기(`frontend/src/assets/cat.png`, `frontend/src/catframes.json`, 걷기는 발이 미끄러지지 않게 프레임마다 이동 거리 계산) |
 
 ## 아직 지원하지 않는 기능
 
