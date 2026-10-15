@@ -20,7 +20,7 @@
 
   <rect x="0" y="0" width="1010" height="868" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.30 · <tspan class="new">NEW</tspan> = 최근에 바뀜 (고양이: 돌아다니며 클릭하면 탭 없이 Lua 실행, 실행 기록 창)</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.31 · <tspan class="new">NEW</tspan> = 최근에 바뀜 (고양이: 폴더·웹사이트 열기, 네 다리로 걷기 · 컨테이너: podman 선택)</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="621" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
