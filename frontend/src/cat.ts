@@ -16,8 +16,7 @@ interface Action {
     w: number;
     h: number;
     frames: number[][];
-    ax?: number; // where the first frame's nose is, from the left (kept put as the action starts)
-    steps?: number[]; // walk: atlas px the nose moves when frame i comes up
+    steps?: number[]; // walk: atlas px the nose moves when frame i comes up (keeps the paws put)
     ms?: number; // walk: how long a frame shows (before TEMPO), when it isn't the default
 }
 interface Meta {
@@ -95,9 +94,8 @@ function draw(s: Step) {
     el.style.width = `${w}px`;
     el.style.height = `${h}px`;
     el.style.backgroundPosition = `${-fx * SCALE}px ${-fy * SCALE}px`;
-    // x is where the nose is: ax px into the frame (mirrored when facing left).
-    const ax = (a.ax ?? a.w) * SCALE;
-    el.style.left = `${dir > 0 ? x - ax : x - (w - ax)}px`;
+    // The frames have the nose on their right edge: facing left, mirrored, it is on the left.
+    el.style.left = `${dir > 0 ? x - w : x}px`;
     el.style.top = `${floorY() - h}px`;
     el.style.transform = dir > 0 ? '' : 'scaleX(-1)';
     zz.hidden = !s.zz;
@@ -124,69 +122,37 @@ const hold = (act: string, frame: number, ms: number) => queue.push({act, frame,
 
 function walk(cycles: number) {
     const steps = META.actions.walk.steps ?? [];
-    const ms = META.actions.walk.ms ?? 110;
     for (let c = 0; c < cycles; c++) {
+        // The walk comes from a video at its own frame rate (see make_cat.py --walk).
+        const ms = META.actions.walk.ms ?? 170;
         for (let i = 0; i < steps.length; i++) queue.push({act: 'walk', frame: i, ms, move: steps[i] * SCALE});
     }
     pose = 'stand';
 }
 
-// The sheet's actions (see make_cat.py): stretch ends sat down; asleep is
-// sit, nod off, curl up (frames 3-6 breathe); wake goes from curled up to
-// standing; jump is crouch, leap, fly, land, stand.
-const SIT = (ms: number) => hold('yawn', 0, ms);
-const STAND = (ms: number) => hold('stretch', 0, ms);
-
 function sitDown() {
-    add('stretch', [5, 6], 260);
-    SIT(500);
+    add('sitdown', [0, 1, 2], 200);
     pose = 'sit';
 }
 
 function standUp() {
-    add('wake', [5, 6], 300);
+    add('sitdown', [2, 1, 0], 200);
     pose = 'stand';
 }
 
-function yawn() {
-    add('yawn', [1, 2], 320);
-    add('yawn', [3], 380);
-    hold('yawn', 4, 700);
-    add('yawn', [5], 600);
-    hold('yawn', 6, 600);
-}
-
-function stretch() {
-    add('stretch', [0, 1, 2], 300);
-    hold('stretch', 3, 500);
-    hold('stretch', 4, 900);
-    add('stretch', [3, 2, 1], 260);
-    STAND(400);
-}
-
 function sleep() {
-    add('asleep', [0], 900);
-    add('asleep', [1, 2], 520);
-    add('asleep', [3], 700);
+    add('liedown', [0, 1, 2], 520);
     const n = irand(4, 9);
-    for (let i = 0; i < n; i++) add('asleep', [4, 5, 6, 5], 700, {zz: true});
+    for (let i = 0; i < n; i++) add('sleep', [0, 1, 2, 1], 700, {zz: true});
     pose = 'lie';
 }
 
 function wakeUp() {
-    hold('wake', 0, 600);
-    add('wake', [1, 2], 420);
-    hold('wake', 3, 800);
-    hold('wake', 4, 700);
-    add('wake', [5, 6], 380);
+    add('liedown', [2, 1, 0], 380);
+    add('stretch', [0], 380);
+    hold('stretch', 1, 900);
+    add('stretch', [0], 380);
     pose = 'stand';
-}
-
-function jump() {
-    add('jump', [0], 400);
-    add('jump', [1, 2, 3], 150, {move: 22});
-    add('jump', [4], 200);
-    hold('jump', 5, 500);
 }
 
 /** Picks what comes next, by what the cat is doing now. */
@@ -194,30 +160,27 @@ function plan() {
     if (pose === 'lie') return wakeUp();
     if (pose === 'sit') {
         const r = Math.random();
-        if (r < 0.2) yawn();
-        else if (r < 0.38) {
-            add('groom', [0, 1, 2, 1, 0, 1, 2, 1].slice(0, irand(4, 8)), 240);
-            SIT(300);
-        } else if (r < 0.52) {
+        if (r < 0.25) add('groom', [0, 1, 2, 1, 0, 1, 2, 1].slice(0, irand(4, 8)), 240);
+        else if (r < 0.45) {
             add('lookback', [2, 1], 260);
             hold('lookback', 0, irand(1000, 2200));
             add('lookback', [1, 2], 260);
-            SIT(300);
-        } else if (r < 0.66) SIT(irand(1500, 4000));
-        else if (r < 0.78) sleep();
+        } else if (r < 0.6) hold('sitdown', 2, irand(1500, 4000));
+        else if (r < 0.72) sleep();
         else standUp();
         return;
     }
     const r = Math.random();
     if (r < 0.5) walk(irand(2, 6));
     else if (r < 0.65) sitDown();
-    else if (r < 0.72) STAND(irand(900, 2200));
-    else if (r < 0.8) stretch();
-    else if (r < 0.88) jump();
-    else if (r < 0.95) {
-        add('roll', [0, 1, 2, 1, 0, 1, 2], 260);
-        STAND(300);
-    } else hold('back', 0, irand(1200, 2400));
+    else if (r < 0.73) hold('sitdown', 0, irand(900, 2200));
+    else if (r < 0.81) {
+        add('stretch', [0], 380);
+        hold('stretch', 1, 900);
+        add('stretch', [0], 380);
+    } else if (r < 0.89) add('jump', [0, 1, 2], 150, {move: 0});
+    else if (r < 0.95) add('roll', [0, 1, 2, 1, 0, 1, 2], 260);
+    else hold('back', 0, irand(1200, 2400));
 }
 
 function tick() {
@@ -226,12 +189,12 @@ function tick() {
     if (!queue.length) {
         if (busy) {
             // waiting on the Lua box: sit still
-            if (pose === 'lie') wakeUp();
-            else if (pose !== 'sit') sitDown();
-            else SIT(1000);
+            if (pose !== 'sit') sitDown();
+            else hold('sitdown', 2, 1000);
         } else plan();
     }
     const s = queue.shift()!;
+    if (s.act === 'jump' && s.frame > 0) s.move = 26;
     if (s.move) {
         // turn round at the window's edge: the nose goes where the tail was
         const w = size(s.act).w;
@@ -255,8 +218,7 @@ function start() {
         dir = 1;
     }
     queue = [];
-    pose = 'stand';
-    STAND(600);
+    hold('sitdown', 0, 600);
     tick();
     maybeShowGuide();
 }
@@ -312,8 +274,7 @@ el.addEventListener('pointermove', ev => {
     }
     // held by the scruff: legs dangling, the pointer at its middle
     const {w, h} = size('jump');
-    const ax = (META.actions.jump.ax ?? META.actions.jump.w) * SCALE;
-    x = dir > 0 ? ev.clientX - w / 2 + ax : ev.clientX + w / 2 - ax;
+    x = ev.clientX + dir * w / 2;
     fromBottom = Math.max(0, window.innerHeight - (ev.clientY + h / 2));
     draw({act: 'jump', frame: 1, ms: 0});
 });
@@ -327,11 +288,11 @@ const release = (ev: PointerEvent) => {
     dragging = false;
     el.classList.remove('dragging');
     // keep the feet inside the window, a little above the very bottom
-    fromBottom = Math.min(Math.max(fromBottom, 2), window.innerHeight - size('yawn').h - 4);
+    fromBottom = Math.min(Math.max(fromBottom, 2), window.innerHeight - size('sitdown').h - 4);
     pose = 'stand';
     queue = [];
-    add('jump', [3, 4], 220);
-    hold('jump', 5, 700);
+    add('jump', [2], 220);
+    hold('sitdown', 0, 700);
     clampX();
     if (running) tick();
 };
