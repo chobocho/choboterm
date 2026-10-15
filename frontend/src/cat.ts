@@ -38,7 +38,7 @@ const SCALE = 0.5; // atlas px -> screen px: the atlas is drawn at twice the siz
 const TEMPO = 1.7;
 const IDLE_MS = 30_000; // no key, click or mouse move for this long: the cat goes to sleep
 const ATTEND_MS = 3_500; // after the last key or click, it watches that long
-const REACH = 150; // screen px: how high above its feet the cat can jump
+const REACH = 60; // screen px: how high above its feet the cat jumps at most (a bit over its height)
 
 type Pose = 'stand' | 'sit' | 'lie';
 
@@ -50,7 +50,7 @@ interface Step {
     move?: number;
     lift?: number; // screen px above the floor (in a jump)
     raw?: boolean; // ms is as is, not times TEMPO (the walk, a jump's flight)
-    lock?: boolean; // a jump: a key or click doesn't cut it short
+    lock?: boolean; // a jump, or waking up: a key or click doesn't cut it short
     zz?: boolean; // asleep: z's float up
     nap?: boolean; // on the way to a nap for want of input: 'asleep' once it is curled up
 }
@@ -221,13 +221,26 @@ function snore() {
     add('doze', [4, 5, 6, 5], 700, {zz: true});
 }
 
-/** Woken by a key, a click or the mouse: lifts its head and sits up. */
+/** Woken by a key, a click or the mouse: lifts its head, sits up, stands
+ * and stretches, as a cat does; only then does it look at what woke it. */
 function wakeUp() {
     queue = [];
     asleep = false;
-    hold('wake', 1, 260);
-    hold('wake', 3, 220);
-    hold('wake', 4, 300);
+    const lock = {lock: true};
+    add('wake', [1], 260, lock);
+    add('wake', [3], 220, lock);
+    add('wake', [4], 300, lock);
+    add('wake', [6], 220, lock);
+    add('stretch', [2, 3], 240, lock);
+    add('stretch', [3], 700, lock);
+    add('stretch', [4, 5], 240, lock);
+    pose = 'stand';
+}
+
+/** Flops over, belly up, wriggles, and sits up again. */
+function roll() {
+    add('roll', [0, 1, 2, 1, 0, 1, 2], 260);
+    hold('wake', 4, 500);
     pose = 'sit';
 }
 
@@ -278,30 +291,29 @@ function plan() {
     }
     if (pose === 'sit') {
         const r = Math.random();
-        if (r < 0.2) {
+        if (r < 0.17) {
             add('sit', [2, 3, 4], 260);
             hold('sit', 4, 500);
             add('sit', [3, 5], 300);
             hold('sit', 1, 800);
-        } else if (r < 0.4) {
+        } else if (r < 0.34) {
             add('lookback', [2, 1], 260);
             hold('lookback', 0, irand(1000, 2200));
             add('lookback', [1, 2], 260);
-        } else if (r < 0.62) {
+        } else if (r < 0.52) {
             hold('sit', irand(0, 2), irand(1200, 3000));
             hold('sit', 6, irand(800, 1800));
-        } else if (r < 0.72) {
-            add('roll', [0, 1, 2, 1, 0, 1, 2], 260);
-            hold('wake', 4, 500);
-        } else standUp();
+        } else if (r < 0.77) roll();
+        else standUp();
         return;
     }
     const r = Math.random();
-    if (r < 0.55) walk(irand(2, 5));
-    else if (r < 0.72) sitDown();
-    else if (r < 0.8) hold('stretch', irand(0, 1), irand(900, 2200));
-    else if (r < 0.9) stretch();
-    else leap(rand(30, 60), rand(10, 24)); // a hop, for nothing
+    if (r < 0.5) walk(irand(2, 5));
+    else if (r < 0.65) sitDown();
+    else if (r < 0.72) hold('stretch', irand(0, 1), irand(900, 2200));
+    else if (r < 0.82) stretch();
+    else if (r < 0.9) roll();
+    else leap(rand(30, 60), rand(10, 20)); // a hop, for nothing
 }
 
 // ---- Watching the cursor ----
