@@ -20,7 +20,7 @@
 
   <rect x="0" y="0" width="1010" height="800" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm Architecture</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.29 · <tspan class="new">NEW</tspan> = changed in this version (Lua: shows the last line's value in multi-line input)</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.30 · <tspan class="new">NEW</tspan> = changed in this version (the cat's Lua: runs gather in one log to scroll and copy)</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
