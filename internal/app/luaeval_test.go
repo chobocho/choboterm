@@ -32,6 +32,8 @@ func TestEvalLuaValuesAndPrints(t *testing.T) {
 		{"local s = 0 for i = 1, 10 do s = s + i end print(s)", "55", ""},
 		{"string.format('%05.1f', math.pi)", "", "003.1"},
 		{"=os.time() > 0", "", "true"},
+		// the last line's value is shown after the statements before it
+		{"print('야옹')\n1 + 2", "야옹", "3"},
 	} {
 		r, err := a.EvalLua(c.code)
 		if err != nil {
