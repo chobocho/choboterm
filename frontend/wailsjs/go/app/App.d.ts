@@ -43,6 +43,8 @@ export function DockerList(arg1:number,arg2:boolean):Promise<Array<app.Container
 
 export function DockerOpen(arg1:number,arg2:number,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number):Promise<void>;
 
+export function EvalLua(arg1:string):Promise<app.LuaResult>;
+
 export function ExportSessions():Promise<string>;
 
 export function FileCancel(arg1:number):Promise<void>;

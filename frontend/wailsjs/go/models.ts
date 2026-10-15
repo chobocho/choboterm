@@ -131,6 +131,24 @@ export namespace app {
 	        this.standby = source["standby"];
 	    }
 	}
+	export class LuaResult {
+	    output: string;
+	    value: string;
+	    error: string;
+	    ms: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new LuaResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.output = source["output"];
+	        this.value = source["value"];
+	        this.error = source["error"];
+	        this.ms = source["ms"];
+	    }
+	}
 	export class SaveResult {
 	    path: string;
 	    bad: number;
@@ -368,6 +386,8 @@ export namespace config {
 	    consoleHeight: number;
 	    macros: Macro[];
 	    updateCheck: boolean;
+	    cat: boolean;
+	    catIntro: boolean;
 	    window?: WindowState;
 	    update?: UpdateState;
 	    web?: WebSettings;
@@ -400,6 +420,8 @@ export namespace config {
 	        this.consoleHeight = source["consoleHeight"];
 	        this.macros = this.convertValues(source["macros"], Macro);
 	        this.updateCheck = source["updateCheck"];
+	        this.cat = source["cat"];
+	        this.catIntro = source["catIntro"];
 	        this.window = this.convertValues(source["window"], WindowState);
 	        this.update = this.convertValues(source["update"], UpdateState);
 	        this.web = this.convertValues(source["web"], WebSettings);

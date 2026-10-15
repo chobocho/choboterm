@@ -60,6 +60,11 @@ type Settings struct {
 	// UpdateCheck asks GitHub for a newer release at start, once a day.
 	// Off unless the user turns it on: nothing is sent otherwise.
 	UpdateCheck bool `json:"updateCheck"`
+	// Cat shows the cat walking about the window (on at first, so settings
+	// files from before it see it too); CatIntro is set once its guide (what
+	// clicking and dragging do, how to hide it) has been shown.
+	Cat      bool `json:"cat"`
+	CatIntro bool `json:"catIntro"`
 	// Window is the main window's last position, kept by the Go side only.
 	Window *WindowState `json:"window,omitempty"`
 	// Update is when the last check ran and what it found, kept by the Go side only.
@@ -121,7 +126,7 @@ func Default() Settings {
 		Theme: "choboterm", CursorStyle: "block", CursorBlink: true, Scrollback: 5000,
 		Translucency: "off", Opacity: 85,
 		KeepAlive: 60, AutoReconnect: true, Macros: []Macro{},
-		Highlight: defaultHighlight, LogTime: true,
+		Highlight: defaultHighlight, LogTime: true, Cat: true,
 	}
 }
 

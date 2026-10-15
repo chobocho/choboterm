@@ -23,6 +23,8 @@ export let settings: config.Settings = config.Settings.createFrom({
     logTime: true,
     consoleHeight: 0,
     updateCheck: false,
+    cat: true,
+    catIntro: false,
     language: '',
     highlight: {
         on: true,
