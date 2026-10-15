@@ -17,6 +17,10 @@ import (
 // on an App that has no Wails context.
 func TestEveryMethodWithoutWindow(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	// Hide docker and podman: this test is about the Wails runtime, not the
+	// engine. The Windows CI runner has docker installed, and "docker version"
+	// there sometimes takes longer than the watchdog below, failing at random.
+	t.Setenv("PATH", t.TempDir())
 	isolateSettings(t)
 	sess := filepath.Join(t.TempDir(), "sessions.json")
 	orig := store.SessionsFile

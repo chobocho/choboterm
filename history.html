@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-16 — Windows CI 간헐 실패 수정 (v0.2.32 릴리스 중단 원인)</h2>
+<ul>
+  <li>원인: release 실행 38772713188의 Windows 테스트에서 <code>TestEveryMethodWithoutWindow</code>가 "DockerEngineInfo didn't return"으로 실패. DPAPI 문제가 아님(<code>internal/store</code>는 통과). 러너에 설치된 docker의 <code>docker version</code>이 가끔 10초 감시 시간보다 오래 걸림. 같은 커밋이 CI에선 통과했고 이전 CI 실패 2건도 같은 원인</li>
+  <li>재현: 15초 멈추는 가짜 <code>docker.bat</code>을 PATH에 두면 같은 실패(DockerEngineInfo·DockerList)</li>
+  <li>수정: 이 테스트 동안 PATH를 빈 폴더로 바꿔 docker·podman을 숨김. 테스트 목적은 창 없이 Wails를 부르지 않는지 확인하는 것이라 엔진 실행은 불필요</li>
+  <li>확인: 같은 재현 조건에서 1.6초에 통과, <code>go vet</code>·<code>internal/app</code> 테스트 통과. 푸시 후 v0.2.32 릴리스를 손으로 다시 실행</li>
+</ul>
+
 <h2>2026-10-16 — 작업 찌꺼기 파일 정리</h2>
 <ul>
   <li>삭제: <code>output/</code>(44MB), <code>tmp/</code>(15MB), 고양이 스프라이트 검토용 이미지·GIF·영상. 결과는 이미 커밋되어 있고 <code>docs/cat-artwork.md</code> 절차로 다시 만들 수 있음</li>
