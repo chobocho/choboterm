@@ -3,7 +3,7 @@
 import {dbg} from './debug';
 import {saveSettings, settings} from './settings';
 import {ConsoleEval, ConsoleOpen, ConsoleSave, ConsoleInterrupt, ScriptScreen, StartConsole, StopScript} from '../wailsjs/go/app/App';
-import {EventsOn} from '../wailsjs/runtime/runtime';
+import {BrowserOpenURL, EventsOn} from '../wailsjs/runtime/runtime';
 import {active, focusActive, Tab, tabs} from './tabstate';
 import {toast} from './notify';
 
@@ -270,6 +270,10 @@ async function consoleRun(t: Tab, box: ScriptBox) {
     }
 }
 
+// open_url in a script of a tab whose page is a browser on another PC: Go
+// can't show it there, so the page opens it.
+EventsOn('script:open', (_id: number, url: string) => BrowserOpenURL(url));
+
 EventsOn('script:result', (id: number, req: number, value: string, err: string) => {
     const t = tabs.get(id);
     const box = t?.scriptBox;
@@ -314,7 +318,7 @@ EventsOn('script:start', (id: number, s: {name: string; started: number; console
     const box = s.console ? consoleBox(t) : scriptBox(t);
     paintScript(t);
     if (s.console) {
-        scriptLine(t, 'send · expect · sleep · screen · print 사용 가능. 식을 입력하면 값을 보여 줍니다 (Lua 5.1).', 'hint');
+        scriptLine(t, 'send · expect · sleep · screen · print · open_url · open_folder 사용 가능. 식을 입력하면 값을 보여 줍니다 (Lua 5.1).', 'hint');
         box.input!.focus();
     }
 });

@@ -158,3 +158,43 @@ test('the help tells about the cat and its setting', async ({app}) => {
     await expect(help).toContainText('고양이 보이기');
     await expect(help.locator('td, th, dt, div').filter({hasText: /^고양이$/})).toHaveCount(1);
 });
+
+// The test's browser logs in with the token only, so it counts as one on
+// another PC: addresses open in it (window.open), folders can't be shown.
+// Opening on this PC's screen is tested on the Go side (open_test.go).
+test('the cat opens web addresses it is told to, as a message or with open_url', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    await page.evaluate(() => {
+        const w = window as unknown as {opened: string[]};
+        w.opened = [];
+        window.open = (u?: string | URL) => (w.opened.push(String(u)), null);
+    });
+    const opened = () => page.evaluate(() => (window as unknown as {opened: string[]}).opened.join(' '));
+    const c = await centre(page);
+    await page.mouse.click(c.x, c.y);
+    const input = bubble(page).locator('textarea');
+    const log = page.locator('#luaResult textarea.log');
+    const run = async (code: string) => {
+        await input.fill(code);
+        await input.press('Control+Enter');
+    };
+
+    await run('https://example.com/a');
+    await expect(log).toHaveValue(/^> https:\/\/example\.com\/a\n브라우저로 열었습니다: https:\/\/example\.com\/a\n-- \d+ms$/);
+    await run('열기 github.com/chobocho');
+    await expect(log).toHaveValue(/\n브라우저로 열었습니다: https:\/\/github\.com\/chobocho\n-- \d+ms$/);
+    await run('open_url("example.org")\nreturn 1');
+    await expect(log).toHaveValue(/\n> open_url\("example\.org"\)\n {2}return 1\n= 1\n-- \d+ms$/);
+    await expect.poll(opened).toBe('https://example.com/a https://github.com/chobocho https://example.org');
+
+    // refused: not http(s); a folder from another PC
+    await run('열기 javascript:alert(1)');
+    await expect(log).toHaveValue(/\n오류: .*http · https.*\n-- \d+ms$/);
+    await run('폴더 /tmp');
+    await expect(log).toHaveValue(/\n오류: .*폴더는 이 PC에서만 열 수 있습니다\n-- \d+ms$/);
+    // Lua stays Lua: a.b is a field, not an address
+    await run('math.pi > 3');
+    await expect(log).toHaveValue(/\n> math\.pi > 3\n= true\n-- \d+ms$/);
+    expect(await opened()).toBe('https://example.com/a https://github.com/chobocho https://example.org');
+});

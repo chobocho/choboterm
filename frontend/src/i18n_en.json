@@ -80,7 +80,7 @@
   "choboterm에서 내보낸 세션 파일이 아닙니다": "This is not a session file exported by choboterm",
   "choboterm이 응답하지 않습니다": "choboterm does not respond",
   "scp 오류 ({})": "scp error ({})",
-  "send · expect · sleep · screen · print 사용 가능. 식을 입력하면 값을 보여 줍니다 (Lua 5.1).": "send · expect · sleep · screen · print are available. An expression shows its value (Lua 5.1).",
+  "send · expect · sleep · screen · print · open_url · open_folder 사용 가능. 식을 입력하면 값을 보여 줍니다 (Lua 5.1).": "send · expect · sleep · screen · print · open_url · open_folder are available. An expression shows its value (Lua 5.1).",
   "send: 한 번에 {}KB까지 보낼 수 있습니다": "send: up to {}KB at a time",
   "Enter: 다시 접속": "Enter: reconnect",
   "연결을 끊었습니다": "Disconnected",
@@ -615,5 +615,18 @@
   "Lua가 멈추지 않아 강제로 끝냈습니다": "Lua didn't stop and was ended",
   "Lua를 시작하지 못했습니다: {}": "Couldn't start Lua: {}",
   "{}초가 지나 멈췄습니다": "Stopped after {} seconds",
-  "코드가 너무 큽니다 ({}KB까지)": "The code is too big (up to {}KB)"
+  "코드가 너무 큽니다 ({}KB까지)": "The code is too big (up to {}KB)",
+  "Lua 코드, 웹 주소, 폴더 경로 (예: 열기 github.com · 폴더 C:\\work)": "Lua code, a web address or a folder (e.g. open github.com · folder C:\\work)",
+  "브라우저로 열었습니다: {}": "Opened in the browser: {}",
+  "폴더를 열었습니다: {}": "Opened the folder: {}",
+  "폴더는 이 PC에서만 열 수 있습니다": "Folders can only be opened on this PC",
+  "웹 주소가 아닙니다: {}": "Not a web address: {}",
+  "http · https 주소만 열 수 있습니다: {}": "Only http · https addresses can be opened: {}",
+  "폴더 경로가 없습니다": "No folder given",
+  "전체 경로를 써 주세요: {}": "Give the full path: {}",
+  "폴더가 없습니다: {}": "No such folder: {}",
+  "폴더가 아닙니다: {}": "Not a folder: {}",
+  "너무 자주 엽니다 ({}초에 {}번까지)": "Opening too often (up to {1} times in {0} seconds)",
+  "열 수 없는 종류입니다: {}": "Can't open this kind: {}",
+  "너무 깁니다": "Too long"
 }

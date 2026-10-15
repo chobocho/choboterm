@@ -113,6 +113,8 @@ export function LookupSSH(arg1:string):Promise<sshconn.SSHTarget>;
 
 export function MemoSave(arg1:string):Promise<string>;
 
+export function OpenTarget(arg1:string,arg2:string):Promise<app.Opened>;
+
 export function Quit():Promise<void>;
 
 export function Resize(arg1:number,arg2:number,arg3:number):Promise<void>;

@@ -26,6 +26,7 @@ import (
 	"choboterm/internal/luahost"
 	"choboterm/internal/osutil"
 	"choboterm/internal/transfer"
+	"choboterm/internal/web"
 )
 
 const (
@@ -263,6 +264,8 @@ func (s *scriptRun) readLoop(r io.Reader) {
 			}
 		case "screen":
 			go s.screen(m.ID)
+		case "openurl", "openfolder":
+			go s.open(m)
 		case "print":
 			s.t.emit("script:print", m.D)
 		case "evaldone":
@@ -276,6 +279,17 @@ func (s *scriptRun) readLoop(r io.Reader) {
 			return
 		}
 	}
+}
+
+// open carries out open_url / open_folder for the tab's owner: on this PC's
+// screen, or (an address, for a browser elsewhere) in that page.
+func (s *scriptRun) open(m luahost.LuaMsg) {
+	a := s.t.app
+	o, err := a.open(a.clientAtThisPC(web.ClientOf(s.t.id)), strings.TrimPrefix(m.T, "open"), m.D)
+	if err == nil && o.InPage {
+		s.t.emit("script:open", o.Target)
+	}
+	s.reply(m.ID, "", err)
 }
 
 // sendLoop writes the script's input to the session, at most luaSendPerSec.

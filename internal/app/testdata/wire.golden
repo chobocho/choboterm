@@ -51,6 +51,7 @@ ImportSessions() (ImportResult, error)
 LogPath(int) (string)
 LookupSSH(string) (SSHTarget)
 MemoSave(string) (string, error)
+OpenTarget(string, string) (Opened, error)
 Quit()
 Resize(int, int, int)
 RunScript(int, string, string) (error)
@@ -195,6 +196,7 @@ luaResult {
     "value" string
     "error" string
     "ms" int64
+    "open,omitempty" []string
 }
 
 macro {
@@ -207,6 +209,11 @@ macro {
 monoFont {
     "family" string
     "size" int
+}
+
+opened {
+    "target" string
+    "inPage" bool
 }
 
 pick {

@@ -5,10 +5,10 @@
 
 import catPng from './assets/cat.png';
 import catFrames from './catframes.json';
-import {EvalLua} from '../wailsjs/go/app/App';
+import {EvalLua, OpenTarget} from '../wailsjs/go/app/App';
 import {saveSettings, settings} from './settings';
 import {focusActive} from './tabstate';
-import {ClipboardSetText} from '../wailsjs/runtime/runtime';
+import {BrowserOpenURL, ClipboardSetText} from '../wailsjs/runtime/runtime';
 import {tr} from './i18n';
 import {toast} from './notify';
 
@@ -328,7 +328,7 @@ function closeBubble(refocus = true) {
 function openLuaBox() {
     openBubble(`
         <div class="head">🐾 Lua <span class="hint">탭 없이 실행 · Ctrl+Enter</span></div>
-        <textarea spellcheck="false" rows="4"></textarea>
+        <textarea spellcheck="false" rows="4" placeholder="Lua 코드, 웹 주소, 폴더 경로 (예: 열기 github.com · 폴더 C:\\work)"></textarea>
         <div class="buttons">
             <button type="button" class="run">실행</button>
             <button type="button" class="close">닫기</button>
@@ -344,7 +344,14 @@ function openLuaBox() {
         run.disabled = true;
         run.textContent = '실행 중...';
         try {
-            showResult(lastCode, await EvalLua(lastCode));
+            const msg = message(lastCode);
+            if (msg) await openFor(lastCode, msg);
+            else {
+                const r = await EvalLua(lastCode);
+                showResult(lastCode, r);
+                // open_url for a browser on another PC: Go couldn't show them there
+                r.open?.forEach(u => BrowserOpenURL(u));
+            }
         } catch (e) {
             showResult(lastCode, {output: '', value: '', error: String(e), ms: 0});
         } finally {
@@ -365,6 +372,47 @@ function openLuaBox() {
             closeBubble();
         }
     });
+}
+
+// ---- Plain messages ----
+// Besides Lua the cat takes a web address or a folder to open: a line that
+// is one ("https://...", "www...", "C:\work", "~/src", "/var/log"), or one
+// after 열기 / open (a bare "github.com" too) or 폴더 / folder. None of these
+// is valid Lua, so code is never taken for a message; a bare "a.b" is Lua
+// (math.pi), hence 열기 for an address without its scheme. Go checks what
+// to open (http(s) only, folders that exist) and limits how often.
+
+interface Message {
+    kind: 'url' | 'folder';
+    target: string;
+}
+
+const FOLDER = /^["']?(?:[A-Za-z]:[\\/]|\\\\|~(?:[\\/]|$)|\/)/;
+
+function message(text: string): Message | undefined {
+    const s = text.trim();
+    if (!s || s.includes('\n')) return undefined;
+    let m = /^(?:폴더|folder)\s+(.+)$/i.exec(s);
+    if (m) return {kind: 'folder', target: m[1]};
+    m = /^(?:열기|open)\s+(.+)$/i.exec(s);
+    if (m) return {kind: FOLDER.test(m[1]) ? 'folder' : 'url', target: m[1]};
+    if (/^(?:https?:\/\/|www\.)\S+$/i.test(s)) return {kind: 'url', target: s};
+    if (FOLDER.test(s)) return {kind: 'folder', target: s};
+    return undefined;
+}
+
+async function openFor(code: string, msg: Message) {
+    const started = performance.now();
+    const ms = () => Math.round(performance.now() - started);
+    try {
+        const o = await OpenTarget(msg.kind, msg.target);
+        // A browser on another PC opens the address itself, still inside the click.
+        if (o.inPage) BrowserOpenURL(o.target);
+        const done = msg.kind === 'url' ? `브라우저로 열었습니다: ${o.target}` : `폴더를 열었습니다: ${o.target}`;
+        showResult(code, {output: tr(done), value: '', error: '', ms: ms()});
+    } catch (e) {
+        showResult(code, {output: '', value: '', error: String(e), ms: ms()});
+    }
 }
 
 function maybeShowGuide() {
