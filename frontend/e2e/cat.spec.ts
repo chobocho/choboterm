@@ -198,3 +198,22 @@ test('the cat opens web addresses it is told to, as a message or with open_url',
     await expect(log).toHaveValue(/\n> math\.pi > 3\n= true\n-- \d+ms$/);
     expect(await opened()).toBe('https://example.com/a https://github.com/chobocho https://example.org');
 });
+
+test('Esc closes the result window first, then the Lua box', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    const c = await centre(page);
+    await page.mouse.click(c.x, c.y);
+    const input = bubble(page).locator('textarea');
+    const result = page.locator('#luaResult');
+    await input.fill('1 + 1');
+    await input.press('Control+Enter');
+    await expect(result).toBeVisible();
+    await expect(input).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(result).toBeHidden();
+    await expect(bubble(page)).toBeVisible();
+    await expect(input).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(bubble(page)).toBeHidden();
+});
