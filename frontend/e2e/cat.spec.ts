@@ -87,6 +87,49 @@ test('dragging puts the cat elsewhere', async ({app}) => {
     expect(Math.abs(box!.y + box!.height - (to.y + 30))).toBeLessThan(40);
 });
 
+test('a click elsewhere: the cat turns to it and watches it', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    const terms = (await page.locator('#terms').boundingBox())!;
+    const y = terms.y + terms.height - 30; // low enough to jump at
+    for (const [px, d] of [[terms.x + 20, '-1'], [terms.x + terms.width - 20, '1']] as const) {
+        await page.mouse.click(px, y);
+        // turned that way (after a jump already in the air has landed)
+        await expect(cat(page)).toHaveAttribute('data-dir', d, {timeout: 4000});
+        // and comes, crouches, stares or pounces: no sitting about looking back
+        await expect(cat(page)).toHaveAttribute('data-act', /^(walk|jump|sit|wake):/);
+    }
+});
+
+test('typing: the cat turns to the cursor', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    await app.connectShell();
+    // the cat put down at the right end, facing away from the prompt on the left
+    const terms = (await page.locator('#terms').boundingBox())!;
+    const from = await centre(page);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(terms.x + terms.width - 60, terms.y + terms.height - 40, {steps: 6});
+    await page.mouse.up();
+    await page.keyboard.type('echo meow', {delay: 80});
+    await expect(cat(page)).toHaveAttribute('data-dir', '-1', {timeout: 4000});
+});
+
+test('with nothing to do for 30 s it naps, and a key wakes it', async ({app}) => {
+    test.setTimeout(90_000);
+    const page = app.page;
+    await dismissGuide(app);
+    // no key, click or mouse move: a short stroll, then curled up asleep
+    await expect(cat(page)).toHaveAttribute('data-pose', 'asleep', {timeout: 60_000});
+    await expect(page.locator('#catZ')).toBeVisible({timeout: 5000});
+    await page.waitForTimeout(3000);
+    await expect(cat(page)).toHaveAttribute('data-pose', 'asleep'); // and stays asleep
+    await page.keyboard.press('Shift');
+    await expect(cat(page)).not.toHaveAttribute('data-pose', 'asleep', {timeout: 2000});
+    await expect(page.locator('#catZ')).toBeHidden({timeout: 2000});
+});
+
 test('clicking the cat runs Lua; the runs gather in one log to copy', async ({app}) => {
     const page = app.page;
     await dismissGuide(app);
