@@ -23,6 +23,10 @@ interface Meta {
 }
 const META = catFrames as unknown as Meta;
 const SCALE = 0.5; // atlas px -> screen px: the atlas is drawn at twice the size, for HiDPI
+// Every frame is shown TEMPO times as long as the durations below say: an
+// unhurried cat. The walk's step per frame is fixed by the drawings (it keeps
+// the paws put), so a slower walk takes longer frames, not shorter steps.
+const TEMPO = 1.7;
 
 type Pose = 'stand' | 'sit' | 'lie';
 
@@ -196,7 +200,7 @@ function tick() {
     }
     clampX();
     draw(s);
-    timer = window.setTimeout(tick, s.ms);
+    timer = window.setTimeout(tick, s.ms * TEMPO);
 }
 
 function start() {
