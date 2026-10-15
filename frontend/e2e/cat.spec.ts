@@ -87,26 +87,48 @@ test('dragging puts the cat elsewhere', async ({app}) => {
     expect(Math.abs(box!.y + box!.height - (to.y + 30))).toBeLessThan(40);
 });
 
-test('clicking the cat runs Lua and shows the result', async ({app}) => {
+test('clicking the cat runs Lua; the runs gather in one log to copy', async ({app}) => {
+    const page = app.page;
     await dismissGuide(app);
-    const c = await centre(app.page);
-    await app.page.mouse.click(c.x, c.y);
-    const input = bubble(app.page).locator('textarea');
+    const c = await centre(page);
+    await page.mouse.click(c.x, c.y);
+    const input = bubble(page).locator('textarea');
     await expect(input).toBeFocused();
-    await input.fill('print("meow") return 6 * 7');
+    await input.fill('print("meow")\n6 * 7');
     await input.press('Control+Enter');
-    const result = app.page.locator('#luaResult');
-    await expect(result).toBeVisible();
-    await expect(result.locator('pre').nth(1)).toHaveText('meow');
-    await expect(result.locator('pre.value')).toHaveText('42');
-    // errors show as errors; send() has no tab here
-    await result.press('Escape');
+    const result = page.locator('#luaResult');
+    const log = result.locator('textarea.log');
+    await expect(log).toHaveValue(/^> print\("meow"\)\n {2}6 \* 7\nmeow\n= 42\n-- \d+ms$/);
+    await expect(log).not.toBeEditable();
+    // the code keeps the focus, for the next run
+    await expect(input).toBeFocused();
+
+    // a second run is added below the first; errors show as errors (send() has no tab here)
+    await input.fill('send("ls\\r")');
+    await bubble(page).getByRole('button', {name: '실행'}).click();
+    await expect(log).toHaveValue(/= 42\n-- \d+ms\n\n> send\("ls\\r"\)\n오류: .*탭 없이.*\n-- \d+ms$/);
+    await expect(input).toBeFocused();
+
+    // 모두 복사 copies the whole log
+    await page.evaluate(() => {
+        const w = window as unknown as {copied: string};
+        w.copied = '';
+        navigator.clipboard.writeText = async (t: string) => void (w.copied = t);
+    });
+    await result.getByRole('button', {name: '모두 복사'}).click();
+    const all = await log.inputValue();
+    await expect.poll(() => page.evaluate(() => (window as unknown as {copied: string}).copied)).toBe(all);
+
+    // closed, it keeps the log for the next run; 지우기 empties it
+    await log.press('Escape');
     await expect(result).toBeHidden();
     await expect(input).toBeFocused();
-    await input.fill('send("ls\\r")');
-    await bubble(app.page).getByRole('button', {name: '실행'}).click();
-    await expect(result.locator('pre.error')).toContainText('탭 없이');
-    await result.press('Escape');
+    await input.fill('1 + 2');
+    await input.press('Control+Enter');
+    await expect(log).toHaveValue(/^> print\("meow"\)[^]*\n\n> 1 \+ 2\n= 3\n-- \d+ms$/);
+    await result.getByRole('button', {name: '지우기'}).click();
+    await expect(log).toHaveValue('');
+    await log.press('Escape');
     await input.press('Escape');
-    await expect(bubble(app.page)).toBeHidden();
+    await expect(bubble(page)).toBeHidden();
 });

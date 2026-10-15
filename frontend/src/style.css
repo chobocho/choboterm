@@ -2414,45 +2414,42 @@ body.web .window-only {
     z-index: 9;
     right: 24px;
     bottom: 80px;
-    width: 420px;
-    max-height: 60vh;
+    width: min(560px, calc(100vw - 32px));
+    height: min(360px, 60vh);
+    min-height: 180px;
     display: flex;
     flex-direction: column;
+    resize: both; /* drag the corner for a bigger log */
+    overflow: hidden;
 }
 
-#luaResult .body {
-    padding: 8px 10px 10px;
-    overflow: auto;
-}
-
-#luaResult .label {
-    margin: 6px 0 2px;
-    color: #555;
-    font-size: 12px;
-}
-
-#luaResult pre {
-    margin: 0;
-    padding: 6px 8px;
-    max-height: 30vh;
-    overflow: auto;
-    background: #1e1e1e;
-    color: #ddd;
-    border-radius: 3px;
-    font: 12px Consolas, "D2Coding", "DejaVu Sans Mono", monospace;
+/* The log: one dark, scrolling, selectable text box, like the Lua console. */
+#luaResult .log {
+    flex: 1;
+    min-height: 0;
+    margin: 8px 10px 0;
+    padding: 8px 10px;
+    resize: none;
+    border: 1px solid #3b5b85;
+    border-radius: 4px;
+    outline: none;
+    background: #111827;
+    color: #e5e7eb;
+    font: 13px/1.45 Consolas, "D2Coding", "DejaVu Sans Mono", monospace;
     white-space: pre-wrap;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+    user-select: text;
 }
 
-#luaResult pre.value {
-    color: #9fe39f;
+#luaResult .log:focus {
+    border-color: #60a5fa;
 }
 
-#luaResult pre.error {
-    color: #ff9a9a;
+#luaResult .log::selection {
+    background: #2563eb;
+    color: #fff;
 }
 
-#luaResult .ms {
-    margin-top: 6px;
-    text-align: right;
+#luaResult .buttons {
+    margin: 8px 10px 10px;
 }
