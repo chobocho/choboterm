@@ -132,3 +132,18 @@ test('clicking the cat runs Lua; the runs gather in one log to copy', async ({ap
     await input.press('Escape');
     await expect(bubble(page)).toBeHidden();
 });
+
+test('in English, a Lua error is translated after its place and function', async ({app}) => {
+    const page = app.page;
+    const file = path.join(app.configDir, 'settings.json');
+    fs.writeFileSync(file, JSON.stringify({...saved(app), language: 'en'}));
+    await page.reload();
+    await bubble(page).getByRole('button', {name: 'Got it'}).click({timeout: 5000});
+    const c = await centre(page);
+    await page.mouse.click(c.x, c.y);
+    const input = bubble(page).locator('textarea');
+    await input.fill('send("ls\\r")');
+    await input.press('Control+Enter');
+    await expect(page.locator('#luaResult textarea.log')).toHaveValue(
+        /\nError: console:1: send: send\(\) can't be used when running without a tab\n-- \d+ms$/);
+});

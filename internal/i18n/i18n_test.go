@@ -14,8 +14,13 @@ func TestEnTranslate(t *testing.T) {
 		"3개 항목을(를) 서버에서 삭제할까요? 되돌릴 수 없습니다.":     "Delete 3 items on the server? This can't be undone.",
 		// line by line when the whole text has no entry
 		"x 호스트를 처음 접속합니다.\n\n키 지문: SHA256:abc\n\n이 호스트를 신뢰하고 계속하시겠습니까?": "First connection to the host x.\n\nKey fingerprint: SHA256:abc\n\nTrust this host and continue?",
-		"사용자 파일 이름.txt": "사용자 파일 이름.txt", // unknown: unchanged
-		"plain English": "plain English",
+		// a Lua error: the place ("console:1:") and the function ("send:") stay, the message is translated
+		"console:1: send: 탭 없이 실행할 때는 send()를 쓸 수 없습니다":     "console:1: send: send() can't be used when running without a tab",
+		"오류: console:1: send: 탭 없이 실행할 때는 send()를 쓸 수 없습니다": "Error: console:1: send: send() can't be used when running without a tab",
+		"login.lua:12: 연결되어 있지 않습니다":                        "login.lua:12: Not connected",
+		"console:2: 사용자 메시지":                                "console:2: 사용자 메시지",
+		"사용자 파일 이름.txt":                                     "사용자 파일 이름.txt", // unknown: unchanged
+		"plain English":                                     "plain English",
 	} {
 		if got := enTranslate(in, 0); got != want {
 			t.Errorf("%q:\n got %q\nwant %q", in, got, want)

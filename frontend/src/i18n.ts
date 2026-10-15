@@ -47,12 +47,23 @@ function lookup(s: string, depth: number): string | undefined {
     return undefined;
 }
 
+// What Lua puts before an error: where it happened ("console:1: ",
+// "login.lua:12: ") and, for errors from send() and the like, the function
+// ("send: "). The message after it is in the dictionary. Same as luaWhere in
+// internal/i18n.
+const LUA_WHERE = /^((?:[^\s:]+:\d+: )+(?:[A-Za-z_]\w*: )?)([\s\S]+)$/;
+
 function translate(s: string, depth = 0): string {
     if (!HANGUL.test(s)) return s;
     const lead = s.match(/^\s*/)![0];
     const tail = s.slice(lead.length).match(/\s*$/)![0];
     const core = s.slice(lead.length, s.length - tail.length);
     let out = lookup(core, depth);
+    if (out === undefined && depth <= 3) {
+        const m = LUA_WHERE.exec(core);
+        const msg = m && translate(m[2], depth + 1);
+        if (m && msg !== m[2]) out = m[1] + msg;
+    }
     if (out === undefined && core.includes('\n')) out = core.split('\n').map(l => translate(l, depth)).join('\n');
     return out === undefined ? s : lead + out + tail;
 }

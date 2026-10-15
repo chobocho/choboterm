@@ -55,6 +55,11 @@ var enDict = sync.OnceValues(func() (map[string]string, []enPattern) {
 
 var placeholder = regexp.MustCompile(`\{(\d*)\}`)
 
+// luaWhere is what Lua puts before an error: where it happened
+// ("console:1: ", "login.lua:12: ") and, for errors from send() and the
+// like, the function ("send: "). The message after it is in the dictionary.
+var luaWhere = regexp.MustCompile(`^((?:[^\s:]+:\d+: )+(?:[A-Za-z_]\w*: )?)([\s\S]+)$`)
+
 func enTranslate(s string, depth int) string {
 	if !hangul.MatchString(s) {
 		return s
@@ -87,6 +92,11 @@ func enTranslate(s string, depth int) string {
 				return ""
 			})
 			return lead + out + tail
+		}
+	}
+	if m := luaWhere.FindStringSubmatch(core); m != nil {
+		if out := enTranslate(m[2], depth+1); out != m[2] {
+			return lead + m[1] + out + tail
 		}
 	}
 	if strings.Contains(core, "\n") {
