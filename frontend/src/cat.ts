@@ -38,7 +38,8 @@ const SCALE = 0.5; // atlas px -> screen px: the atlas is drawn at twice the siz
 const TEMPO = 1.7;
 const IDLE_MS = 30_000; // no key, click or mouse move for this long: the cat goes to sleep
 const ATTEND_MS = 3_500; // after the last key or click, it watches that long
-const REACH = 60; // screen px: how high above its feet the cat jumps at most (a bit over its height)
+const REACH = 28; // screen px above the floor: a small hop, below the cat's own height
+const STRETCH_MS = 20_000; // stretch regularly, including while watching someone type
 
 type Pose = 'stand' | 'sit' | 'lie';
 
@@ -90,6 +91,7 @@ let lastInput = performance.now();
 let asleep = false; // curled up for want of input: the next input wakes it
 let watch: {x: number; y: number; until: number; click: boolean} | undefined;
 let lastPounce = 0;
+let lastStretch = 0;
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const irand = (a: number, b: number) => Math.floor(rand(a, b + 1));
@@ -120,7 +122,7 @@ function draw(s: Step) {
     el.style.transform = dir > 0 ? '' : 'scaleX(-1)';
     // what it is doing, for the e2e tests and for looking at in DevTools
     el.dataset.act = `${s.act}:${s.frame}`;
-    el.dataset.pose = asleep ? 'asleep' : pose;
+    el.dataset.pose = asleep ? 'asleep' : poseOf(s);
     el.dataset.dir = String(dir);
     zz.hidden = !s.zz;
     if (s.zz) {
@@ -130,8 +132,8 @@ function draw(s: Step) {
 }
 
 /** Keeps the cat inside the window (after a resize, or near an edge). */
-function clampX() {
-    const w = shown ? size(shown.act).w : 60;
+function clampX(act = shown?.act) {
+    const w = act ? size(act).w : 60;
     const lo = dir > 0 ? w + 2 : 2;
     const hi = dir > 0 ? window.innerWidth - 2 : window.innerWidth - w - 2;
     x = Math.min(Math.max(x, lo), hi);
@@ -189,19 +191,19 @@ function walkFrames(n: number) {
 }
 
 function walk(cycles: number) {
-    if (pose === 'sit') standUp();
+    if (pose !== 'stand') standUp();
     walkFrames(cycles * (META.actions.walk.steps?.length ?? 24));
     pose = 'stand';
 }
 
 function sitDown() {
-    hold('wake', 6, 200);
-    hold('wake', 5, 300);
+    add('stretch', [5, 6], 180, {lock: true});
     pose = 'sit';
 }
 
 function standUp() {
-    hold('wake', 6, 250);
+    if (pose === 'lie') add('wake', [1, 2, 3, 4], 140, {lock: true});
+    add('wake', [5, 6], 160, {lock: true});
     pose = 'stand';
 }
 
@@ -213,7 +215,7 @@ function sleep() {
     add('doze', [0], 900, {nap: true});
     add('doze', [1], 1100, {nap: true});
     add('doze', [2], 900, {nap: true});
-    add('doze', [3], 700, {nap: true});
+    add('doze', [3], 700, {nap: true, zz: true});
     pose = 'lie';
 }
 
@@ -227,36 +229,36 @@ function wakeUp() {
     queue = [];
     asleep = false;
     const lock = {lock: true};
-    add('wake', [1], 260, lock);
-    add('wake', [3], 220, lock);
-    add('wake', [4], 300, lock);
-    add('wake', [6], 220, lock);
-    add('stretch', [2, 3], 240, lock);
-    add('stretch', [3], 700, lock);
-    add('stretch', [4, 5], 240, lock);
+    add('wake', [0, 1, 2, 3, 4, 5, 6], 140, lock);
     pose = 'stand';
+    stretch();
 }
 
 /** Flops over, belly up, wriggles, and sits up again. */
 function roll() {
-    add('roll', [0, 1, 2, 1, 0, 1, 2], 260);
-    hold('wake', 4, 500);
+    if (pose === 'stand') sitDown();
+    add('doze', [2], 160, {lock: true});
+    add('roll', [0, 1, 2, 1, 0, 1, 2], 160, {lock: true});
+    add('wake', [2, 3, 4], 160, {lock: true});
     pose = 'sit';
 }
 
 function stretch() {
-    if (pose === 'sit') standUp();
-    add('stretch', [0, 2, 3], 300);
-    hold('stretch', 3, 900);
-    add('stretch', [4, 5], 300);
+    if (pose !== 'stand') standUp();
+    lastStretch = performance.now();
+    add('stretch', [0, 1, 2], 140, {lock: true});
+    add('stretch', [3], 650, {lock: true});
+    add('stretch', [4, 5], 160, {lock: true});
     pose = 'stand';
 }
 
 /** A leap of travel screen px forward, up to apex px high, landing on the floor. */
 function leap(travel: number, apex: number) {
+    // A dragged cat may be near the top of the window: keep its ears visible too.
+    apex = Math.max(0, Math.min(apex, REACH, floorY() - size('jump').h - 4));
     const ms = 360 + apex * 1.6; // higher jumps take longer, as they do
     const n = Math.max(6, Math.round(ms / 40));
-    hold('jump', 0, 160);
+    add('jump', [0], 160, {lock: true});
     for (let k = 1; k <= n; k++) {
         const t = k / n;
         queue.push({
@@ -269,20 +271,21 @@ function leap(travel: number, apex: number) {
             lock: true,
         });
     }
-    add('jump', [3, 4], 160, {lock: true});
+    add('jump', [3, 4, 5], 140, {lock: true});
     pose = 'stand';
 }
 
 /** Picks what comes next, by what the cat is doing now. */
 function plan() {
     if (asleep) return snore();
-    if (watch && performance.now() < watch.until) return attend();
-    watch = undefined;
     if (performance.now() - lastInput >= IDLE_MS) {
         // nobody about: a short stroll, then a nap until somebody comes back
         walk(irand(1, 3));
         return sleep();
     }
+    if (performance.now() - lastStretch >= STRETCH_MS) return stretch();
+    if (watch && performance.now() < watch.until) return attend();
+    watch = undefined;
     if (pose === 'lie') {
         hold('wake', 3, 400);
         hold('wake', 4, 600);
@@ -313,7 +316,7 @@ function plan() {
     else if (r < 0.72) hold('stretch', irand(0, 1), irand(900, 2200));
     else if (r < 0.82) stretch();
     else if (r < 0.9) roll();
-    else leap(rand(30, 60), rand(10, 20)); // a hop, for nothing
+    else leap(rand(30, 60), rand(6, 12)); // a little hop, for nothing
 }
 
 // ---- Watching the cursor ----
@@ -454,7 +457,7 @@ function tick() {
         if ((dir > 0 && next > window.innerWidth - 2) || (dir < 0 && next < 2)) turn();
         else x = next;
     }
-    clampX();
+    clampX(s.act);
     draw(s);
     timer = window.setTimeout(tick, s.raw ? s.ms : s.ms * TEMPO);
 }
@@ -469,6 +472,8 @@ function start() {
     }
     queue = [];
     lastInput = performance.now();
+    lastStretch = lastInput;
+    watch = undefined;
     asleep = false;
     pose = 'sit';
     hold('sit', 1, 600);

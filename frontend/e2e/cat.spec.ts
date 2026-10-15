@@ -39,6 +39,86 @@ async function dismissGuide(app: App) {
     await expect(bubble(app.page)).toBeHidden();
 }
 
+// Observe the rendered frames, including their actual height above the floor.
+// Fake time lets us exercise whole routines without waiting for random idle choices.
+async function observeMotion(page: Page, random: number) {
+    await page.clock.install();
+    await page.evaluate(value => {
+        Math.random = () => value;
+        const frames: {act: string; lift: number}[] = [];
+        (window as unknown as {catMotion: typeof frames}).catMotion = frames;
+        const el = document.getElementById('cat')!;
+        new MutationObserver(() => {
+            const floor = document.getElementById('terms')!.getBoundingClientRect().bottom - 1;
+            frames.push({act: el.dataset.act!, lift: floor - el.getBoundingClientRect().bottom});
+        }).observe(el, {attributes: true, attributeFilter: ['data-act']});
+    }, random);
+}
+
+const motion = (page: Page) => page.evaluate(() =>
+    (window as unknown as {catMotion: {act: string; lift: number}[]}).catMotion);
+
+test('regular stretching completes even while keys keep arriving', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    await observeMotion(page, 0.4);
+    for (let i = 0; i < 52; i++) {
+        await page.keyboard.press('Shift');
+        await page.clock.runFor(500);
+    }
+    const acts = (await motion(page)).map(f => f.act);
+    const start = acts.indexOf('stretch:0');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(acts.slice(start, start + 6)).toEqual([
+        'stretch:0', 'stretch:1', 'stretch:2', 'stretch:3', 'stretch:4', 'stretch:5',
+    ]);
+});
+
+test('sleep effects appear immediately and waking plays every frame before stretching', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    await observeMotion(page, 0.4);
+    // Stop on the very first sleeping frame rather than a later snore loop.
+    for (let i = 0; i < 100; i++) {
+        if (await cat(page).getAttribute('data-pose') === 'asleep') break;
+        await page.clock.runFor(500);
+    }
+    await expect(cat(page)).toHaveAttribute('data-pose', 'asleep');
+    await expect(page.locator('#catZ')).toBeVisible();
+    await expect(page.locator('#catZ span').first()).toHaveCSS('animation-name', 'catz');
+    await page.keyboard.press('Shift');
+    await expect(page.locator('#catZ')).toBeHidden();
+    for (let i = 0; i < 12; i++) {
+        await page.keyboard.press('Shift');
+        await page.clock.runFor(500);
+    }
+    const acts = (await motion(page)).map(f => f.act);
+    const start = acts.indexOf('wake:0');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(acts.slice(start, start + 13)).toEqual([
+        'wake:0', 'wake:1', 'wake:2', 'wake:3', 'wake:4', 'wake:5', 'wake:6',
+        'stretch:0', 'stretch:1', 'stretch:2', 'stretch:3', 'stretch:4', 'stretch:5',
+    ]);
+});
+
+test('a high target produces a low jump and a complete landing', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    await observeMotion(page, 0);
+    await page.clock.runFor(3000);
+    const box = (await cat(page).boundingBox())!;
+    await page.mouse.click(box.x + box.width + 50, box.y - 100);
+    await page.clock.runFor(4000);
+    const frames = await motion(page);
+    const peak = Math.max(...frames.filter(f => f.act.startsWith('jump:')).map(f => f.lift));
+    expect(peak).toBeGreaterThan(20);
+    expect(peak).toBeLessThanOrEqual(28);
+    const acts = frames.map(f => f.act);
+    const landing = acts.indexOf('jump:3');
+    expect(landing).toBeGreaterThanOrEqual(0);
+    expect(acts.slice(landing, landing + 3)).toEqual(['jump:3', 'jump:4', 'jump:5']);
+});
+
 test('the cat is there from the first start, and its guide shows once', async ({app}) => {
     await expect(cat(app.page)).toBeVisible();
     // it stands on the terminals' bottom edge
