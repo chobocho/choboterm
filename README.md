@@ -120,7 +120,7 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
 - **Macros**: Open the macro window with `Ctrl+Shift+M` to save frequently used commands and send them (`Enter` / double-click in the list).
   - Assign one of `F2`–`F12`, `Shift+F1`–`F12` or `Ctrl+F1`–`F12` to a macro to send it with that key. Keys not assigned are passed through unchanged to programs such as mc or htop.
   - Line breaks in the content are sent as `Enter`, and you can use `\t` (Tab), `\e` (Esc), `\xHH` (e.g. `\x03` = Ctrl+C) and `\\` (backslash).
-- **The cat**: an orange tabby walks along the bottom of the window. It walks, sits and looks around, grooms, stretches, jumps, rolls over and curls up to sleep (zZ).
+- **The cat**: an orange tabby walks along the bottom of the window. It walks, sits and yawns, grooms, looks back, stretches, jumps, rolls over, nods off and curls up to sleep (zZ), and wakes with a stretch of its paws.
   - **Drag** it somewhere else and it carries on at that height. **Click** it for a Lua box: `Ctrl+Enter` (or "Run") runs the code, and the runs gather in a result window as in the Lua console (`>` code, output, `=` values, `Error:`, time taken). The window scrolls; select text to copy it, or copy it all with "Copy all", and empty it with "Clear". It runs on its own, without a tab, so it works as a calculator with no connection (no `send` or `screen`; stopped after 10 seconds).
   - Instead of Lua you can **tell** it what to open: a web address as is (`https://github.com`, `www.…`), a folder path as is (`C:\work`, `~/src`, `/var/log`), or `open github.com` (an address without `https://`) · `folder C:\work`. They go through the same checks as `open_url` · `open_folder`. To open several at once, chain `open_url("...")` calls in Lua.
   - The first time, it tells you about clicking and dragging and how to hide it. Turn it on and off with "Show the cat" in Settings (`Ctrl+Shift+O`).
@@ -370,7 +370,7 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/imageview.ts` | Image viewer window |
 | `frontend/src/cjkwidth.ts` | Double-width character handling in EUC-KR mode |
 | `tools/make_icon.py` | App icon generation (`build/appicon.png`, `build/windows/icon.ico`) |
-| `tools/make_cat.py` | Builds the cat's sprites from the artist's sheet (`frontend/src/assets/cat.png`, `frontend/src/catframes.json`). The walk is one cycle taken from a video of the cat walking in place (`--walk VIDEO FIRST EVERY COUNT`), with the step per frame worked out so the paws on the ground don't slide |
+| `tools/make_cat.py` | Builds the cat's sprites from the artist's sheets (`frontend/src/assets/cat.png`, `frontend/src/catframes.json`): the dark-background actions sheet (yawn, stretch, nodding off, waking, jump) and walk sheet are cut out and keep each frame's place in its cell; grooming, looking back, the back view and rolling come from the old sheet, sized to match |
 
 ## Not supported yet
 

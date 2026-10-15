@@ -1,36 +1,34 @@
-"""Builds the cat's sprites from the artist's sheet.
+"""Builds the cat's sprites from the artist's sheets.
 
-The sheet is one orange tabby on a light checker background, in two blocks:
-on the left, rows of three (walk, walk, roll, groom, stretch and a back view,
-walk with the tail up, lie down to sleep); on the right, rows of three too
-(stand, crouch and sit; sit turned away and look back; walk; jump; sleep
-curled up). Frames are cut out (background flood-filled from the border,
-the anti-aliased edge un-matted against the checker square it was drawn
-on), scaled so a walking cat is 96 px tall (twice its 48 px on screen),
-aligned on their feet and noses, and packed into cat.png with the frame
-positions in catframes.json.
+Two sheets on a dark background are the cat now:
+  ACTS: five rows: sit and yawn (7 frames); stretch from standing, ending
+        sat down (7); sit, nod off and curl up (7); wake from curled up to
+        standing (7); crouch, leap, land (6).
+  WALK: one row of 8 frames, walking in place.
+The old checker sheet (OLD) still gives the actions the new ones don't
+have: grooming, looking back, the back view and rolling over; it is drawn
+in the same cute style.
 
-The walk can come from a video of the cat walking in place instead (the
-sheet's walking rows are separate poses with a hind leg in the air, so the
-cat looked three-legged): --walk VIDEO FIRST EVERY COUNT takes COUNT frames
-of VIDEO, from frame FIRST (0-based), every EVERY frames: one whole cycle.
-The cat is cut out of the plain gray background by its colour, all frames
-are cropped to one box (the body stays put, the legs move), and the step
-per frame comes from the paws on the ground, as for the sheet.
+New sheets: the cats are cut out of the near-black background (flood-filled
+from the border; the edge fades by brightness from the background's to the
+outline's), cats joined only by a whisker are kept apart, and each frame
+keeps its place in its cell, so an action plays as drawn (a stretching
+cat's nose goes forward). Everything is scaled so the walking cat is 96 px
+tall (twice its 48 px on screen) and packed into cat.png, with the frame
+positions, each action's anchor (ax: the first frame's nose, from the
+left) and the walk's steps in catframes.json.
 
-Usage: python tools/make_cat.py SHEET.png [PREVIEW_DIR] [--walk VIDEO FIRST EVERY COUNT]
-  e.g. python tools/make_cat.py sheet.png --walk walk.mp4 0 2 13
+Usage: python tools/make_cat.py OLD.png ACTS.png WALK.png [PREVIEW_DIR]
 Writes frontend/src/assets/cat.png and frontend/src/catframes.json.
-Requires Pillow; --walk also numpy and ffmpeg.
+Requires Pillow and numpy.
 """
 import json
 import os
-import subprocess
 import sys
-import tempfile
 from collections import deque
 
-from PIL import Image, ImageDraw
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 
 HEIGHT = 96  # a walking cat, in atlas px; shown at half size, so sharp on HiDPI too
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
@@ -38,23 +36,17 @@ OUT_PNG = os.path.join(ROOT, 'frontend', 'src', 'assets', 'cat.png')
 OUT_JSON = os.path.join(ROOT, 'frontend', 'src', 'catframes.json')
 N4 = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
-# Where each action's frames are on the sheet: the block, the top of its row
-# (frames whose top is within 95 px below it), and which frames of the row
-# (left to right) it takes.
+# ---- The old checker sheet: grooming, looking back, the back view, rolling ----
+
+# Where each action's frames are on the old sheet: the block, the top of its
+# row (frames whose top is within 95 px below it), and which frames of the
+# row (left to right) it takes.
 LAYOUT = [
-    ('walkA',    'left',  10,  (0, 1, 2)),
-    ('walkB',    'left',  140, (0, 1, 2)),
     ('roll',     'left',  275, (0, 1, 2)),
     ('groom',    'left',  375, (0, 1, 2)),
-    ('stretch',  'left',  510, (0, 1)),
     ('back',     'left',  510, (2,)),
-    ('walkC',    'left',  650, (0, 1, 2)),
-    ('liedown',  'left',  785, (0, 1, 2)),
-    ('sitdown',  'right', 5,   (0, 1, 2)),
+    ('sitdown',  'right', 5,   (0, 1, 2)),   # only to size the old frames: its sitting cat
     ('lookback', 'right', 170, (0, 1, 2)),
-    ('walkD',    'right', 470, (0, 1, 2)),
-    ('jump',     'right', 610, (0, 1, 2)),
-    ('sleep',    'right', 790, (0, 1, 2)),
 ]
 SPLIT_X = 600  # left block | right block
 
@@ -174,24 +166,6 @@ def actions_of(sheet):
     return acts
 
 
-# What goes into the atlas: action -> [(sheet row, frame index)]. Only walkB
-# is a real walk cycle (its paws on the ground move back evenly from frame
-# to frame, in the order 0, 2, 1); the other walking rows are separate poses
-# and would make the paws slide, so they are left out.
-ATLAS = {
-    'walk':     [('walkB', 0), ('walkB', 2), ('walkB', 1)],
-    'sitdown':  [('sitdown', i) for i in range(3)],   # stand, crouch, sit
-    'lookback': [('lookback', i) for i in range(3)],  # sit turned away, turning, sit
-    'groom':    [('groom', i) for i in range(3)],
-    'stretch':  [('stretch', i) for i in range(2)],
-    'back':     [('back', 0)],
-    'roll':     [('roll', i) for i in range(3)],
-    'liedown':  [('liedown', i) for i in range(3)],   # lying awake, eyes closed, curled up
-    'sleep':    [('sleep', i) for i in range(3)],
-    'jump':     [('jump', i) for i in range(3)],
-}
-
-
 def ground_runs(f):
     """x ranges of the paws on the ground (opaque in the bottom 3 rows)."""
     al = f.getchannel('A').load()
@@ -223,61 +197,115 @@ def locked_step(a, b):
     return best[1]
 
 
-def video_frames(video, first, every, count):
-    """count frames of video from frame first (0-based), every every frames, through ffmpeg."""
-    want = [first + i * every for i in range(count)]
-    sel = '+'.join(f'eq(n\\,{n})' for n in want)
-    with tempfile.TemporaryDirectory() as d:
-        subprocess.run(['ffmpeg', '-v', 'error', '-i', video, '-vf', f"select='{sel}'",
-                        '-fps_mode', 'passthrough', os.path.join(d, 'f%03d.png')], check=True)
-        return [Image.open(os.path.join(d, f'f{i + 1:03d}.png')).convert('RGB') for i in range(count)]
+# ---- The new sheets, on a dark background ----
 
-
-def video_mask(frame):
-    """The cat in a video frame: saturated (orange, brown, cream, green, pink)
-    or dark (the outline) pixels, with the holes inside filled (eye glints).
-    The background, its shadow and the watermark are gray and drop out; so do
-    the outline's light anti-aliased edge pixels, which would leave a gray
-    fringe."""
-    import numpy as np
-    a = np.asarray(frame, dtype=np.float32) / 255
+def cut_dark(sheet):
+    """The sheet with its near-black background transparent."""
+    a = np.asarray(sheet.convert('RGB')).astype(np.int32)
+    H, W = a.shape[:2]
     mx, mn = a.max(2), a.min(2)
-    cat = ((mx - mn) / (mx + 1e-6) > 0.18) | (mx < 0.22)
-    # Everything not reachable from the border without crossing the cat is cat.
-    # (copy: an image made by fromarray shares the array's read-only buffer,
-    # and floodfill silently does nothing on it)
-    outside = Image.fromarray(np.where(cat, 0, 255).astype(np.uint8)).copy()
-    ImageDraw.floodfill(outside, (0, 0), 128)
-    return np.asarray(outside) != 128
+    # the background: near-black, grey or slightly navy (the outline is a
+    # reddish brown, so it isn't taken for it)
+    bgc = (mx <= 50) & (mx - mn <= 20)
+    seed = Image.fromarray(np.where(bgc, 255, 0).astype(np.uint8)).copy()  # (fromarray's buffer is read-only)
+    for x in range(0, W, 5):
+        for y in (0, H - 1):
+            if seed.getpixel((x, y)) == 255:
+                ImageDraw.floodfill(seed, (x, y), 128)
+    for y in range(0, H, 5):
+        for x in (0, W - 1):
+            if seed.getpixel((x, y)) == 255:
+                ImageDraw.floodfill(seed, (x, y), 128)
+    bg = np.asarray(seed) == 128
+    alpha = np.where(bg, 0, 255).astype(np.float64)
+    # the edge fades from the background's brightness to the outline's, as drawn
+    near = np.zeros_like(bg)
+    for dy, dx in N4:
+        near |= np.roll(np.roll(bg, dy, 0), dx, 1)
+    edge = ~bg & near
+    L = a.mean(2)
+    alpha[edge] = 255 * np.clip((L[edge] - 22) / (70 - 22), 0, 1)
+    return Image.fromarray(np.dstack([a, alpha]).astype(np.uint8), 'RGBA').copy()
 
 
-def walk_from_video(video, first, every, count):
-    """The walk's frames from a video of the cat walking in place, all of one size."""
-    import numpy as np
-    frames = video_frames(video, first, every, count)
-    masks = [video_mask(f) for f in frames]
-    # One box for all: the union of each frame's cat, outliers (compression
-    # specks) left out by taking the 0.1th..99.9th percentile of its pixels.
-    boxes = []
-    for m in masks:
-        ys, xs = np.nonzero(m)
-        x0, x1 = np.percentile(xs, [0.1, 99.9])
-        y0, y1 = np.percentile(ys, [0.1, 99.9])
-        boxes.append((int(x0), int(y0), int(x1) + 1, int(y1) + 1))
-    box = (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
+def split_blobs(im, min_area):
+    """(box, image) of each cat. Cats joined only by thin lines (a whisker
+    touching the next cat's tail) are kept apart: blobs are found with thin
+    lines opened away, then every opaque pixel goes to the blob it is
+    nearest to."""
+    a = np.asarray(im)
+    solid = Image.fromarray(np.where(a[..., 3] > 60, 255, 0).astype(np.uint8))
+    core = np.asarray(solid.filter(ImageFilter.MinFilter(5)).filter(ImageFilter.MaxFilter(5))) > 0
+    H, W = core.shape
+    lab = np.full((H, W), -1, np.int32)
+    seeds = Image.fromarray(np.where(core, 255, 0).astype(np.uint8)).copy()
+    q = deque()
+    n = 0
+    for y, x in zip(*np.nonzero(core)):
+        if seeds.getpixel((int(x), int(y))) != 255:
+            continue
+        ImageDraw.floodfill(seeds, (int(x), int(y)), 77)
+        m = np.asarray(seeds) == 77
+        if m.sum() >= min_area // 2:
+            lab[m] = n
+            q.extend(zip(*np.nonzero(m)))
+            n += 1
+        seeds.paste(Image.fromarray(np.where(m, 1, np.asarray(seeds)).astype(np.uint8)))
+    opaque = a[..., 3] > 0
+    while q:
+        y, x = q.popleft()
+        for dy, dx in N4:
+            yy, xx = y + dy, x + dx
+            if 0 <= yy < H and 0 <= xx < W and opaque[yy, xx] and lab[yy, xx] < 0:
+                lab[yy, xx] = lab[y, x]
+                q.append((yy, xx))
     out = []
-    for f, m in zip(frames, masks):
-        rgba = f.convert('RGBA')
-        rgba.putalpha(Image.fromarray((m * 255).astype(np.uint8)))
-        out.append(rgba.crop(box))
-    print(f'walk from video: {count} frames, box {box}')
+    for k in range(n):
+        ys, xs = np.nonzero(lab == k)
+        if len(xs) < min_area:
+            continue
+        box = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
+        sub = a[box[1]:box[3], box[0]:box[2]].copy()
+        sub[lab[box[1]:box[3], box[0]:box[2]] != k] = 0
+        out.append((box, Image.fromarray(sub, 'RGBA')))
     return out
 
 
-def shrink(im, size):
-    """im resized with premultiplied alpha, so transparent pixels' colour
-    doesn't bleed into the edges."""
-    return im.convert('RGBa').resize(size, Image.LANCZOS).convert('RGBA')
+def rows_of(sheet, nrows):
+    """The sheet's cats, row by row, left to right, each with its place in its
+    cell: [(image, x, y)], x and y from the cell's top-left."""
+    im = cut_dark(sheet)
+    W, H = im.size
+    rows = [[] for _ in range(nrows)]
+    for box, sp in split_blobs(im, 1500):
+        rows[min(nrows - 1, int((box[1] + box[3]) / 2 / (H / nrows)))].append((box, sp))
+    out = []
+    for r, row in enumerate(rows):
+        row.sort(key=lambda b: b[0][0])
+        # The cells: evenly spaced from the first cat to the last (a row
+        # needn't span the sheet's width), by the cats' centres.
+        cs = [(box[0] + box[2]) / 2 for box, _ in row]
+        cw = (cs[-1] - cs[0]) / max(1, len(row) - 1)
+        ch = H / nrows
+        out.append([(sp, box[0] - (cs[0] + i * cw), box[1] - r * ch) for i, (box, sp) in enumerate(row)])
+    return out
+
+
+def body_x(f):
+    """x of the middle of the body: the centre of the opaque pixels in the
+    band from 30% to 60% of the height, right of the tail (the left quarter)."""
+    al = np.asarray(f.getchannel('A')) > 128
+    h, w = al.shape
+    band = al[int(h * 0.3):int(h * 0.6), w // 4:]
+    xs = np.nonzero(band)[1]
+    return float(xs.mean()) + w // 4 if len(xs) else w / 2
+
+
+def nose(f):
+    """x of the rightmost opaque column: where the cat's nose (or front) is."""
+    al = np.asarray(f.getchannel('A')) > 128
+    cols = np.nonzero(al.any(0))[0]
+    return int(cols[-1]) + 1 if len(cols) else f.size[0]
 
 
 def save_png(im, path):
@@ -285,24 +313,68 @@ def save_png(im, path):
     im.quantize(colors=128, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(path, optimize=True)
 
 
-def main(sheet_path, preview_dir=None, walk=None):
-    acts = actions_of(Image.open(sheet_path).convert('RGBA'))
-    walk_h = sorted(f.size[1] for f in acts['walkB'])[1]
-    scale = HEIGHT / walk_h
+def scaled(f, s):
+    """f scaled by s, with premultiplied alpha so no dark fringe bleeds in."""
+    return f.convert('RGBa').resize((max(1, round(f.size[0] * s)), max(1, round(f.size[1] * s))), Image.LANCZOS).convert('RGBA')
+
+
+def main(old_path, acts_path, walk_path, preview_dir=None):
+    acts = rows_of(Image.open(acts_path), 5)
+    walk = rows_of(Image.open(walk_path), 1)[0]
+    old = actions_of(Image.open(old_path).convert('RGBA'))
+    if [len(r) for r in acts] != [7, 7, 7, 7, 6] or len(walk) != 8:
+        sys.exit(f'unexpected frames: acts {[len(r) for r in acts]}, walk {len(walk)}')
+    # one size for all: the walking cat HEIGHT tall; the acts sheet's standing
+    # cat (stretch's first frame, the same pose) as tall as it; the old
+    # sheet's sitting cat as tall as the new one
+    sw = HEIGHT / sorted(f.size[1] for f, _, _ in walk)[4]
+    sa = walk[0][0].size[1] * sw / acts[1][0][0].size[1]
+    so = acts[0][0][0].size[1] * sa / old['sitdown'][2].size[1]
+    print(f'scales: walk {sw:.3f}, acts {sa:.3f}, old {so:.3f}')
+
+    def placed(frames, s):
+        return [(scaled(f, s), x * s, y * s) for f, x, y in frames]
+
+    def nose_right(frames, s):
+        # old frames: feet on the bottom, nose on the right, as they were drawn
+        fs = [scaled(f, s) for f in frames]
+        w = max(f.size[0] for f in fs)
+        h = max(f.size[1] for f in fs)
+        return [(f, w - f.size[0], h - f.size[1]) for f in fs]
+
+    # The walk's cats aren't drawn quite alike: a few are smaller, and where
+    # each sits in its cell drifts. Every frame is scaled to the same height,
+    # stands on one line (a walking cat always has paws on the ground) and is
+    # placed by its body (the middle band, without legs and tail), so only
+    # the legs move.
+    wf = []
+    for f, _, _ in walk:
+        g = scaled(f, HEIGHT / f.size[1])
+        wf.append((g, -body_x(g), 0))
+    ACTIONS = {
+        'walk': wf,
+        'yawn': placed(acts[0], sa),      # sit, look about, yawn, eyes shut, sit
+        'stretch': placed(acts[1], sa),   # stand, stretch, stand, sit down
+        'asleep': placed(acts[2], sa),    # sit, nod off, curl up (3-6: asleep)
+        'wake': placed(acts[3], sa),      # curled up, look up, stretch a paw, sit, stand
+        'jump': placed(acts[4], sa),      # crouch, leap, fly, land, stand
+        'groom': nose_right(old['groom'], so),
+        'lookback': nose_right(old['lookback'], so),
+        'back': nose_right(old['back'], so),
+        'roll': nose_right(old['roll'], so),
+    }
     strips = []
-    for name, parts in ATLAS.items():
-        if name == 'walk' and walk:
-            vframes = walk_from_video(*walk)
-            # as tall as the sheet's walking cat
-            vs = HEIGHT / vframes[0].size[1]
-            frames = [shrink(f, (round(f.size[0] * vs), HEIGHT)) for f in vframes]
-        else:
-            frames = [acts[row][i] for row, i in parts]
-            frames = [f.resize((max(1, round(f.size[0] * scale)), max(1, round(f.size[1] * scale))), Image.LANCZOS)
-                      for f in frames]
-        # one size per action: feet on the bottom, nose (right edge) on the right
-        fw, fh = max(f.size[0] for f in frames), max(f.size[1] for f in frames)
-        strips.append((name, fw, fh, frames))
+    for name, frames in ACTIONS.items():
+        x0 = min(int(x) for _, x, _ in frames)
+        y0 = min(int(y) for _, _, y in frames)
+        fw = max(int(round(x)) - x0 + f.size[0] for f, x, _ in frames)
+        fh = max(int(round(y)) - y0 + f.size[1] for f, _, y in frames)
+        padded = []
+        for f, x, y in frames:
+            g = Image.new('RGBA', (fw, fh), (0, 0, 0, 0))
+            g.alpha_composite(f, (int(round(x)) - x0, int(round(y)) - y0))
+            padded.append(g)
+        strips.append((name, fw, fh, padded))
     atlas_w = max(fw * len(fr) for _, fw, _, fr in strips)
     atlas_h = sum(fh for _, _, fh, _ in strips)
     atlas = Image.new('RGBA', (atlas_w, atlas_h), (0, 0, 0, 0))
@@ -311,29 +383,19 @@ def main(sheet_path, preview_dir=None, walk=None):
     for name, fw, fh, frames in strips:
         pos = []
         for i, f in enumerate(frames):
-            atlas.alpha_composite(f, (i * fw + fw - f.size[0], y + fh - f.size[1]))
+            atlas.alpha_composite(f, (i * fw, y))
             pos.append([i * fw, y])
-        meta['actions'][name] = {'w': fw, 'h': fh, 'frames': pos}
+        # ax: where the first frame's nose is, from the frame's left edge; the
+        # app keeps it put when an action starts, so the cat doesn't jump
+        meta['actions'][name] = {'w': fw, 'h': fh, 'ax': nose(frames[0]), 'frames': pos}
         if name == 'walk':
-            padded = []
-            for f in frames:
-                g = Image.new('RGBA', (fw, fh), (0, 0, 0, 0))
-                g.alpha_composite(f, (fw - f.size[0], fh - f.size[1]))
-                padded.append(g)
-            # steps[i]: atlas px the body moves when frame i follows frame i-1
-            steps = [locked_step(padded[i - 1], padded[i]) for i in range(len(padded))]
+            # steps[i]: atlas px the body moves when frame i follows frame i-1,
+            # keeping the paws on the ground put. The cat walks in place at an
+            # even pace, so every step is the measured ones' mean.
+            steps = [locked_step(frames[i - 1], frames[i]) for i in range(len(frames))]
             print('walk steps (atlas px):', steps)
-            if walk:
-                # In the video the cat walks on a treadmill at an even pace, so
-                # the paws on the ground move back evenly: the same step every
-                # frame, the measured ones' mean, keeps them put without the
-                # jitter of whole-pixel measurements. Frames are 1/24 s apart
-                # in the video: ms is how long each is shown (before TEMPO).
-                mean = sum(steps) / len(steps)
-                steps = [round(mean, 2)] * len(steps)
-                meta['actions'][name]['ms'] = round(1000 * walk[2] / 24)
-                print(f'walk step {steps[0]} atlas px, {meta["actions"][name]["ms"]} ms a frame')
-            meta['actions'][name]['steps'] = steps
+            mean = sum(steps) / len(steps)
+            meta['actions'][name]['steps'] = [round(mean, 2)] * len(steps)
         y += fh
     os.makedirs(os.path.dirname(OUT_PNG), exist_ok=True)
     save_png(atlas, OUT_PNG)
@@ -349,15 +411,6 @@ def main(sheet_path, preview_dir=None, walk=None):
 
 
 if __name__ == '__main__':
-    argv = sys.argv[1:]
-    walk = None
-    if '--walk' in argv:
-        i = argv.index('--walk')
-        if len(argv) < i + 5:
-            sys.exit(__doc__)
-        video, first, every, count = argv[i + 1:i + 5]
-        walk = (video, int(first), int(every), int(count))
-        del argv[i:i + 5]
-    if len(argv) not in (1, 2):
+    if len(sys.argv) not in (4, 5):
         sys.exit(__doc__)
-    main(*argv, walk=walk)
+    main(*sys.argv[1:])
