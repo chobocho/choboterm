@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-16 — 작업 찌꺼기 파일 정리</h2>
+<ul>
+  <li>삭제: <code>output/</code>(44MB), <code>tmp/</code>(15MB), 고양이 스프라이트 검토용 이미지·GIF·영상. 결과는 이미 커밋되어 있고 <code>docs/cat-artwork.md</code> 절차로 다시 만들 수 있음</li>
+  <li>삭제: <code>frontend/e2e/.tmp</code>(21MB, E2E 임시), <code>tools/__pycache__</code>(파이썬 캐시). 모두 git 미추적이라 커밋 변경 없음</li>
+  <li>유지: 빌드 결과물(<code>build/bin</code>, <code>release/</code>, <code>frontend/dist-termux</code>), Go 임베드에 필요한 <code>frontend/dist</code>, <code>node_modules</code></li>
+</ul>
+
 <h2>2026-10-16 — V0.2.32: 고양이 그림 통일과 마우스 반응</h2>
 <ul>
   <li>버전 0.2.31 → 0.2.32. Go 버전 상수, Wails 제품 버전, 한·영 README와 릴리스 예시, 아키텍처 그림을 함께 갱신</li>
