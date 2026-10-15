@@ -1,4 +1,4 @@
-# choboterm V0.2.31
+# choboterm V0.2.32
 
 **English** · [한국어](README.ko.md)
 
@@ -121,6 +121,7 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
   - Assign one of `F2`–`F12`, `Shift+F1`–`F12` or `Ctrl+F1`–`F12` to a macro to send it with that key. Keys not assigned are passed through unchanged to programs such as mc or htop.
   - Line breaks in the content are sent as `Enter`, and you can use `\t` (Tab), `\e` (Esc), `\xHH` (e.g. `\x03` = Ctrl+C) and `\\` (backslash).
 - **The cat**: an orange tabby walks along the bottom of the window. It walks, sits and looks around, yawns, stretches, looks back and rolls over showing its belly.
+  - Hover briefly over the cat to make it show its belly. A pointer within about 70px ahead of its walk makes it stop and stretch, in either direction. Pointers behind it or far above it are ignored. Clicking and dragging still work.
   - As you type it watches the terminal's cursor (a click: where you clicked), comes closer, crouches and now and then pounces at it. After 30 seconds with no keyboard or mouse input it walks a little, curls up and sleeps (zZ) until the next one.
   - **Drag** it somewhere else and it carries on at that height. **Click** it for a Lua box: `Ctrl+Enter` (or "Run") runs the code, and the runs gather in a result window as in the Lua console (`>` code, output, `=` values, `Error:`, time taken). The window scrolls; select text to copy it, or copy it all with "Copy all", and empty it with "Clear". It runs on its own, without a tab, so it works as a calculator with no connection (no `send` or `screen`; stopped after 10 seconds).
   - Instead of Lua you can **tell** it what to open: a web address as is (`https://github.com`, `www.…`), a folder path as is (`C:\work`, `~/src`, `/var/log`), or `open github.com` (an address without `https://`) · `folder C:\work`. They go through the same checks as `open_url` · `open_folder`. To open several at once, chain `open_url("...")` calls in Lua.
@@ -243,12 +244,12 @@ Open the printed HTTPS URL in a browser. Use `--web=127.0.0.1:7681` to restrict 
 
 Other ways:
 
-- Push the tag yourself: `git tag v0.2.31 && git push origin v0.2.31`
-- Run it by hand: Actions > release > Run workflow with Tag `v0.2.31` and Ref `main` (the tag is created on that commit if it doesn't exist). With only a Tag it rebuilds an existing tag.
+- Push the tag yourself: `git tag v0.2.32 && git push origin v0.2.32`
+- Run it by hand: Actions > release > Run workflow with Tag `v0.2.32` and Ref `main` (the tag is created on that commit if it doesn't exist). With only a Tag it rebuilds an existing tag.
 - Build on this PC: build `release\choboterm.exe` and `release\choboterm-headless.exe` with `build.bat`, and `release/choboterm-linux-amd64.tar.gz` and `release/choboterm-headless-linux-amd64` with `wsl -- ./build_linux.sh` (quit any running choboterm first), then:
 
    ```sh
-   gh release create v0.2.31 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.31" --notes "..."
+   gh release create v0.2.32 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.32" --notes "..."
    ```
 
 The v0.2.24 release workflow removed older GitHub Release entries; their git tags remain available.
@@ -371,7 +372,7 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/imageview.ts` | Image viewer window |
 | `frontend/src/cjkwidth.ts` | Double-width character handling in EUC-KR mode |
 | `tools/make_icon.py` | App icon generation (`build/appicon.png`, `build/windows/icon.ico`) |
-| `tools/make_cat.py` | Builds the cat's sprites from the artist's sheet (`frontend/src/assets/cat.png`, `frontend/src/catframes.json`). The walk is one cycle taken from a video of the cat walking in place (`SHEET VIDEO FIRST EVERY COUNT`), with the step per frame worked out so the paws on the ground don't slide. Looking back and rolling over come from `tools/cat_keep.png` (the v0.2.31 drawings). Given a preview folder, it also writes GIFs of the walk and the actions |
+| `tools/make_cat.py` · `cat_style.py` · `preview_cat.py` | Builds the sprites, matches colour/size/eyes and renders comparison videos. Walking uses 24 filmed frames; looking back and rolling over use `tools/cat_keep.png` (the v0.2.31 drawings). [Artwork and review workflow](docs/cat-artwork.md) |
 
 ## Not supported yet
 

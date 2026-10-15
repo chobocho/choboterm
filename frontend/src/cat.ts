@@ -1,5 +1,6 @@
 // The cat: walks along the bottom of the window, sits and looks about,
-// yawns, stretches, looks back, rolls over and hops. When you type it looks
+// yawns, stretches, looks back, rolls over and hops. Hover it to see its belly.
+// A nearby pointer ahead of its walk makes it stop and stretch. When you type it looks
 // at the cursor (a click: where you clicked), crouches and now and then
 // pounces at it; after 30 s with no key, click or mouse move it walks a
 // little, curls up and sleeps until the next one. Drag it to put it
@@ -40,6 +41,10 @@ const IDLE_MS = 30_000; // no key, click or mouse move for this long: the cat go
 const ATTEND_MS = 3_500; // after the last key or click, it watches that long
 const REACH = 28; // screen px above the floor: a small hop, below the cat's own height
 const STRETCH_MS = 20_000; // stretch regularly, including while watching someone type
+const HOVER_MS = 150; // give a click or drag priority over the hover reaction
+const HOVER_ROLL_MS = 4_000; // changing sprite bounds must not retrigger the same roll
+const MOUSE_STRETCH_MS = 8_000; // don't keep stretching at the same nearby pointer
+const MOUSE_REACH = 70; // screen px ahead of the nose
 
 type Pose = 'stand' | 'sit' | 'lie';
 
@@ -92,6 +97,11 @@ let asleep = false; // curled up for want of input: the next input wakes it
 let watch: {x: number; y: number; until: number; click: boolean} | undefined;
 let lastPounce = 0;
 let lastStretch = 0;
+let hoverTimer = 0;
+let hoverRollPending = false;
+let lastHoverRoll = -Infinity;
+let mouse: {x: number; y: number} | undefined;
+let lastMouseStretch = -Infinity;
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const irand = (a: number, b: number) => Math.floor(rand(a, b + 1));
@@ -408,6 +418,10 @@ function noticed(p: {x: number; y: number} | undefined, click: boolean) {
 
 function onInput(ev: Event) {
     lastInput = performance.now();
+    if (ev.type === 'pointermove') {
+        const pe = ev as PointerEvent;
+        if (pe.pointerType === 'mouse') mouse = {x: pe.clientX, y: pe.clientY};
+    }
     if (!running || dragging) return;
     if (asleep && !busy) {
         wakeUp();
@@ -438,9 +452,51 @@ for (const t of ['keydown', 'pointerdown', 'pointermove', 'wheel']) {
     window.addEventListener(t, onInput, {capture: true, passive: true});
 }
 
+function cancelHoverRoll() {
+    window.clearTimeout(hoverTimer);
+    hoverTimer = 0;
+    hoverRollPending = false;
+}
+
+el.addEventListener('pointerenter', ev => {
+    if (ev.pointerType !== 'mouse' || ev.buttons || !running || busy || dragging || press) return;
+    if (performance.now() - lastHoverRoll < HOVER_ROLL_MS) return;
+    if (shown?.act === 'roll' || queue.some(s => s.act === 'roll')) return;
+    cancelHoverRoll();
+    hoverTimer = window.setTimeout(() => {
+        hoverTimer = 0;
+        if (!running || busy || dragging || press || !el.matches(':hover')) return;
+        hoverRollPending = true;
+        // Let protected motions (especially a jump) finish at their next boundary.
+        if (shown?.lock || queue.some(s => s.lock)) return;
+        window.clearTimeout(timer);
+        tick();
+    }, HOVER_MS);
+});
+el.addEventListener('pointerleave', cancelHoverRoll);
+document.addEventListener('pointerleave', () => { mouse = undefined; });
+
+function mouseAhead() {
+    if (!mouse || busy || dragging || press) return false;
+    const ahead = (mouse.x - x) * dir;
+    const aboveFloor = floorY() - mouse.y;
+    return ahead >= 4 && ahead <= MOUSE_REACH && aboveFloor >= -8
+        && aboveFloor <= size('walk').h + 16;
+}
+
 function tick() {
     timer = 0;
     if (!running) return;
+    if (hoverRollPending && !busy && !dragging && !press && !queue.some(s => s.lock)) {
+        hoverRollPending = false;
+        lastHoverRoll = performance.now();
+        lastInput = lastHoverRoll;
+        watch = undefined;
+        asleep = false;
+        if (shown) pose = poseOf(shown);
+        queue = [];
+        roll();
+    }
     if (!queue.length) {
         if (busy) {
             // waiting on the Lua box: sit still
@@ -448,6 +504,17 @@ function tick() {
             if (pose !== 'sit') sitDown();
             else hold('sit', 1, 1000);
         } else plan();
+    }
+    // Check every walking frame, so a cat also notices a stationary pointer as
+    // it approaches. Hovering the cat itself has its separate belly reaction.
+    if (queue[0]?.act === 'walk' && !queue.some(s => s.lock) && mouseAhead()
+        && performance.now() - lastMouseStretch >= MOUSE_STRETCH_MS) {
+        lastMouseStretch = performance.now();
+        lastInput = lastMouseStretch;
+        watch = undefined;
+        queue = [];
+        if (shown) pose = poseOf(shown);
+        stretch();
     }
     const s = queue.shift()!;
     if (s.nap && s.frame === 3) asleep = true;
@@ -474,6 +541,9 @@ function start() {
     lastInput = performance.now();
     lastStretch = lastInput;
     watch = undefined;
+    cancelHoverRoll();
+    lastHoverRoll = -Infinity;
+    lastMouseStretch = -Infinity;
     asleep = false;
     pose = 'sit';
     hold('sit', 1, 600);
@@ -483,6 +553,7 @@ function start() {
 
 function stop() {
     running = false;
+    cancelHoverRoll();
     window.clearTimeout(timer);
     timer = 0;
     el.hidden = true;
@@ -516,6 +587,7 @@ let press: {x: number; y: number; id: number} | undefined;
 
 el.addEventListener('pointerdown', ev => {
     if (ev.button !== 0) return;
+    cancelHoverRoll();
     ev.preventDefault();
     press = {x: ev.clientX, y: ev.clientY, id: ev.pointerId};
     el.setPointerCapture(ev.pointerId);

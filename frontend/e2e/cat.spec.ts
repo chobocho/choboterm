@@ -58,6 +58,109 @@ async function observeMotion(page: Page, random: number) {
 const motion = (page: Page) => page.evaluate(() =>
     (window as unknown as {catMotion: {act: string; lift: number}[]}).catMotion);
 
+test('hovering the cat plays one complete belly roll without restarting on mouse moves', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    await observeMotion(page, 0.4);
+    await page.clock.runFor(6000); // finish any routine started before randomness was fixed
+    await page.evaluate(() => (window as unknown as {catMotion: unknown[]}).catMotion.length = 0);
+    const box = (await cat(page).boundingBox())!;
+    // Stay over the lower body, which remains under the pointer when the cat lies down.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height - 8);
+    for (let i = 0; i < 24; i++) {
+        await page.clock.runFor(250);
+        const current = (await cat(page).boundingBox())!;
+        await page.mouse.move(current.x + current.width / 2 + i % 2, current.y + current.height - 8);
+    }
+    expect((await motion(page)).map(f => f.act).filter(a => a.startsWith('roll:'))).toEqual([
+        'roll:0', 'roll:1', 'roll:2', 'roll:1', 'roll:0', 'roll:1', 'roll:2',
+    ]);
+    await expect(bubble(page)).toBeHidden();
+    await expect(cat(page)).toHaveAttribute('data-pose', 'sit');
+});
+
+test('passing over the cat briefly cancels its hover reaction', async ({app}) => {
+    const page = app.page;
+    await dismissGuide(app);
+    await observeMotion(page, 0.4);
+    await page.clock.runFor(6000);
+    await page.evaluate(() => (window as unknown as {catMotion: unknown[]}).catMotion.length = 0);
+    const c = await centre(page);
+    await page.mouse.move(c.x, c.y);
+    await page.clock.runFor(75);
+    await page.mouse.move(4, 4);
+    await page.clock.runFor(4000);
+    expect((await motion(page)).some(f => f.act.startsWith('roll:'))).toBe(false);
+});
+
+async function beginWalk(app: App, dir: 1 | -1) {
+    const page = app.page;
+    await dismissGuide(app);
+    await observeMotion(page, 0.4);
+    await page.mouse.move(4, 4);
+    await page.clock.runFor(6000);
+    // Start from the middle so a distant click makes it walk in either direction.
+    const terms = (await page.locator('#terms').boundingBox())!;
+    const c = await centre(page);
+    await page.mouse.move(c.x, c.y);
+    await page.mouse.down();
+    await page.mouse.move(terms.x + terms.width / 2, terms.y + terms.height - 25, {steps: 3});
+    await page.mouse.up();
+    await page.mouse.move(4, 4);
+    await page.clock.runFor(3000);
+    await page.mouse.click(dir === 1 ? terms.x + terms.width - 8 : terms.x + 8,
+        terms.y + terms.height - 20);
+    for (let i = 0; i < 40; i++) {
+        await page.clock.runFor(100);
+        if ((await cat(page).getAttribute('data-act'))?.startsWith('walk:')
+            && await cat(page).getAttribute('data-dir') === String(dir)) break;
+    }
+    await expect(cat(page)).toHaveAttribute('data-act', /^walk:/);
+    await expect(cat(page)).toHaveAttribute('data-dir', String(dir));
+    await page.evaluate(() => { Math.random = () => 0.1; });
+    await page.evaluate(() => (window as unknown as {catMotion: unknown[]}).catMotion.length = 0);
+}
+
+for (const dir of [1, -1] as const) {
+    test(`a cat walking ${dir === 1 ? 'right' : 'left'} stops and stretches as it approaches the pointer`, async ({app}) => {
+        const page = app.page;
+        await beginWalk(app, dir);
+        const box = (await cat(page).boundingBox())!;
+        const nose = dir === 1 ? box.x + box.width : box.x;
+        // Leave the pointer still: the cat starts outside its 70 px reaction range.
+        await page.mouse.move(nose + dir * 100, box.y + box.height - 12);
+        await page.clock.runFor(300);
+        await expect(cat(page)).toHaveAttribute('data-act', /^walk:/);
+        await page.clock.runFor(1200);
+        await expect(cat(page)).toHaveAttribute('data-act', /^stretch:/);
+        const stopped = (await cat(page).boundingBox())!;
+        const distance = ((dir === 1 ? stopped.x + stopped.width : stopped.x) - nose) * dir;
+        expect(distance).toBeGreaterThanOrEqual(29);
+        expect(distance).toBeLessThanOrEqual(33);
+        await page.clock.runFor(3000);
+        const stretches = (await motion(page)).map(f => f.act).filter(a => a.startsWith('stretch:'));
+        // Sitting down also uses stretch:5/6; only a new stretch:0 starts another stretch.
+        expect(stretches.slice(0, 6)).toEqual([
+            'stretch:0', 'stretch:1', 'stretch:2', 'stretch:3', 'stretch:4', 'stretch:5',
+        ]);
+        expect(stretches.filter(a => a === 'stretch:0')).toHaveLength(1);
+    });
+}
+
+test('a walking cat ignores a pointer behind it or far above it', async ({app}) => {
+    const page = app.page;
+    await beginWalk(app, 1);
+    let box = (await cat(page).boundingBox())!;
+    await page.mouse.move(box.x - 30, box.y + box.height - 10);
+    await page.clock.runFor(300);
+    await expect(cat(page)).toHaveAttribute('data-act', /^walk:/);
+    box = (await cat(page).boundingBox())!;
+    await page.mouse.move(box.x + box.width + 40, box.y - 120);
+    await page.clock.runFor(300);
+    await expect(cat(page)).toHaveAttribute('data-act', /^walk:/);
+    expect((await motion(page)).some(f => f.act.startsWith('stretch:'))).toBe(false);
+});
+
 test('regular stretching completes even while keys keep arriving', async ({app}) => {
     const page = app.page;
     await dismissGuide(app);

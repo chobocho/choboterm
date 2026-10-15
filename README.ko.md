@@ -1,4 +1,4 @@
-# choboterm V0.2.31
+# choboterm V0.2.32
 
 [English](README.md) · **한국어**
 
@@ -120,6 +120,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 매크로마다 `F2`~`F12`, `Shift+F1`~`F12`, `Ctrl+F1`~`F12` 중 하나를 지정하면 그 키로 바로 보냅니다. 지정하지 않은 키는 mc, htop 같은 프로그램에 그대로 전달됩니다.
   - 내용의 줄바꿈은 `Enter`로 보내고, `\t`(Tab), `\e`(Esc), `\xHH`(예: `\x03` = Ctrl+C), `\\`(역슬래시)를 쓸 수 있습니다.
 - **고양이**: 창 아래쪽을 치즈냥 한 마리가 돌아다닙니다. 걷고, 앉아서 두리번거리고, 하품하고, 기지개를 켜고, 뒤돌아보고, 배를 보이며 구릅니다.
+  - 고양이 위에 마우스를 잠깐 올리면 배를 보이며 구릅니다. 걷는 방향 앞 약 70px 안에 커서가 있으면 멈추고 기지개를 켭니다. 좌우 방향 모두 반응하며, 뒤쪽이나 멀리 위의 커서는 무시합니다. 클릭·끌기는 그대로 사용할 수 있습니다.
   - 글자를 치면 터미널 커서를, 클릭하면 그 자리를 바라보며 다가가 웅크리고, 가끔 뛰어올라 잡으려 합니다. 30초 동안 키보드·마우스 입력이 없으면 조금 걷다가 웅크려 잠들고(zZ), 다음 입력에 깹니다.
   - **끌어서** 다른 곳에 옮기면 그 높이에서 계속 다닙니다. **클릭**하면 Lua 입력 상자가 열리고, `Ctrl+Enter`(또는 "실행")로 실행하면 결과 창에 Lua 콘솔처럼 실행 기록이 쌓입니다(`>` 코드, 출력, `=` 값, `오류:`, 걸린 시간). 결과 창은 스크롤되고, 글자를 골라 복사하거나 "모두 복사"로 한 번에 복사하며, "지우기"로 비웁니다. 탭 없이 따로 실행하므로 연결이 없어도 계산기처럼 쓸 수 있습니다(`send` · `screen`은 못 씀, 10초가 지나면 멈춤).
   - Lua 대신 **메시지**로 열 것을 알려 줄 수도 있습니다: `https://github.com` · `www.…` 같은 웹 주소, `C:\work` · `~/src` · `/var/log` 같은 폴더 경로를 그대로 쓰거나, `열기 github.com`(주소에 `https://`가 없을 때) · `폴더 C:\work`처럼 씁니다. `open_url` · `open_folder`와 같은 검사를 거칩니다. 여러 개를 한꺼번에 열려면 Lua로 `open_url("...")`를 이어 씁니다.
@@ -243,12 +244,12 @@ Termux에서 Go와 Node.js를 설치(`pkg install golang nodejs`)한 뒤 `./buil
 
 그 밖의 방법:
 
-- 태그를 직접 푸시: `git tag v0.2.31 && git push origin v0.2.31`
-- 손으로 실행: Actions > release > Run workflow에서 Tag `v0.2.31`, Ref `main`(태그가 없으면 그 커밋에 생김). Tag만 주면 있는 태그를 다시 빌드합니다.
+- 태그를 직접 푸시: `git tag v0.2.32 && git push origin v0.2.32`
+- 손으로 실행: Actions > release > Run workflow에서 Tag `v0.2.32`, Ref `main`(태그가 없으면 그 커밋에 생김). Tag만 주면 있는 태그를 다시 빌드합니다.
 - 이 PC에서 빌드: `build.bat`으로 `release\choboterm.exe`와 `release\choboterm-headless.exe`를, `wsl -- ./build_linux.sh`로 `release/choboterm-linux-amd64.tar.gz`와 `release/choboterm-headless-linux-amd64`를 만든 뒤(실행 중인 choboterm은 먼저 종료):
 
    ```sh
-   gh release create v0.2.31 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.31" --notes "..."
+   gh release create v0.2.32 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.32" --notes "..."
    ```
 
 V0.2.24 릴리스 워크플로는 이전 GitHub Release 항목을 삭제했습니다. 이전 git 태그는 그대로 남습니다.
@@ -371,7 +372,7 @@ npm run test:e2e
 | `frontend/src/imageview.ts` | 이미지 보기 창 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
 | `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
-| `tools/make_cat.py` | 고양이 그림 시트에서 스프라이트 만들기(`frontend/src/assets/cat.png`, `frontend/src/catframes.json`). 걷기는 제자리걸음 영상에서 한 주기를 뽑고(`시트 영상 첫프레임 간격 개수`), 땅에 닿은 발이 미끄러지지 않게 프레임마다 이동 거리 계산. 뒤돌아보기·구르기는 `tools/cat_keep.png`(v0.2.31 그림)에서. 미리보기 폴더를 주면 걷기·동작 GIF도 만듦 |
+| `tools/make_cat.py` · `cat_style.py` · `preview_cat.py` | 고양이 스프라이트 생성·색감/크기/눈 보정·영상 비교. 걷기는 영상의 24프레임을 사용하고, 뒤돌아보기·구르기는 `tools/cat_keep.png`(v0.2.31 그림)에서 가져옵니다. [제작·검토 방법](docs/cat-artwork.md) |
 
 ## 아직 지원하지 않는 기능
 
