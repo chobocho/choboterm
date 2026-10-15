@@ -374,15 +374,9 @@ func (h *luaHost) eval(L *lua.LState, code string) (out string, err error) {
 	}()
 	L.SetContext(ctx)
 
-	code = strings.TrimSpace(code)
-	if strings.HasPrefix(code, "=") {
-		code = "return " + code[1:]
-	}
-	fn, err := L.Load(strings.NewReader("return "+code), "console")
+	fn, err := compileConsole(L, code)
 	if err != nil {
-		if fn, err = L.Load(strings.NewReader(code), "console"); err != nil {
-			return "", cleanLuaError(err)
-		}
+		return "", cleanLuaError(err)
 	}
 	L.Push(fn)
 	if err := L.PCall(0, lua.MultRet, nil); err != nil {
@@ -396,6 +390,70 @@ func (h *luaHost) eval(L *lua.LState, code string) (out string, err error) {
 		parts = append(parts, L.ToStringMeta(L.Get(i)).String())
 	}
 	return strings.Join(parts, "\t"), nil
+}
+
+// consoleTailLines is how many lines at the end of an input are tried as the
+// expression whose value is shown.
+const consoleTailLines = 20
+
+// compileConsole compiles one console input. Like a notebook cell, the value
+// of an expression on the last line(s) is shown, so "print(x)\n1 + 2" prints
+// x and shows 3. Tried in order:
+//  1. the whole input as an expression ("1 + 2", "=x");
+//  2. the input as statements followed by "return <the last lines>", the
+//     fewest last lines first;
+//  3. the input as statements, showing nothing; its error is the one shown.
+func compileConsole(L *lua.LState, code string) (*lua.LFunction, error) {
+	code = strings.TrimSpace(code)
+	if strings.HasPrefix(code, "=") {
+		code = "return " + code[1:]
+	}
+	if fn, err := L.Load(strings.NewReader("return "+code), "console"); err == nil {
+		return fn, nil
+	}
+	// Byte offsets where each line after the first starts.
+	var starts []int
+	for i := 0; i < len(code); i++ {
+		if code[i] == '\n' {
+			starts = append(starts, i+1)
+		}
+	}
+	for k := len(starts) - 1; k >= 0 && k >= len(starts)-consoleTailLines; k-- {
+		head, tail := code[:starts[k]], strings.TrimSpace(code[starts[k]:])
+		if tail == "" || continuesExpression(tail) {
+			continue
+		}
+		// The tail must be an expression and the head complete statements on
+		// its own: a head ending inside a long string or comment would
+		// otherwise swallow "return" and still compile. The tail is checked
+		// first because it is the short one.
+		if _, err := L.Load(strings.NewReader("return "+tail), "console"); err != nil {
+			continue
+		}
+		if _, err := L.Load(strings.NewReader(head), "console"); err != nil {
+			continue
+		}
+		// Kept on the tail's own line so error lines still match the input.
+		if fn, err := L.Load(strings.NewReader(head+"return "+tail), "console"); err == nil {
+			return fn, nil
+		}
+	}
+	return L.Load(strings.NewReader(code), "console")
+}
+
+// continuesExpression reports whether a line starting with s could be read
+// by Lua as part of the expression the line before ended with: a call
+// ("f\n(x)", "f\n{x}", "f\n'x'", "f\n[[x]]"), an index ("t\n[k]") or a
+// subtraction ("a\n- b"). Splitting there would change what valid code
+// means, so such lines are not taken as the shown expression.
+func continuesExpression(s string) bool {
+	switch s[0] {
+	case '(', '{', '"', '\'', '[':
+		return true
+	case '-':
+		return !strings.HasPrefix(s, "--")
+	}
+	return false
 }
 
 // cleanLuaError keeps "name:line: message" and drops the stack traceback.
