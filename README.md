@@ -1,4 +1,4 @@
-# choboterm V0.2.28
+# choboterm V0.2.29
 
 **English** · [한국어](README.ko.md)
 
@@ -241,12 +241,12 @@ Open the printed HTTPS URL in a browser. Use `--web=127.0.0.1:7681` to restrict 
 
 Other ways:
 
-- Push the tag yourself: `git tag v0.2.28 && git push origin v0.2.28`
-- Run it by hand: Actions > release > Run workflow with Tag `v0.2.28` and Ref `main` (the tag is created on that commit if it doesn't exist). With only a Tag it rebuilds an existing tag.
+- Push the tag yourself: `git tag v0.2.29 && git push origin v0.2.29`
+- Run it by hand: Actions > release > Run workflow with Tag `v0.2.29` and Ref `main` (the tag is created on that commit if it doesn't exist). With only a Tag it rebuilds an existing tag.
 - Build on this PC: build `release\choboterm.exe` and `release\choboterm-headless.exe` with `build.bat`, and `release/choboterm-linux-amd64.tar.gz` and `release/choboterm-headless-linux-amd64` with `wsl -- ./build_linux.sh` (quit any running choboterm first), then:
 
    ```sh
-   gh release create v0.2.28 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.28" --notes "..."
+   gh release create v0.2.29 "release/choboterm.exe#choboterm.exe (Windows x64)" "release/choboterm-linux-amd64.tar.gz#choboterm-linux-amd64.tar.gz (Linux x86_64)" "release/choboterm-headless.exe#choboterm-headless.exe (web server, Windows x64)" "release/choboterm-headless-linux-amd64#choboterm-headless-linux-amd64 (web server, Linux x86_64 static)" --title "choboterm V0.2.29" --notes "..."
    ```
 
 The v0.2.24 release workflow removed older GitHub Release entries; their git tags remain available.
