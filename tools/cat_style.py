@@ -1,7 +1,8 @@
 """Retarget the existing raster artwork to the stretch row's character.
 
-No generated drawings are used: the walking and legacy heads are composited
-from the artist's sheet, while the video's body and contact timing are kept.
+No generated drawings are used. The filmed walking head keeps its viewing
+angle, while legacy heads come from the artist's sheet. Open eyes are balanced
+as a pair; the video's body and contact timing are kept.
 Coordinates below are landmarks in the supplied, unscaled source artwork.
 Requires numpy, Pillow and OpenCV in addition to make_cat.py's dependencies.
 """
@@ -62,6 +63,82 @@ def cream_centre(im):
     return np.median(a[..., :3][mask], axis=0) if mask.sum() > 10 else np.array([248, 211, 153])
 
 
+def eye_features(im):
+    """Find the two whole eyes, including pupils, whites and dark outlines."""
+    a = np.asarray(im.convert('RGBA'))
+    hsv = cv2.cvtColor(a[..., :3], cv2.COLOR_RGB2HSV)
+    iris = ((hsv[..., 0] >= 37) & (hsv[..., 0] < 100)
+            & (hsv[..., 1] > 65) & (a[..., 3] > 180)).astype(np.uint8)
+    _, labels, stats, _ = cv2.connectedComponentsWithStats(iris, 8)
+    candidates = [i for i in range(1, len(stats)) if stats[i, 4] >= 8]
+    candidates = sorted(candidates, key=lambda i: stats[i, 4], reverse=True)[:2]
+    if len(candidates) != 2:
+        return []  # closed eyes and a face turned fully away are intentional
+    candidates.sort(key=lambda i: stats[i, 0])
+    if stats[candidates[1], 0] - stats[candidates[0], 0] < 8:
+        return []
+    result = []
+    for i in candidates:
+        x, y, w, h, _ = stats[i]
+        box = (max(0, int(x - .8 * w)), max(0, int(y - 1.6 * h)),
+               min(im.width, int(x + 1.8 * w)), min(im.height, int(y + 1.3 * h)))
+        hh = hsv[box[1]:box[3], box[0]:box[2]]
+        seed = labels[box[1]:box[3], box[0]:box[2]] == i
+        feature = (seed | (hh[..., 2] < 95)
+                   | ((hh[..., 1] < 65) & (hh[..., 2] > 150))).astype(np.uint8)
+        _, components, _, _ = cv2.connectedComponentsWithStats(feature, 8)
+        overlap = np.bincount(components[seed], minlength=components.max() + 1)
+        overlap[0] = 0
+        mask = (components == overlap.argmax()).astype(np.uint8) * 255
+        mask = cv2.dilate(mask, np.ones((3, 3), np.uint8))
+        bounds = Image.fromarray(mask).getbbox()
+        x0, y0, x1, y1 = bounds
+        whole = (box[0] + x0, box[1] + y0, box[0] + x1, box[1] + y1)
+        patch = im.crop(whole).copy()
+        alpha = Image.fromarray(mask[y0:y1, x0:x1]).filter(ImageFilter.GaussianBlur(.5))
+        patch.putalpha(alpha)
+        result.append((whole, patch))
+    return result
+
+
+def balance_eyes(im):
+    """Give both visible eyes one apparent size without altering closed poses.
+
+    Reuse the larger eye's actual painted feature for both sides, at their
+    average size. Inpaint the previous features before compositing so shrinking
+    the near eye cannot leave a second outline or pupil behind it.
+    """
+    features = eye_features(im)
+    if len(features) != 2:
+        return im
+    a = np.asarray(im.convert('RGBA')).copy()
+    source = max(features, key=lambda f: f[1].width * f[1].height)[1]
+    target = tuple(round(sum(f[1].size[k] for f in features) / 2) for k in range(2))
+    mask = np.zeros(a.shape[:2], np.uint8)
+    for (x0, y0, x1, y1), patch in features:
+        mask[y0:y1, x0:x1] |= np.asarray(patch.getchannel('A'))
+    mask = cv2.dilate((mask > 8).astype(np.uint8) * 255, np.ones((3, 3), np.uint8))
+    a[..., :3] = cv2.inpaint(a[..., :3], mask, 3, cv2.INPAINT_TELEA)
+    out = Image.fromarray(a, 'RGBA')
+    eye = source.convert('RGBa').resize(target, Image.Resampling.LANCZOS).convert('RGBA')
+    for (x0, y0, x1, y1), _ in features:
+        x = round((x0 + x1 - target[0]) / 2)
+        y = round((y0 + y1 - target[1]) / 2)
+        # Keep the far eye inside the cheek contour instead of cropping it.
+        for shift in range(max(1, round(target[0] * .35))):
+            xx = x - shift
+            if xx < 0 or y < 0 or xx + target[0] > im.width or y + target[1] > im.height:
+                continue
+            background = a[y:y + target[1], xx:xx + target[0], 3]
+            solid = np.asarray(eye.getchannel('A')) > 180
+            if np.mean(background[solid] > 128) > .995:
+                x = xx
+                break
+        out.alpha_composite(eye, (x, y))
+    out.putalpha(im.getchannel('A'))
+    return out
+
+
 class Palette:
     def __init__(self, reference):
         self.fur = fur_centres(reference)
@@ -95,15 +172,29 @@ class Palette:
         rgb[eye] = cv2.cvtColor(recoloured, cv2.COLOR_HSV2RGB)[eye]
         a[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
         a[a[..., 3] == 0] = 0
-        return Image.fromarray(a, 'RGBA')
+        return balance_eyes(Image.fromarray(a, 'RGBA'))
 
 
 def normalize_sheet(rows, palette, scale):
+    paired_head = head_from_stand(palette.match(rows[1][0]))
     out = []
     for row_index, row in enumerate(rows[:5]):
         normal = []
         for i, frame in enumerate(row):
             frame = palette.match(trim(frame))
+            if row_index == 4 and i < 3:
+                # These three drawings are almost in profile and have only one
+                # painted iris. Use the balanced reference face so the second
+                # eye is actually visible instead of enlarging a nonexistent eye.
+                left, anchor = [(135, 184), (183, 236), (190, 242)][i]
+                a = np.asarray(frame).copy()
+                # The larger reference face covers the old face completely.
+                # Keep the shoulder/neck underneath; only old ear tips need removal.
+                a[:34, left:] = 0
+                canvas = Image.new('RGBA', (frame.width + 64, frame.height + 64))
+                canvas.alpha_composite(Image.fromarray(a), (32, 32))
+                canvas.alpha_composite(paired_head, (32 + anchor - 187, 34))
+                frame = trim(canvas)
             if row_index == 3 and i == 6:
                 # The drawn waking stand has an unusually long torso. Compress
                 # its body alone so the face keeps the reference proportions.
@@ -140,7 +231,7 @@ def normalize_sheet(rows, palette, scale):
 
 
 def retarget_walk(frames, stand, palette, scale):
-    """Use one reference head, tracking the filmed neck through the whole cycle.
+    """Use the filmed face angle, with balanced eyes and a reference-sized head.
 
     Body transforms and palette are shared by all frames. No per-frame crop or
     per-frame scale can make the cat grow/shrink or move its planted paws.
@@ -149,7 +240,19 @@ def retarget_walk(frames, stand, palette, scale):
     reference = np.asarray(frames[0].convert('RGB'))
     template = cv2.cvtColor(reference[60:245, 500:690], cv2.COLOR_RGB2GRAY)
     src_fur, src_cream = fur_centres(frames[0]), cream_centre(frames[0])
-    head = head_from_stand(palette.match(stand))
+    # The video has the requested, more frontal viewing angle. Keep its muzzle,
+    # ears and eye placement, but match the stretch cat's palette and head width.
+    head = palette.match(frames[0], src_fur, src_cream)
+    mask = polygon_mask(head.size, [
+        (480, 45), (head.width, 45), (head.width, 245),
+        (675, 267), (620, 275), (575, 272), (535, 255), (510, 239), (480, 212),
+    ])
+    alpha = np.minimum(np.asarray(head.getchannel('A')), np.asarray(mask))
+    alpha = cv2.erode(alpha, np.ones((3, 3), np.uint8))
+    head.putalpha(Image.fromarray(alpha).filter(ImageFilter.GaussianBlur(.45)))
+    head = head.crop((480, 45, 705, 275))
+    reference_width = head_from_stand(stand).getchannel('A').getbbox()
+    head_scale = (reference_width[2] - reference_width[0]) * scale / head.width
     # Body length relative to the sheet's shorter, kitten-like torso.
     sy, sx = 96 / frames[0].height, 96 / frames[0].height * .9
     ss = 4
@@ -177,10 +280,11 @@ def retarget_walk(frames, stand, palette, scale):
         canvas = Image.new('RGBA', (560, 460))
         origin = (24, 32)
         canvas.alpha_composite(body, origin)
-        replacement = scaled(head, scale * ss)
-        # Neck anchors: (187, 109) on the sheet; (590, 274) in video frame 78.
-        hx = origin[0] + round(((590 + dx) * sx - 187 * scale) * ss)
-        hy = origin[1] + round(((274 + dy) * sy - 109 * scale) * ss)
+        replacement = scaled(head, head_scale * ss)
+        # The cropped video head's neck is (110, 229). A slightly lower body
+        # anchor accommodates its taller face while retaining the existing scale.
+        hx = origin[0] + round(((590 + dx) * sx - 110 * head_scale) * ss)
+        hy = origin[1] + round(((285 + dy) * sy - 229 * head_scale) * ss)
         canvas.alpha_composite(replacement, (hx, hy))
         rendered.append(canvas)
     union = np.maximum.reduce([np.asarray(f.getchannel('A')) for f in rendered])

@@ -25,8 +25,9 @@ apart. The video's cat is cut out of the grey by its colour; holes in it
 are filled only when small (eye glints), not the grey between the legs.
 The stretch row defines the character's colour and proportions. Its standing
 cat is 96 px tall (twice its 48 px on screen). tools/cat_style.py matches every
-pose to it and replaces the walking/legacy heads with the sheet's artwork.
-The filmed legs and their contact timing are retained. Every frame
+pose to it. The walking head retains the video's viewing angle with balanced
+eyes; legacy heads use the sheet's artwork. The filmed legs and their contact
+timing are retained. Every frame
 stands on the bottom of its action's box with its nose on the right edge:
 the app keeps the nose put from frame to frame (the sheet's frames sit
 loosely in their cells, so where they were drawn says nothing).

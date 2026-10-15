@@ -48,6 +48,27 @@ def sprites(image, meta):
     return out
 
 
+def check_eye_pairs(frames):
+    """Measure the rendered irises, independently of the editing masks."""
+    expected = {'walk': range(24), 'sit': [0, 1, 2, 6], 'stretch': [0, 1, 5, 6],
+                'wake': [4, 5, 6], 'jump': range(6), 'lookback': [0, 2]}
+    count, maximum = 0, 0
+    for name, indices in expected.items():
+        for i in indices:
+            a = np.asarray(frames[name][i])
+            hsv = cv2.cvtColor(a[..., :3], cv2.COLOR_RGB2HSV)
+            mask = ((hsv[..., 0] >= 37) & (hsv[..., 0] < 100)
+                    & (hsv[..., 1] > 65) & (a[..., 3] > 180)).astype(np.uint8)
+            _, _, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+            eyes = sorted([s for s in stats[1:] if s[4] >= 4], key=lambda s: s[4], reverse=True)[:2]
+            assert len(eyes) == 2, f'{name}:{i} must show both eyes'
+            difference = max(abs(int(eyes[0][k]) - int(eyes[1][k])) for k in (2, 3))
+            assert difference <= 1, f'{name}:{i} eye sizes differ by {difference} atlas pixels'
+            count += 1
+            maximum = max(maximum, difference)
+    return {'open_eye_frames_checked': count, 'maximum_iris_size_difference_screen_px': maximum / 2}
+
+
 def text(im, xy, value, small=False):
     ImageDraw.Draw(im).text(xy, value, fill=(225, 228, 234), font=SMALL if small else FONT)
 
@@ -101,6 +122,7 @@ def main(before_png, before_json, video, output):
     meta = json.loads((ROOT / 'frontend/src/catframes.json').read_text())
     oldmeta = json.loads(Path(before_json).read_text())
     frames = sprites(ROOT / 'frontend/src/assets/cat.png', meta)
+    eye_report = check_eye_pairs(frames)
     before = sprites(before_png, oldmeta)
     filmed = video_samples(video)
     shutil.copyfile(ROOT / 'frontend/src/assets/cat.png', output / 'cat.png')
@@ -221,6 +243,7 @@ if(png.complete&&before.complete){draw(before,old,'수정 전',0,i);draw(png,met
         'standing_height_atlas_px': frames['stretch'][0].getchannel('A').getbbox()[3]
                                    - frames['stretch'][0].getchannel('A').getbbox()[1],
         'art_method': 'existing raster composites and colour/geometry correction; no AI image generation',
+        **eye_report,
     }
     (output / 'validation.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     print(json.dumps(report, ensure_ascii=False, indent=2))
