@@ -20,7 +20,7 @@
 
   <rect x="0" y="0" width="1010" height="800" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.27 · <tspan class="new">NEW</tspan> = 이번 버전에 바뀜 (Linux: 기본 터미널과 같은 글꼴·크기)</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.28 · <tspan class="new">NEW</tspan> = 이번 버전에 바뀜 (고양이: 돌아다니기, 끌어서 옮기기, 클릭하면 Lua 실행)</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="563" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
