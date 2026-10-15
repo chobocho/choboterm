@@ -23,8 +23,10 @@ Sheet frames are cut out of the near-black background (flood-filled from
 the border, the edge fading by brightness), cats joined by a whisker kept
 apart. The video's cat is cut out of the grey by its colour; holes in it
 are filled only when small (eye glints), not the grey between the legs.
-The walk is 96 px tall (twice its 48 px on screen); the sheet is scaled so
-its standing cat is as tall to the ears as the walking one. Every frame
+The stretch row defines the character's colour and proportions. Its standing
+cat is 96 px tall (twice its 48 px on screen). tools/cat_style.py matches every
+pose to it and replaces the walking/legacy heads with the sheet's artwork.
+The filmed legs and their contact timing are retained. Every frame
 stands on the bottom of its action's box with its nose on the right edge:
 the app keeps the nose put from frame to frame (the sheet's frames sit
 loosely in their cells, so where they were drawn says nothing).
@@ -34,7 +36,7 @@ Usage: python tools/make_cat.py SHEET.png VIDEO FIRST EVERY COUNT [PREVIEW_DIR]
 Writes frontend/src/assets/cat.png and frontend/src/catframes.json, and in
 PREVIEW_DIR the atlas on dark, walk.gif (the walk as the app moves it, next
 to the video's frames as filmed) and acts.gif (every action), to look at
-before trying it in the app. Requires Pillow, numpy and ffmpeg.
+before trying it in the app. Requires Pillow, numpy, OpenCV and ffmpeg.
 """
 import json
 import os
@@ -278,8 +280,8 @@ def scaled(f, s):
 
 
 def save_png(im, path):
-    """A 128-colour palette PNG (with alpha): a fifth of the size of full colour."""
-    im.quantize(colors=128, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(path, optimize=True)
+    """Keep shared RGB colours and full edge alpha; avoid palette banding."""
+    im.save(path, optimize=True)
 
 
 # ---- Previews ----
@@ -325,24 +327,22 @@ def acts_preview(strips, path):
 
 
 def main(sheet_path, video, first, every, count, preview_dir=None):
+    from cat_style import Palette, normalize_kept, normalize_sheet, retarget_walk
+
     rows = sheet_rows(Image.open(sheet_path))
     vframes, filmed = walk_from_video(video, first, every, count)
-    sw = HEIGHT / vframes[0].size[1]
-    walk = [scaled(f, sw) for f in vframes]
-    # the sheet's standing cat (stretch, frame 0) as tall to the ears as the walking one
     stand = trim(rows[1][0])
-    sa = to_ears(walk[0]) / to_ears(stand)
-
-    # the kept frames: their sitting cat as tall as the sheet's (sit, frame 1)
-    keep = kept()
-    sk = trim(rows[0][1]).size[1] * sa / trim(keep['sitref'][0]).size[1]
-    print(f'scales: walk {sw:.3f}, sheet {sa:.3f}, kept {sk:.3f}')
-    sources = [(name, row, sa) for name, row in zip(ACTS, rows)]
-    sources += [(name, keep[name], sk) for name in ('lookback', 'roll')]
+    sa = HEIGHT / stand.height
+    palette = Palette(stand)
+    walk, tracks = retarget_walk(vframes, stand, palette, sa)
+    normalized = normalize_sheet(rows, palette, sa)
+    keep = normalize_kept(kept(), rows, palette, sa)
+    sources = list(zip(ACTS, normalized))
+    sources += [(name, keep[name]) for name in ('lookback', 'roll')]
+    print(f'stretch reference scale {sa:.3f}; walking head tracking {tracks}')
 
     strips = [('walk', walk[0].size[0], walk[0].size[1], walk)]
-    for name, row, s in sources:
-        fs = [scaled(trim(f), s) for f in row]
+    for name, fs in sources:
         fw, fh = max(f.size[0] for f in fs), max(f.size[1] for f in fs)
         padded = []
         for f in fs:
@@ -391,6 +391,13 @@ def main(sheet_path, video, first, every, count, preview_dir=None):
         bg.convert('RGB').save(os.path.join(preview_dir, 'atlas_dark.png'))
         walk_preview(walk, mean, filmed, ms, os.path.join(preview_dir, 'walk.gif'))
         acts_preview(strips, os.path.join(preview_dir, 'acts.gif'))
+        for name, _, _, frames in strips:
+            path = os.path.join(preview_dir, 'frames', name)
+            os.makedirs(path, exist_ok=True)
+            for i, frame in enumerate(frames):
+                frame.save(os.path.join(path, f'{i:02}.png'))
+        with open(os.path.join(preview_dir, 'head-tracking.json'), 'w') as f:
+            json.dump(tracks, f, indent=2)
 
 
 if __name__ == '__main__':
