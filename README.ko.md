@@ -370,7 +370,7 @@ npm run test:e2e
 | `frontend/src/imageview.ts` | 이미지 보기 창 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
 | `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
-| `tools/make_cat.py` | 고양이 그림 시트에서 스프라이트 만들기(`frontend/src/assets/cat.png`, `frontend/src/catframes.json`, 걷기는 발이 미끄러지지 않게 프레임마다 이동 거리 계산) |
+| `tools/make_cat.py` | 고양이 그림 시트에서 스프라이트 만들기(`frontend/src/assets/cat.png`, `frontend/src/catframes.json`). 걷기는 제자리걸음 영상에서 한 주기를 뽑고(`--walk 영상 첫프레임 간격 개수`), 땅에 닿은 발이 미끄러지지 않게 프레임마다 이동 거리 계산 |
 
 ## 아직 지원하지 않는 기능
 

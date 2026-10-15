@@ -370,7 +370,7 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/imageview.ts` | Image viewer window |
 | `frontend/src/cjkwidth.ts` | Double-width character handling in EUC-KR mode |
 | `tools/make_icon.py` | App icon generation (`build/appicon.png`, `build/windows/icon.ico`) |
-| `tools/make_cat.py` | Builds the cat's sprites from the artist's sheet (`frontend/src/assets/cat.png`, `frontend/src/catframes.json`; the walk's step per frame is worked out so the paws don't slide) |
+| `tools/make_cat.py` | Builds the cat's sprites from the artist's sheet (`frontend/src/assets/cat.png`, `frontend/src/catframes.json`). The walk is one cycle taken from a video of the cat walking in place (`--walk VIDEO FIRST EVERY COUNT`), with the step per frame worked out so the paws on the ground don't slide |
 
 ## Not supported yet
 
