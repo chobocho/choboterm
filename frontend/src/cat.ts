@@ -8,6 +8,9 @@ import catFrames from './catframes.json';
 import {EvalLua} from '../wailsjs/go/app/App';
 import {saveSettings, settings} from './settings';
 import {focusActive} from './tabstate';
+import {ClipboardSetText} from '../wailsjs/runtime/runtime';
+import {tr} from './i18n';
+import {toast} from './notify';
 
 interface Action {
     w: number;
@@ -347,6 +350,8 @@ function openLuaBox() {
         } finally {
             run.disabled = false;
             run.textContent = '실행';
+            // Back to the code, ready for the next run (the button took the focus).
+            if (input.isConnected) input.focus();
         }
     };
     run.addEventListener('click', () => void go());
@@ -391,6 +396,13 @@ function maybeShowGuide() {
 }
 
 // ---- The result window ----
+// Every run is added to one log, as in the Lua console: the code after "> "
+// (and "  " on its next lines), what it printed, its value after "= " or its
+// error after "오류: ", and "-- 12ms". A read-only textarea holds the log:
+// it scrolls, its text is selected and copied like any text box, and no
+// keyboard pops up on a phone. A textarea has no colours, hence the
+// prefixes. The labels are put through tr() because the page's translator
+// sees text nodes, not a textarea's value.
 
 interface Result {
     output: string;
@@ -399,32 +411,30 @@ interface Result {
     ms: number;
 }
 
-const esc = (s: string) => s.replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]!));
-
-function showResult(code: string, r: Result) {
-    const parts = [`<div class="titlebar"><span class="title">Lua 결과</span>
-        <button type="button" class="close" title="닫기 (Esc)">✕</button></div><div class="body">`];
-    parts.push(`<div class="label">코드</div><pre class="code">${esc(code)}</pre>`);
-    if (r.output) parts.push(`<div class="label">출력</div><pre>${esc(r.output)}</pre>`);
-    if (r.value) parts.push(`<div class="label">값</div><pre class="value">${esc(r.value)}</pre>`);
-    if (r.error) parts.push(`<div class="label">오류</div><pre class="error">${esc(r.error)}</pre>`);
-    if (!r.output && !r.value && !r.error) parts.push('<div class="hint">(출력도 값도 없습니다)</div>');
-    parts.push(`<div class="hint ms">${r.ms}ms</div></div>`);
-    result.innerHTML = parts.join('');
-    result.hidden = false;
-    result.querySelector('.close')!.addEventListener('click', closeResult);
-    result.focus();
-}
-
-function closeResult() {
-    result.hidden = true;
-    result.innerHTML = '';
-    const input = bubble.querySelector('textarea');
-    if (input) input.focus();
-    else focusActive();
-}
+const LOG_MAX = 256 << 10; // characters kept; the oldest runs go first
 
 result.tabIndex = -1;
+result.innerHTML = `
+    <div class="titlebar"><span class="title">Lua 결과</span>
+        <button type="button" class="close" title="닫기 (Esc)">✕</button></div>
+    <textarea class="log" readonly spellcheck="false" wrap="soft"></textarea>
+    <div class="buttons">
+        <button type="button" class="copy">모두 복사</button>
+        <button type="button" class="clear">지우기</button>
+    </div>`;
+const log = result.querySelector<HTMLTextAreaElement>('.log')!;
+result.querySelector('.close')!.addEventListener('click', () => closeResult());
+result.querySelector('.copy')!.addEventListener('click', () => {
+    if (!log.value) return;
+    ClipboardSetText(log.value).then(
+        () => toast('복사했습니다'),
+        e => toast(String(e)),
+    );
+});
+result.querySelector('.clear')!.addEventListener('click', () => {
+    log.value = '';
+    log.focus();
+});
 result.addEventListener('keydown', ev => {
     if (ev.key === 'Escape') {
         ev.stopPropagation();
@@ -432,3 +442,44 @@ result.addEventListener('keydown', ev => {
     }
 });
 
+function showResult(code: string, r: Result) {
+    const lines = code.replace(/\s+$/, '').split('\n').map((l, i) => (i ? '  ' : '> ') + l);
+    if (r.output) lines.push(r.output);
+    if (r.value) lines.push(r.value.split('\n').map(l => '= ' + l).join('\n'));
+    if (r.error) lines.push(tr(`오류: ${r.error}`));
+    lines.push(`-- ${r.ms}ms`);
+    let text = (log.value ? log.value + '\n\n' : '') + lines.join('\n');
+    if (text.length > LOG_MAX) {
+        // Cut at the start of a run, so no run is left half there.
+        const cut = text.indexOf('\n\n> ', text.length - LOG_MAX);
+        text = cut >= 0 ? text.slice(cut + 2) : text.slice(text.length - LOG_MAX);
+    }
+    log.value = text;
+    if (result.hidden) {
+        result.hidden = false;
+        placeResult();
+    }
+    log.scrollTop = log.scrollHeight;
+}
+
+/** Keeps the log off the code box: on a narrow window (a phone) it would
+ * cover the box it was run from, so it goes above it, shorter if need be.
+ * Done only as it opens, so a size the user dragged it to stays. */
+function placeResult() {
+    result.style.bottom = '';
+    if (bubble.hidden) return;
+    const b = bubble.getBoundingClientRect();
+    const r = result.getBoundingClientRect();
+    if (r.right <= b.left || b.right <= r.left || r.bottom <= b.top || b.bottom <= r.top) return;
+    const room = b.top - 16; // above the box, less a margin at the top
+    if (room < 180) return; // too little room: covering it is the lesser evil
+    result.style.bottom = `${window.innerHeight - b.top + 8}px`;
+    if (r.height > room) result.style.height = `${room}px`;
+}
+
+function closeResult() {
+    result.hidden = true; // the log is kept for the next run; 지우기 empties it
+    const input = bubble.querySelector('textarea');
+    if (input) input.focus();
+    else focusActive();
+}
