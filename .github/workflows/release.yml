@@ -4,9 +4,9 @@
 # - when a commit that changes internal/version/version.go reaches main (a
 #   version bump merged): it releases v<Version> from that commit, unless that
 #   tag already exists. Merging the version PR is the release.
-# - when a version tag (v0.2.28, ...) is pushed:
+# - when a version tag (v0.2.29, ...) is pushed:
 #
-#     git tag v0.2.28 && git push origin v0.2.28
+#     git tag v0.2.29 && git push origin v0.2.29
 #
 # - by hand (Actions > release > Run workflow): with only a tag it rebuilds
 #   that tag; with a ref too it builds that commit or branch and the release
@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g. v0.2.28)'
+        description: 'Tag to release (e.g. v0.2.29)'
         required: true
       ref:
         description: 'Commit or branch to build if the tag does not exist yet (e.g. main)'
