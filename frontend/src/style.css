@@ -2306,3 +2306,153 @@ body.web .window-only {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* ---- The cat (cat.ts) ----
+   Above the terminals, the memo pad and the Lua console (up to 7), below
+   menus and dialogs (10 and up). Only the cat itself takes the mouse. */
+
+#cat {
+    position: fixed;
+    z-index: 8;
+    background-repeat: no-repeat;
+    image-rendering: auto;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#cat.dragging {
+    cursor: grabbing;
+}
+
+#cat[hidden],
+#catZ[hidden],
+#catBubble[hidden],
+#luaResult[hidden] {
+    display: none;
+}
+
+#catZ {
+    position: fixed;
+    z-index: 8;
+    width: 30px;
+    height: 30px;
+    pointer-events: none;
+    font: bold 13px "Segoe UI", sans-serif;
+    color: #b8c6d4;
+}
+
+#catZ span {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    opacity: 0;
+    animation: catz 2.4s linear infinite;
+}
+
+#catZ span:nth-child(2) {
+    font-size: 16px;
+    animation-delay: 0.8s;
+}
+
+#catZ span:nth-child(3) {
+    animation-delay: 1.6s;
+}
+
+@keyframes catz {
+    0% { transform: translate(0, 0); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translate(14px, -30px); opacity: 0; }
+}
+
+#catBubble {
+    position: fixed;
+    z-index: 9;
+    width: 300px;
+    padding: 10px 12px;
+    background: #fffdf6;
+    color: #222;
+    border: 1px solid #c9b48a;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    font: 13px "Malgun Gothic", "Segoe UI", "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif;
+}
+
+#catBubble .head {
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+#catBubble .hint {
+    color: #777;
+    font-weight: normal;
+    font-size: 12px;
+}
+
+#catBubble p {
+    margin: 4px 0 8px;
+    line-height: 1.45;
+}
+
+#catBubble textarea {
+    box-sizing: border-box;
+    width: 100%;
+    resize: vertical;
+    font: 13px Consolas, "D2Coding", "DejaVu Sans Mono", monospace;
+}
+
+#catBubble .buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+#luaResult {
+    position: fixed;
+    z-index: 9;
+    right: 24px;
+    bottom: 80px;
+    width: 420px;
+    max-height: 60vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#luaResult .body {
+    padding: 8px 10px 10px;
+    overflow: auto;
+}
+
+#luaResult .label {
+    margin: 6px 0 2px;
+    color: #555;
+    font-size: 12px;
+}
+
+#luaResult pre {
+    margin: 0;
+    padding: 6px 8px;
+    max-height: 30vh;
+    overflow: auto;
+    background: #1e1e1e;
+    color: #ddd;
+    border-radius: 3px;
+    font: 12px Consolas, "D2Coding", "DejaVu Sans Mono", monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+#luaResult pre.value {
+    color: #9fe39f;
+}
+
+#luaResult pre.error {
+    color: #ff9a9a;
+}
+
+#luaResult .ms {
+    margin-top: 6px;
+    text-align: right;
+}

@@ -3,6 +3,7 @@
 
 import {dbg} from './debug';
 import {ambiguousFontReady, fontFamily, NARROW, WIDE} from './cjkwidth';
+import {applyCat} from './cat';
 import {loadRules} from './highlight';
 import {saveSettings, settings} from './settings';
 import {themeByName} from './themes';
@@ -163,6 +164,7 @@ export function applySettings() {
     applyFontSize();
     loadRules();
     for (const t of tabs.values()) t.hl.reset();
+    applyCat();
 }
 
 export function applyLook(t: Tab) {

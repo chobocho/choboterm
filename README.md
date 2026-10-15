@@ -120,6 +120,9 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
 - **Macros**: Open the macro window with `Ctrl+Shift+M` to save frequently used commands and send them (`Enter` / double-click in the list).
   - Assign one of `F2`–`F12`, `Shift+F1`–`F12` or `Ctrl+F1`–`F12` to a macro to send it with that key. Keys not assigned are passed through unchanged to programs such as mc or htop.
   - Line breaks in the content are sent as `Enter`, and you can use `\t` (Tab), `\e` (Esc), `\xHH` (e.g. `\x03` = Ctrl+C) and `\\` (backslash).
+- **The cat**: an orange tabby walks along the bottom of the window. It walks, sits and looks around, grooms, stretches, jumps, rolls over and curls up to sleep (zZ).
+  - **Drag** it somewhere else and it carries on at that height. **Click** it for a Lua box: `Ctrl+Enter` (or "Run") runs the code and a result window shows the output, the values and any error. It runs on its own, without a tab, so it works as a calculator with no connection (no `send` or `screen`; stopped after 10 seconds).
+  - The first time, it tells you about clicking and dragging and how to hide it. Turn it on and off with "Show the cat" in Settings (`Ctrl+Shift+O`).
 - **Lua scripts**: Automate tasks that watch the output and type input, such as automatic login or repeated commands, with Lua (5.1 syntax, [gopher-lua](https://github.com/yuin/gopher-lua)).
   - If you set the type to "Lua script (runs in the tab)" in the macro window, that macro (including its assigned F key) runs as a script. "Run Lua script..." in the tab context menu runs a `.lua` file from `Documents\choboterm\scripts` (3 examples are placed there the first time it opens).
   - Available functions: `send(string)` sends input (`"\r"` = Enter), `expect(pattern, seconds)` waits until a Lua pattern appears in the output (compared with colors and control codes removed; returns `nil` on timeout, default 30 seconds), `sleep(milliseconds)`, `screen()` the text currently on screen, `print(...)`. Also `string` · `table` · `math` · `os.time/clock/date`; files (`io`), running commands and `require` are not available.
@@ -344,6 +347,7 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/tabmenu.ts` / `panels.ts` / `shortcuts.ts` | Tab menu and its color themes; opening the settings · sessions · macro · forwarding · containers windows; which keys are the app's |
 | `frontend/src/look.ts` / `clipboard.ts` / `title.ts` / `notify.ts` | Renderer · fonts · colors · translucency; copy and paste; the window title; toast and terminal notices |
 | `frontend/src/luaconsole.ts` | Lua script box and the Lua console |
+| `frontend/src/cat.ts` · `internal/app/luaeval.go` | The cat (what it does, dragging, the Lua box and result window on a click, the first-time guide); running Lua once without a tab |
 | `frontend/e2e/` | End-to-end tests of the page (Playwright, against a headless choboterm): `npm run test:e2e` in `frontend` |
 | `frontend/src/files.ts` | File transfer window (multi-select, drag-and-drop upload, delete · rename · new folder), progress box |
 | `frontend/src/viewer.ts` / `internal/app/viewer.go` | Text viewer · editor (CodeMirror, automatic / forced encoding, saving to the server · conflict check, converted save) |
@@ -364,6 +368,7 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/imageview.ts` | Image viewer window |
 | `frontend/src/cjkwidth.ts` | Double-width character handling in EUC-KR mode |
 | `tools/make_icon.py` | App icon generation (`build/appicon.png`, `build/windows/icon.ico`) |
+| `tools/make_cat.py` | Builds the cat's sprites from the artist's sheet (`frontend/src/assets/cat.png`, `frontend/src/catframes.json`; the walk's step per frame is worked out so the paws don't slide) |
 
 ## Not supported yet
 

@@ -37,6 +37,7 @@ const logAuto = $<HTMLInputElement>('pLogAuto');
 const logPlain = $<HTMLInputElement>('pLogPlain');
 const logTime = $<HTMLInputElement>('pLogTime');
 const updateCheck = $<HTMLInputElement>('pUpdate');
+const catOn = $<HTMLInputElement>('pCat');
 const updateNow = $<HTMLButtonElement>('pUpdateNow');
 const updateMsg = $<HTMLSpanElement>('pUpdateMsg');
 const language = $<HTMLSelectElement>('pLang');
@@ -144,6 +145,7 @@ export function openPrefs(apply: () => void, close: () => void) {
     logPlain.checked = !settings.logRaw;
     logTime.checked = settings.logTime;
     updateCheck.checked = settings.updateCheck;
+    catOn.checked = settings.cat;
     updateMsg.textContent = '';
     language.value = settings.language || '';
     logDir.value = settings.logDir;
@@ -244,6 +246,7 @@ function apply() {
         s.logRaw = !logPlain.checked;
         s.logTime = logTime.checked;
         s.updateCheck = updateCheck.checked;
+        s.cat = catOn.checked;
         s.language = language.value;
         s.logDir = logDir.value.trim();
         s.highlight = config.Highlight.createFrom({
