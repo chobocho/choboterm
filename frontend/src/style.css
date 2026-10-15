@@ -1918,6 +1918,19 @@ body.resizing-col #terms .term {
     min-width: 0;
 }
 
+.dk .dktop #dkEngine {
+    flex: none;
+    width: auto; /* not .body select's 100% */
+}
+
+/* Which engine answers, and its version: "podman 4.9.3". */
+.dk .dkengine {
+    flex: none;
+    color: #555;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
 .dk .dktop label {
     flex: none;
     display: block;

@@ -25,6 +25,7 @@ export let settings: config.Settings = config.Settings.createFrom({
     updateCheck: false,
     cat: true,
     catIntro: false,
+    dockerEngines: {} as Record<string, string>,
     language: '',
     highlight: {
         on: true,

@@ -8,7 +8,9 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -73,10 +75,10 @@ func TestWinQuote(t *testing.T) {
 }
 
 func TestDockerError(t *testing.T) {
-	if err := dockerError("x\n"+noDocker+"\n", nil); err != errNoDocker {
+	if err := dockerError("", "x\n"+noDocker+"\n", nil); err.Error() != errNoEngine("").Error() {
 		t.Errorf("no docker: %v", err)
 	}
-	if err := dockerError("permission denied while trying to connect to the Docker daemon socket", nil); !strings.Contains(err.Error(), "usermod") {
+	if err := dockerError("", "permission denied while trying to connect to the Docker daemon socket", nil); !strings.Contains(err.Error(), "usermod") {
 		t.Errorf("permission: %v", err)
 	}
 	for _, msg := range []string{
@@ -85,14 +87,14 @@ func TestDockerError(t *testing.T) {
 		"Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
 		`error during connect: Get "http://127.0.0.1:1/v1.52/containers/json": dial tcp 127.0.0.1:1: connectex: refused`,
 	} {
-		if err := dockerError(msg, nil); !strings.Contains(err.Error(), "실행 중이 아닙니다") {
+		if err := dockerError("", msg, nil); !strings.Contains(err.Error(), "실행 중이 아닙니다") {
 			t.Errorf("%q: %v", msg, err)
 		}
 	}
-	if err := dockerError("permission denied while trying to connect to the docker API at unix:///var/run/docker.sock", nil); !strings.Contains(err.Error(), "usermod") {
+	if err := dockerError("", "permission denied while trying to connect to the docker API at unix:///var/run/docker.sock", nil); !strings.Contains(err.Error(), "usermod") {
 		t.Errorf("permission (docker 29): %v", err)
 	}
-	if err := dockerError("Error: No such container: x\nmore", nil); err.Error() != "Error: No such container: x" {
+	if err := dockerError("", "Error: No such container: x\nmore", nil); err.Error() != "Error: No such container: x" {
 		t.Errorf("first line: %v", err)
 	}
 }
@@ -208,24 +210,24 @@ func TestDockerRemote(t *testing.T) {
 	}
 	a.getTab(1).sess = &sshconn.Session{Client: client}
 
-	list, err := a.DockerList(1, false)
+	list, err := a.DockerList(1, false, "")
 	if err != nil || len(list) != 1 || list[0].Name != "web" || !list[0].Running || list[0].Published[0].Port != 8080 {
 		t.Fatalf("list: %+v %v", list, err)
 	}
-	if list, err = a.DockerList(1, true); err != nil || len(list) != 2 || list[1].Running {
+	if list, err = a.DockerList(1, true, ""); err != nil || len(list) != 2 || list[1].Running {
 		t.Fatalf("list -a: %+v %v", list, err)
 	}
-	if err := a.DockerAction(1, "c1", "restart"); err != nil {
+	if err := a.DockerAction(1, "c1", "restart", ""); err != nil {
 		t.Errorf("restart: %v", err)
 	}
-	if err := a.DockerAction(1, "gone", "stop"); err == nil || err.Error() != "Error: No such container: gone" {
+	if err := a.DockerAction(1, "gone", "stop", ""); err == nil || err.Error() != "Error: No such container: gone" {
 		t.Errorf("stop gone: %v", err)
 	}
-	if _, err := a.DockerList(9, false); err == nil {
+	if _, err := a.DockerList(9, false, ""); err == nil {
 		t.Error("list on a tab that isn't connected")
 	}
 
-	if err := a.DockerOpen(2, 1, "c1", "shell", "web@test", 80, 24); err != nil {
+	if err := a.DockerOpen(2, 1, "c1", "shell", "web@test", 80, 24, ""); err != nil {
 		t.Fatal(err)
 	}
 	var out strings.Builder
@@ -249,7 +251,109 @@ wait:
 
 	// The exec tab ended and was closed; the first tab's connection still works.
 	a.CloseTab(2)
-	if _, err := a.DockerList(1, false); err != nil {
+	if _, err := a.DockerList(1, false, ""); err != nil {
 		t.Errorf("connection closed with the exec tab: %v", err)
+	}
+}
+
+func TestEngineChoice(t *testing.T) {
+	for engine, want := range map[string]string{"": "docker podman", "docker": "docker", "podman": "podman"} {
+		names, err := engineNames(engine)
+		if err != nil || strings.Join(names, " ") != want {
+			t.Errorf("%q: %v %v", engine, names, err)
+		}
+	}
+	if _, err := engineNames("lxc"); err == nil {
+		t.Error("an unknown engine was taken")
+	}
+	// on a server: the commands looked for, in order
+	if s := remoteDocker([]string{"podman"}, "ps"); !strings.Contains(s, "command -v podman)") || strings.Contains(s, "docker") {
+		t.Errorf("podman only: %s", s)
+	}
+	if s := remoteDocker([]string{"docker", "podman"}, "ps"); !strings.Contains(s, "command -v docker || command -v podman)") {
+		t.Errorf("auto: %s", s)
+	}
+	for engine, want := range map[string]string{"": "docker(또는 podman)를", "docker": "docker를", "podman": "podman을"} {
+		if err := dockerError(engine, noDocker, nil); !strings.Contains(err.Error(), want) {
+			t.Errorf("%q not found: %v", engine, err)
+		}
+	}
+}
+
+func TestPodmanErrors(t *testing.T) {
+	for msg, want := range map[string]string{
+		// podman on Windows / macOS with its VM stopped
+		"Cannot connect to Podman. Please verify your connection to the Linux system using `podman system connection list`, or try `podman machine init` and `podman machine start` to manage a new Linux VM\nError: unable to connect to Podman socket": "podman machine start",
+		"Error: unable to connect to Podman socket: Get \"http://d/v5.2.1/libpod/_ping\": dial unix /run/user/1000/podman/podman.sock: connect: no such file or directory":                                                                               "podman.socket",
+	} {
+		if err := dockerError("podman", msg, nil); !strings.Contains(err.Error(), want) {
+			t.Errorf("%.40q: %v, want %q", msg, err, want)
+		}
+	}
+}
+
+// fakeEngines puts shell scripts named docker and/or podman alone on PATH.
+// Each prints its name for ps and a version for "version"; podman's
+// "version" may fail after printing, as with its VM stopped.
+func fakeEngines(t *testing.T, names ...string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell scripts as commands")
+	}
+	dir := t.TempDir()
+	scripts := map[string]string{
+		"docker": "#!/bin/sh\n" +
+			"if [ \"$1\" = version ]; then echo 27.3.1; exit 0; fi\n" +
+			"if [ \"$1\" = ps ]; then printf 'd1\\tfromdocker\\tnginx\\tUp 1 hour\\t\\t1 hour ago\\n'; exit 0; fi\n" +
+			"echo \"docker $*\"\n",
+		"podman": "#!/bin/sh\n" +
+			"if [ \"$1\" = version ]; then echo 5.2.1; echo 'Cannot connect to Podman. try podman machine start' >&2; exit 125; fi\n" +
+			"if [ \"$1\" = ps ]; then printf 'p1\\tfrompodman\\tbusybox\\tUp 2 minutes\\t0.0.0.0:8080->80/tcp\\t2 minutes ago\\n'; exit 0; fi\n" +
+			"if [ \"$1\" = stop ]; then echo 'Cannot connect to Podman. Please verify your connection, or try podman machine init and podman machine start' >&2; exit 125; fi\n" +
+			"echo \"podman $*\"\n",
+	}
+	for _, n := range names {
+		if err := os.WriteFile(filepath.Join(dir, n), []byte(scripts[n]), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", dir)
+}
+
+func TestLocalEngines(t *testing.T) {
+	fakeEngines(t, "docker", "podman")
+	a := NewApp()
+	for engine, want := range map[string]DockerEngine{
+		"":       {Name: "docker", Version: "27.3.1"},
+		"docker": {Name: "docker", Version: "27.3.1"},
+		"podman": {Name: "podman", Version: "5.2.1"}, // printed, then failed: still told
+	} {
+		if got, err := a.DockerEngineInfo(0, engine); err != nil || got != want {
+			t.Errorf("%q: %+v %v, want %+v", engine, got, err, want)
+		}
+	}
+	list, err := a.DockerList(0, false, "podman")
+	if err != nil || len(list) != 1 || list[0].Name != "frompodman" || list[0].Published[0].Port != 8080 {
+		t.Fatalf("podman list: %+v %v", list, err)
+	}
+	if list, err = a.DockerList(0, false, ""); err != nil || list[0].Name != "fromdocker" {
+		t.Fatalf("auto list: %+v %v", list, err)
+	}
+	if err := a.DockerAction(0, "p1", "stop", "podman"); err == nil || !strings.Contains(err.Error(), "podman machine start") {
+		t.Fatalf("podman with its VM stopped: %v", err)
+	}
+}
+
+func TestLocalEngineFallback(t *testing.T) {
+	fakeEngines(t, "podman")
+	a := NewApp()
+	if got, err := a.DockerEngineInfo(0, ""); err != nil || got.Name != "podman" {
+		t.Fatalf("auto without docker: %+v %v", got, err)
+	}
+	if _, err := a.DockerEngineInfo(0, "docker"); err == nil || err.Error() != "docker를 찾을 수 없습니다" {
+		t.Fatalf("docker chosen, not there: %v", err)
+	}
+	if _, err := a.DockerList(0, false, "docker"); err == nil || err.Error() != "docker를 찾을 수 없습니다" {
+		t.Fatalf("docker chosen, not there: %v", err)
 	}
 }

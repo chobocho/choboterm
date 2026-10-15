@@ -490,9 +490,7 @@
   "셸 · 로그는 이 접속을 함께 쓰는 새 탭으로 엽니다(접속을 끊으면 함께 닫힘). 포트 열기: 서버의 포트를 이 PC의 같은 포트로 포워딩(-L)하고 브라우저로 엽니다.": "A shell or log opens in a new tab sharing this connection (it closes when the connection ends). Open port: forwards the server's port to the same port on this PC (-L) and opens it in the browser.",
   "실행 중인 컨테이너가 없습니다": "No running containers",
   "컨테이너가 없습니다": "No containers",
-  "이 PC (Docker Desktop)": "This PC (Docker Desktop)",
   "이 PC의 셸: bash · zsh · fish · sh": "Shells on this PC: bash · zsh · fish · sh",
-  "이 PC의 docker(또는 podman)입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.": "docker (or podman) on this PC. Open port: opens http://localhost:port in the browser.",
   "자동 (시스템 언어)": "Auto (system language)",
   "비밀번호 저장 (Windows 사용자 계정 · Linux 키링으로 암호화)": "Save password (encrypted with your Windows account · Linux keyring)",
   "비밀번호도 저장 (Windows 사용자 계정 · Linux 키링으로 암호화)": "Save the password too (encrypted with your Windows account · Linux keyring)",
@@ -501,7 +499,6 @@
   "저장된 비밀번호가 손상되었습니다": "The saved password is damaged",
   "이 PC": "This PC",
   "{} @ 이 PC": "{} @ This PC",
-  "이 PC의 Docker Desktop(또는 podman)입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.": "Docker Desktop (or podman) on this PC. Open port: opens http://localhost:port in the browser.",
   "재시작": "Restart",
   "시작": "Start",
   "컨테이너 재시작": "Restart container",
@@ -628,5 +625,13 @@
   "폴더가 아닙니다: {}": "Not a folder: {}",
   "너무 자주 엽니다 ({}초에 {}번까지)": "Opening too often (up to {1} times in {0} seconds)",
   "열 수 없는 종류입니다: {}": "Can't open this kind: {}",
-  "너무 깁니다": "Too long"
+  "너무 깁니다": "Too long",
+  "컨테이너 엔진 (이곳마다 기억)": "Container engine (kept for each place)",
+  "이 PC의 컨테이너입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.": "Containers on this PC. Open port: opens http://localhost:port in the browser.",
+  "docker를 찾을 수 없습니다": "docker was not found",
+  "podman을 찾을 수 없습니다": "podman was not found",
+  "podman이 응답하지 않습니다": "podman is not responding",
+  "알 수 없는 엔진: {}": "Unknown engine: {}",
+  "podman machine이 실행 중이 아닙니다. podman machine start 로 켜세요 (처음이면 podman machine init 먼저)": "podman machine is not running. Start it with podman machine start (the first time, podman machine init first)",
+  "podman 소켓에 연결할 수 없습니다. systemctl --user start podman.socket 으로 켜거나 podman system connection list 로 확인하세요": "Can't connect to the podman socket. Start it with systemctl --user start podman.socket, or check podman system connection list"
 }

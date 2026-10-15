@@ -13,9 +13,10 @@ DebugEnabled() (bool)
 DebugLog(string)
 DeleteSession(string) (error)
 Disconnect(int)
-DockerAction(int, string, string) (error)
-DockerList(int, bool) ([]Container, error)
-DockerOpen(int, int, string, string, string, int, int) (error)
+DockerAction(int, string, string, string) (error)
+DockerEngineInfo(int, string) (DockerEngine, error)
+DockerList(int, bool, string) ([]Container, error)
+DockerOpen(int, int, string, string, string, int, int, string) (error)
 EvalLua(string) (LuaResult, error)
 ExportSessions() (string, error)
 FileCancel(int)
@@ -105,6 +106,11 @@ container {
     "ports" string
     "published" []dockerPort
     "created" string
+}
+
+dockerEngine {
+    "name" string
+    "version" string
 }
 
 dockerPort {
@@ -326,6 +332,7 @@ settings {
     "updateCheck" bool
     "cat" bool
     "catIntro" bool
+    "dockerEngines,omitempty" map[string]string
     "window,omitempty" *windowState
     "update,omitempty" *updateState
     "web,omitempty" *webSettings

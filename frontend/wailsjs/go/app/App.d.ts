@@ -37,11 +37,13 @@ export function DeleteSession(arg1:string):Promise<void>;
 
 export function Disconnect(arg1:number):Promise<void>;
 
-export function DockerAction(arg1:number,arg2:string,arg3:string):Promise<void>;
+export function DockerAction(arg1:number,arg2:string,arg3:string,arg4:string):Promise<void>;
 
-export function DockerList(arg1:number,arg2:boolean):Promise<Array<app.Container>>;
+export function DockerEngineInfo(arg1:number,arg2:string):Promise<app.DockerEngine>;
 
-export function DockerOpen(arg1:number,arg2:number,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number):Promise<void>;
+export function DockerList(arg1:number,arg2:boolean,arg3:string):Promise<Array<app.Container>>;
+
+export function DockerOpen(arg1:number,arg2:number,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number,arg8:string):Promise<void>;
 
 export function EvalLua(arg1:string):Promise<app.LuaResult>;
 

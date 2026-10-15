@@ -17,6 +17,7 @@ interface Action {
     h: number;
     frames: number[][];
     steps?: number[]; // walk: atlas px the nose moves when frame i comes up (keeps the paws put)
+    ms?: number; // walk: how long a frame shows (before TEMPO), when it isn't the default
 }
 interface Meta {
     height: number;
@@ -122,7 +123,9 @@ const hold = (act: string, frame: number, ms: number) => queue.push({act, frame,
 function walk(cycles: number) {
     const steps = META.actions.walk.steps ?? [];
     for (let c = 0; c < cycles; c++) {
-        for (let i = 0; i < steps.length; i++) queue.push({act: 'walk', frame: i, ms: 170, move: steps[i] * SCALE});
+        // The walk comes from a video at its own frame rate (see make_cat.py --walk).
+        const ms = META.actions.walk.ms ?? 170;
+        for (let i = 0; i < steps.length; i++) queue.push({act: 'walk', frame: i, ms, move: steps[i] * SCALE});
     }
     pose = 'stand';
 }

@@ -54,16 +54,20 @@ export function Disconnect(arg1) {
   return window['go']['app']['App']['Disconnect'](arg1);
 }
 
-export function DockerAction(arg1, arg2, arg3) {
-  return window['go']['app']['App']['DockerAction'](arg1, arg2, arg3);
+export function DockerAction(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['DockerAction'](arg1, arg2, arg3, arg4);
 }
 
-export function DockerList(arg1, arg2) {
-  return window['go']['app']['App']['DockerList'](arg1, arg2);
+export function DockerEngineInfo(arg1, arg2) {
+  return window['go']['app']['App']['DockerEngineInfo'](arg1, arg2);
 }
 
-export function DockerOpen(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
-  return window['go']['app']['App']['DockerOpen'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+export function DockerList(arg1, arg2, arg3) {
+  return window['go']['app']['App']['DockerList'](arg1, arg2, arg3);
+}
+
+export function DockerOpen(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['app']['App']['DockerOpen'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
 
 export function EvalLua(arg1) {

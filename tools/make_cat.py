@@ -10,16 +10,27 @@ on), scaled so a walking cat is 96 px tall (twice its 48 px on screen),
 aligned on their feet and noses, and packed into cat.png with the frame
 positions in catframes.json.
 
-Usage: python tools/make_cat.py SHEET.png [PREVIEW_DIR]
+The walk can come from a video of the cat walking in place instead (the
+sheet's walking rows are separate poses with a hind leg in the air, so the
+cat looked three-legged): --walk VIDEO FIRST EVERY COUNT takes COUNT frames
+of VIDEO, from frame FIRST (0-based), every EVERY frames: one whole cycle.
+The cat is cut out of the plain gray background by its colour, all frames
+are cropped to one box (the body stays put, the legs move), and the step
+per frame comes from the paws on the ground, as for the sheet.
+
+Usage: python tools/make_cat.py SHEET.png [PREVIEW_DIR] [--walk VIDEO FIRST EVERY COUNT]
+  e.g. python tools/make_cat.py sheet.png --walk walk.mp4 0 2 13
 Writes frontend/src/assets/cat.png and frontend/src/catframes.json.
-Requires Pillow.
+Requires Pillow; --walk also numpy and ffmpeg.
 """
 import json
 import os
+import subprocess
 import sys
+import tempfile
 from collections import deque
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 HEIGHT = 96  # a walking cat, in atlas px; shown at half size, so sharp on HiDPI too
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
@@ -212,20 +223,83 @@ def locked_step(a, b):
     return best[1]
 
 
+def video_frames(video, first, every, count):
+    """count frames of video from frame first (0-based), every every frames, through ffmpeg."""
+    want = [first + i * every for i in range(count)]
+    sel = '+'.join(f'eq(n\\,{n})' for n in want)
+    with tempfile.TemporaryDirectory() as d:
+        subprocess.run(['ffmpeg', '-v', 'error', '-i', video, '-vf', f"select='{sel}'",
+                        '-fps_mode', 'passthrough', os.path.join(d, 'f%03d.png')], check=True)
+        return [Image.open(os.path.join(d, f'f{i + 1:03d}.png')).convert('RGB') for i in range(count)]
+
+
+def video_mask(frame):
+    """The cat in a video frame: saturated (orange, brown, cream, green, pink)
+    or dark (the outline) pixels, with the holes inside filled (eye glints).
+    The background, its shadow and the watermark are gray and drop out; so do
+    the outline's light anti-aliased edge pixels, which would leave a gray
+    fringe."""
+    import numpy as np
+    a = np.asarray(frame, dtype=np.float32) / 255
+    mx, mn = a.max(2), a.min(2)
+    cat = ((mx - mn) / (mx + 1e-6) > 0.18) | (mx < 0.22)
+    # Everything not reachable from the border without crossing the cat is cat.
+    # (copy: an image made by fromarray shares the array's read-only buffer,
+    # and floodfill silently does nothing on it)
+    outside = Image.fromarray(np.where(cat, 0, 255).astype(np.uint8)).copy()
+    ImageDraw.floodfill(outside, (0, 0), 128)
+    return np.asarray(outside) != 128
+
+
+def walk_from_video(video, first, every, count):
+    """The walk's frames from a video of the cat walking in place, all of one size."""
+    import numpy as np
+    frames = video_frames(video, first, every, count)
+    masks = [video_mask(f) for f in frames]
+    # One box for all: the union of each frame's cat, outliers (compression
+    # specks) left out by taking the 0.1th..99.9th percentile of its pixels.
+    boxes = []
+    for m in masks:
+        ys, xs = np.nonzero(m)
+        x0, x1 = np.percentile(xs, [0.1, 99.9])
+        y0, y1 = np.percentile(ys, [0.1, 99.9])
+        boxes.append((int(x0), int(y0), int(x1) + 1, int(y1) + 1))
+    box = (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
+    out = []
+    for f, m in zip(frames, masks):
+        rgba = f.convert('RGBA')
+        rgba.putalpha(Image.fromarray((m * 255).astype(np.uint8)))
+        out.append(rgba.crop(box))
+    print(f'walk from video: {count} frames, box {box}')
+    return out
+
+
+def shrink(im, size):
+    """im resized with premultiplied alpha, so transparent pixels' colour
+    doesn't bleed into the edges."""
+    return im.convert('RGBa').resize(size, Image.LANCZOS).convert('RGBA')
+
+
 def save_png(im, path):
     """A 128-colour palette PNG (with alpha): a fifth of the size of full colour."""
     im.quantize(colors=128, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(path, optimize=True)
 
 
-def main(sheet_path, preview_dir=None):
+def main(sheet_path, preview_dir=None, walk=None):
     acts = actions_of(Image.open(sheet_path).convert('RGBA'))
     walk_h = sorted(f.size[1] for f in acts['walkB'])[1]
     scale = HEIGHT / walk_h
     strips = []
     for name, parts in ATLAS.items():
-        frames = [acts[row][i] for row, i in parts]
-        frames = [f.resize((max(1, round(f.size[0] * scale)), max(1, round(f.size[1] * scale))), Image.LANCZOS)
-                  for f in frames]
+        if name == 'walk' and walk:
+            vframes = walk_from_video(*walk)
+            # as tall as the sheet's walking cat
+            vs = HEIGHT / vframes[0].size[1]
+            frames = [shrink(f, (round(f.size[0] * vs), HEIGHT)) for f in vframes]
+        else:
+            frames = [acts[row][i] for row, i in parts]
+            frames = [f.resize((max(1, round(f.size[0] * scale)), max(1, round(f.size[1] * scale))), Image.LANCZOS)
+                      for f in frames]
         # one size per action: feet on the bottom, nose (right edge) on the right
         fw, fh = max(f.size[0] for f in frames), max(f.size[1] for f in frames)
         strips.append((name, fw, fh, frames))
@@ -248,8 +322,18 @@ def main(sheet_path, preview_dir=None):
                 padded.append(g)
             # steps[i]: atlas px the body moves when frame i follows frame i-1
             steps = [locked_step(padded[i - 1], padded[i]) for i in range(len(padded))]
-            meta['actions'][name]['steps'] = steps
             print('walk steps (atlas px):', steps)
+            if walk:
+                # In the video the cat walks on a treadmill at an even pace, so
+                # the paws on the ground move back evenly: the same step every
+                # frame, the measured ones' mean, keeps them put without the
+                # jitter of whole-pixel measurements. Frames are 1/24 s apart
+                # in the video: ms is how long each is shown (before TEMPO).
+                mean = sum(steps) / len(steps)
+                steps = [round(mean, 2)] * len(steps)
+                meta['actions'][name]['ms'] = round(1000 * walk[2] / 24)
+                print(f'walk step {steps[0]} atlas px, {meta["actions"][name]["ms"]} ms a frame')
+            meta['actions'][name]['steps'] = steps
         y += fh
     os.makedirs(os.path.dirname(OUT_PNG), exist_ok=True)
     save_png(atlas, OUT_PNG)
@@ -265,6 +349,15 @@ def main(sheet_path, preview_dir=None):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) not in (2, 3):
+    argv = sys.argv[1:]
+    walk = None
+    if '--walk' in argv:
+        i = argv.index('--walk')
+        if len(argv) < i + 5:
+            sys.exit(__doc__)
+        video, first, every, count = argv[i + 1:i + 5]
+        walk = (video, int(first), int(every), int(count))
+        del argv[i:i + 5]
+    if len(argv) not in (1, 2):
         sys.exit(__doc__)
-    main(*sys.argv[1:])
+    main(*argv, walk=walk)
