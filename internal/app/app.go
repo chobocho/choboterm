@@ -102,7 +102,8 @@ type testHooks struct {
 	downloadDir string
 	confirmKey  func(host, fingerprint string) bool
 	prompt      func(Prompt) ([]string, bool)
-	picker      dialog.Picker // replaces the file dialogs
+	picker      dialog.Picker                   // replaces the file dialogs
+	open        func(kind, target string) error // replaces opening a page or folder on this PC
 }
 
 // NewApp creates a new App application struct

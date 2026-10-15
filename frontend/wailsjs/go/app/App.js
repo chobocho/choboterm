@@ -206,6 +206,10 @@ export function MemoSave(arg1) {
   return window['go']['app']['App']['MemoSave'](arg1);
 }
 
+export function OpenTarget(arg1, arg2) {
+  return window['go']['app']['App']['OpenTarget'](arg1, arg2);
+}
+
 export function Quit() {
   return window['go']['app']['App']['Quit']();
 }

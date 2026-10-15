@@ -136,6 +136,7 @@ export namespace app {
 	    value: string;
 	    error: string;
 	    ms: number;
+	    open?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new LuaResult(source);
@@ -147,6 +148,21 @@ export namespace app {
 	        this.value = source["value"];
 	        this.error = source["error"];
 	        this.ms = source["ms"];
+	        this.open = source["open"];
+	    }
+	}
+	export class Opened {
+	    target: string;
+	    inPage: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Opened(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.target = source["target"];
+	        this.inPage = source["inPage"];
 	    }
 	}
 	export class SaveResult {

@@ -37,7 +37,8 @@ type LuaMsg struct {
 // App → host: run (D = source) or repl (a console), out (terminal output),
 // ret (reply to a call), eval (console input, D = code), interrupt (stop the
 // running eval), stop.
-// Host → app: send / screen (calls, answered with ret), print, evaldone (D =
+// Host → app: send / screen / openurl / openfolder (calls, answered with
+// ret), print, evaldone (D =
 // the values, Err = why it failed), done (Err = why the script failed).
 
 const (
@@ -499,8 +500,23 @@ func openSafeLibs(L *lua.LState) {
 	}
 }
 
-// register adds the choboterm functions: send, expect, sleep, screen, print.
+// register adds the choboterm functions: send, expect, sleep, screen, print,
+// open_url, open_folder.
 func (h *luaHost) register(L *lua.LState) {
+	// open_url / open_folder ask the app, which checks the address or folder
+	// (http(s) only, folders that exist) and limits how often.
+	for _, f := range []struct{ name, t string }{{"open_url", "openurl"}, {"open_folder", "openfolder"}} {
+		L.SetGlobal(f.name, L.NewFunction(func(L *lua.LState) int {
+			s := L.CheckString(1)
+			if len(s) > 4096 {
+				L.RaiseError("%s: 너무 깁니다", f.name)
+			}
+			if _, err := h.call(L.Context(), LuaMsg{T: f.t, D: s}); err != nil {
+				L.RaiseError("%s: %s", f.name, err.Error())
+			}
+			return 0
+		}))
+	}
 	L.SetGlobal("send", L.NewFunction(func(L *lua.LState) int {
 		s := L.CheckString(1)
 		if len(s) > luaMaxSend {

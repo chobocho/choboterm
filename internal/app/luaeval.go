@@ -24,6 +24,9 @@ type LuaResult struct {
 	Value  string `json:"value"`  // the values it returned, tab-separated ("" if none)
 	Error  string `json:"error"`  // why it failed ("" if it didn't)
 	Ms     int64  `json:"ms"`     // how long it ran
+	// Addresses open_url gave for the page to open itself (a browser on
+	// another PC); on this PC they are already open.
+	Open []string `json:"open,omitempty"`
 }
 
 const luaEvalMaxOutput = 64 << 10 // printed text kept; the rest is cut
@@ -164,6 +167,15 @@ func (a *App) EvalLua(code string) (LuaResult, error) {
 				}
 			case "send", "screen":
 				write(luahost.LuaMsg{T: "ret", ID: r.m.ID, Err: "탭 없이 실행할 때는 " + r.m.T + "()를 쓸 수 없습니다"})
+			case "openurl", "openfolder":
+				ret := luahost.LuaMsg{T: "ret", ID: r.m.ID}
+				o, err := a.open(a.local(), strings.TrimPrefix(r.m.T, "open"), r.m.D)
+				if err != nil {
+					ret.Err = err.Error()
+				} else if o.InPage {
+					res.Open = append(res.Open, o.Target)
+				}
+				write(ret)
 			case "evaldone":
 				res.Value, res.Error = r.m.D, r.m.Err
 				if interrupted && res.Error != "" {
