@@ -1,18 +1,22 @@
 // Docker container window (Ctrl+Shift+J): the containers of the active tab's
 // SSH server or of this PC (Docker Desktop). A shell or a log opens in a new
-// tab; on a server it is an extra session on that tab's connection.
+// tab; on a server it is an extra session on that tab's connection. The
+// engine (docker or podman, same command line) is chosen per place and kept
+// in the settings; the window shows which one answers and its version.
 
-import {DockerAction, DockerList, ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/app/App';
+import {DockerAction, DockerEngineInfo, DockerList, ForwardAdd, ForwardList, ForwardRemove} from '../wailsjs/go/app/App';
 import {app, store} from '../wailsjs/go/models';
 import {BrowserOpenURL} from '../wailsjs/runtime/runtime';
 import {ask} from './dialog';
-import {isLinux} from './platform';
+import {saveSettings, settings} from './settings';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 const overlay = $<HTMLDivElement>('dkOverlay');
 const panel = $<HTMLDivElement>('dk');
 const source = $<HTMLSelectElement>('dkSrc');
+const engineSel = $<HTMLSelectElement>('dkEngine');
+const engineName = $<HTMLSpanElement>('dkEngineName');
 const all = $<HTMLInputElement>('dkAll');
 const body = $<HTMLTableSectionElement>('dkBody');
 const portSel = $<HTMLSelectElement>('dkPort');
@@ -50,6 +54,28 @@ export function containersOpen() {
 
 function current(): DockerSource {
     return sources[source.selectedIndex] ?? {tab: 0, label: '이 PC'};
+}
+
+/** The settings key of a place: the SSH server as host:port, or this PC. */
+function placeKey(src: DockerSource): string {
+    return src.tab ? `${src.host ?? src.label}:${src.port ?? 22}` : 'local';
+}
+
+/** The engine chosen for src: "" (docker, else podman), "docker" or "podman". */
+export function engineOf(src: DockerSource): string {
+    return settings.dockerEngines?.[placeKey(src)] ?? '';
+}
+
+/** Shows which engine answers at the current place, and its version. */
+async function paintEngine(id: number) {
+    engineSel.value = engineOf(current());
+    engineName.textContent = '';
+    try {
+        const e = await DockerEngineInfo(current().tab, engineSel.value);
+        if (id === loading) engineName.textContent = e.version ? `${e.name} ${e.version}` : e.name;
+    } catch {
+        // DockerList shows why
+    }
 }
 
 function paint() {
@@ -103,9 +129,10 @@ async function refresh() {
     td.colSpan = 4;
     td.className = 'empty';
     td.textContent = '불러오는 중...';
+    void paintEngine(id);
     let got: app.Container[];
     try {
-        got = (await DockerList(current().tab, all.checked)) ?? [];
+        got = (await DockerList(current().tab, all.checked, engineOf(current()))) ?? [];
     } catch (e) {
         got = [];
         if (id === loading) error.textContent = String(e);
@@ -120,9 +147,7 @@ async function refresh() {
 function paintHint() {
     hint.textContent = current().tab
         ? '셸 · 로그는 이 접속을 함께 쓰는 새 탭으로 엽니다(접속을 끊으면 함께 닫힘). 포트 열기: 서버의 포트를 이 PC의 같은 포트로 포워딩(-L)하고 브라우저로 엽니다.'
-        : isLinux
-            ? '이 PC의 docker(또는 podman)입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.'
-            : '이 PC의 Docker Desktop(또는 podman)입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.';
+        : '이 PC의 컨테이너입니다. 포트 열기: 브라우저로 http://localhost:포트 를 엽니다.';
 }
 
 function open(mode: DockerMode) {
@@ -147,7 +172,7 @@ async function act(action: 'start' | 'stop' | 'restart') {
     error.textContent = '';
     for (const b of [startBtn, stopBtn, restartBtn]) b.disabled = true;
     try {
-        await DockerAction(current().tab, c.id, action);
+        await DockerAction(current().tab, c.id, action, engineOf(current()));
     } catch (e) {
         error.textContent = String(e);
         paint();
@@ -193,7 +218,7 @@ async function openPort() {
  * "this PC" is added at the end. open makes the tab for a shell or a log.
  */
 export async function openContainers(srcs: DockerSource[], openTab: typeof onOpen, close: () => void) {
-    fillSources([...srcs, {tab: 0, label: isLinux ? '이 PC' : '이 PC (Docker Desktop)'}]);
+    fillSources([...srcs, {tab: 0, label: '이 PC'}]);
     onOpen = openTab;
     onClose = close;
     list = [];
@@ -233,6 +258,17 @@ export function containersTabClosed(id: number) {
 
 source.addEventListener('change', () => {
     paintHint();
+    refresh();
+});
+engineSel.addEventListener('change', () => {
+    const key = placeKey(current());
+    const engine = engineSel.value;
+    saveSettings(s => {
+        const m = {...(s.dockerEngines ?? {})};
+        if (engine) m[key] = engine;
+        else delete m[key]; // automatic: not kept
+        s.dockerEngines = m;
+    });
     refresh();
 });
 all.addEventListener('change', refresh);

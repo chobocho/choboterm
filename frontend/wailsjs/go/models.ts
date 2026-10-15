@@ -74,6 +74,20 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class DockerEngine {
+	    name: string;
+	    version: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerEngine(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.version = source["version"];
+	    }
+	}
 	
 	export class DownloadResult {
 	    dir: string;
@@ -404,6 +418,7 @@ export namespace config {
 	    updateCheck: boolean;
 	    cat: boolean;
 	    catIntro: boolean;
+	    dockerEngines?: Record<string, string>;
 	    window?: WindowState;
 	    update?: UpdateState;
 	    web?: WebSettings;
@@ -438,6 +453,7 @@ export namespace config {
 	        this.updateCheck = source["updateCheck"];
 	        this.cat = source["cat"];
 	        this.catIntro = source["catIntro"];
+	        this.dockerEngines = source["dockerEngines"];
 	        this.window = this.convertValues(source["window"], WindowState);
 	        this.update = this.convertValues(source["update"], UpdateState);
 	        this.web = this.convertValues(source["web"], WebSettings);

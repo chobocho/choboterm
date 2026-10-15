@@ -4,7 +4,7 @@
 import {dbg} from './debug';
 import {Terminal} from '@xterm/xterm';
 import {forwardsTabClosed} from './forwards';
-import {containersTabClosed} from './containers';
+import {containersTabClosed, engineOf} from './containers';
 import {tr} from './i18n';
 import {settings} from './settings';
 import {closeFiles, forgetFiles, openFiles} from './files';
@@ -288,7 +288,7 @@ export async function startDocker(t: Tab) {
     forgetFiles(t.id);
     t.fresh = true;
     try {
-        await DockerOpen(t.id, d.src.tab, d.id, d.mode, `${d.name}@${d.src.label}`, t.term.cols, t.term.rows);
+        await DockerOpen(t.id, d.src.tab, d.id, d.mode, `${d.name}@${d.src.label}`, t.term.cols, t.term.rows, engineOf(d.src));
     } catch (e) {
         t.fresh = false;
         throw e;

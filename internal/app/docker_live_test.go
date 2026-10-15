@@ -129,7 +129,7 @@ func TestDockerLive(t *testing.T) {
 
 	byName := func(all bool) map[string]Container {
 		t.Helper()
-		list, err := a.DockerList(1, all)
+		list, err := a.DockerList(1, all, "")
 		if err != nil {
 			t.Fatalf("list: %v", err)
 		}
@@ -158,7 +158,7 @@ func TestDockerLive(t *testing.T) {
 	}
 
 	// A shell where bash exists: bash, with the tab's size, then exit ends the tab.
-	if err := a.DockerOpen(2, 1, m["ct-ubu"].ID, "shell", "ct-ubu@test", 80, 24); err != nil {
+	if err := a.DockerOpen(2, 1, m["ct-ubu"].ID, "shell", "ct-ubu@test", 80, 24, ""); err != nil {
 		t.Fatal(err)
 	}
 	a.Resize(2, 101, 33)
@@ -170,7 +170,7 @@ func TestDockerLive(t *testing.T) {
 	a.CloseTab(2)
 
 	// No bash (alpine): sh.
-	if err := a.DockerOpen(3, 1, "ct-web", "shell", "ct-web@test", 80, 24); err != nil {
+	if err := a.DockerOpen(3, 1, "ct-web", "shell", "ct-web@test", 80, 24, ""); err != nil {
 		t.Fatal(err)
 	}
 	a.Send(3, "echo M-$((6*7)) $0 $(readlink /proc/$$/exe)\r")
@@ -179,7 +179,7 @@ func TestDockerLive(t *testing.T) {
 	a.CloseTab(3)
 
 	// The log follows new lines.
-	if err := a.DockerOpen(4, 1, "ct-log", "logs", "ct-log@test", 80, 24); err != nil {
+	if err := a.DockerOpen(4, 1, "ct-log", "logs", "ct-log@test", 80, 24, ""); err != nil {
 		t.Fatal(err)
 	}
 	o.waitText(t, 4, "log-line-")
@@ -187,27 +187,27 @@ func TestDockerLive(t *testing.T) {
 	o.waitFor(t, 4, "a new log line", func() bool { return strings.Count(o.text(4), "log-line-") > before })
 	a.CloseTab(4)
 
-	if _, err := a.DockerList(1, false); err != nil {
+	if _, err := a.DockerList(1, false, ""); err != nil {
 		t.Fatalf("connection gone after the container tabs: %v", err)
 	}
 
 	// Stop / start / restart.
-	if err := a.DockerAction(1, "ct-log", "stop"); err != nil {
+	if err := a.DockerAction(1, "ct-log", "stop", ""); err != nil {
 		t.Fatal(err)
 	}
 	if byName(false)["ct-log"].Running {
 		t.Error("ct-log still running after stop")
 	}
-	if err := a.DockerAction(1, "ct-log", "start"); err != nil {
+	if err := a.DockerAction(1, "ct-log", "start", ""); err != nil {
 		t.Fatal(err)
 	}
 	if !byName(false)["ct-log"].Running {
 		t.Error("ct-log not running after start")
 	}
-	if err := a.DockerAction(1, "ct-web", "restart"); err != nil {
+	if err := a.DockerAction(1, "ct-web", "restart", ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.DockerAction(1, "ct-nope", "stop"); err == nil || !strings.Contains(err.Error(), "No such container") {
+	if err := a.DockerAction(1, "ct-nope", "stop", ""); err == nil || !strings.Contains(err.Error(), "No such container") {
 		t.Errorf("stop of a missing container: %v", err)
 	}
 
@@ -232,7 +232,7 @@ func TestDockerLive(t *testing.T) {
 	}
 
 	// The SSH tab ends: a container tab on it ends too.
-	if err := a.DockerOpen(5, 1, "ct-ubu", "shell", "ct-ubu@test", 80, 24); err != nil {
+	if err := a.DockerOpen(5, 1, "ct-ubu", "shell", "ct-ubu@test", 80, 24, ""); err != nil {
 		t.Fatal(err)
 	}
 	a.Send(5, "echo M-$((6*7))\r")
@@ -254,7 +254,7 @@ func TestDockerLocalLive(t *testing.T) {
 	a := NewApp()
 	o := newTabOutput(a)
 
-	list, err := a.DockerList(0, true)
+	list, err := a.DockerList(0, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +267,7 @@ func TestDockerLocalLive(t *testing.T) {
 	}
 
 	// The shell runs in a local pseudo console.
-	if err := a.DockerOpen(1, 0, "ct-ubu", "shell", "ct-ubu@PC", 80, 24); err != nil {
+	if err := a.DockerOpen(1, 0, "ct-ubu", "shell", "ct-ubu@PC", 80, 24, ""); err != nil {
 		t.Fatal(err)
 	}
 	a.Resize(1, 101, 33)
@@ -278,23 +278,72 @@ func TestDockerLocalLive(t *testing.T) {
 	o.waitFor(t, 1, "end after exit", func() bool { return o.isClosed(1) })
 	a.CloseTab(1)
 
-	if err := a.DockerOpen(2, 0, "ct-web", "shell", "ct-web@PC", 80, 24); err != nil {
+	if err := a.DockerOpen(2, 0, "ct-web", "shell", "ct-web@PC", 80, 24, ""); err != nil {
 		t.Fatal(err)
 	}
 	a.Send(2, "echo M-$((6*7)) $0\r")
 	o.waitText(t, 2, "M-42 sh")
 	a.CloseTab(2)
 
-	if err := a.DockerOpen(3, 0, "ct-log", "logs", "ct-log@PC", 80, 24); err != nil {
+	if err := a.DockerOpen(3, 0, "ct-log", "logs", "ct-log@PC", 80, 24, ""); err != nil {
 		t.Fatal(err)
 	}
 	o.waitText(t, 3, "log-line-")
 	a.CloseTab(3)
 
-	if err := a.DockerAction(0, "ct-log", "restart"); err != nil {
+	if err := a.DockerAction(0, "ct-log", "restart", ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.DockerAction(0, "ct-nope", "stop"); err == nil || !strings.Contains(err.Error(), "No such container") {
+	if err := a.DockerAction(0, "ct-nope", "stop", ""); err == nil || !strings.Contains(err.Error(), "No such container") {
 		t.Errorf("stop of a missing container: %v", err)
+	}
+}
+
+// TestPodmanLocalLive uses real podman on this PC, chosen as the engine.
+// It needs a running container named ct-pod publishing a port:
+//
+//	podman run -d --name ct-pod -p 18080:80 docker.io/library/busybox sleep 1000
+//	CHOBOTERM_PODMAN_LIVE=1 go test ./internal/app -run PodmanLocalLive -v
+func TestPodmanLocalLive(t *testing.T) {
+	if os.Getenv("CHOBOTERM_PODMAN_LIVE") == "" {
+		t.Skip("CHOBOTERM_PODMAN_LIVE not set")
+	}
+	a := NewApp()
+	info, err := a.DockerEngineInfo(0, "podman")
+	if err != nil || info.Name != "podman" || info.Version == "" {
+		t.Fatalf("engine: %+v %v", info, err)
+	}
+	t.Logf("engine %+v", info)
+	find := func() *Container {
+		list, err := a.DockerList(0, true, "podman")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := range list {
+			if list[i].Name == "ct-pod" {
+				return &list[i]
+			}
+		}
+		t.Fatalf("ct-pod not listed: %+v", list)
+		return nil
+	}
+	c := find()
+	if !c.Running || len(c.Published) != 1 || c.Published[0].Port != 18080 || c.Published[0].To != "80/tcp" {
+		t.Fatalf("ct-pod: %+v", c)
+	}
+	if err := a.DockerAction(0, "ct-pod", "stop", "podman"); err != nil {
+		t.Fatal(err)
+	}
+	if c = find(); c.Running {
+		t.Fatalf("still running after stop: %+v", c)
+	}
+	if err := a.DockerAction(0, "ct-pod", "start", "podman"); err != nil {
+		t.Fatal(err)
+	}
+	if c = find(); !c.Running {
+		t.Fatalf("not running after start: %+v", c)
+	}
+	if err := a.DockerAction(0, "ct-nope", "stop", "podman"); err == nil || !strings.Contains(err.Error(), "no container") {
+		t.Fatalf("missing container: %v", err)
 	}
 }

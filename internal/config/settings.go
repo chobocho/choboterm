@@ -65,6 +65,10 @@ type Settings struct {
 	// clicking and dragging do, how to hide it) has been shown.
 	Cat      bool `json:"cat"`
 	CatIntro bool `json:"catIntro"`
+	// DockerEngines is the container engine chosen in the container window
+	// per place: "host:port" of an SSH server, or "local" for this PC; the
+	// value is "docker" or "podman" (none: docker, else podman).
+	DockerEngines map[string]string `json:"dockerEngines,omitempty"`
 	// Window is the main window's last position, kept by the Go side only.
 	Window *WindowState `json:"window,omitempty"`
 	// Update is when the last check ran and what it found, kept by the Go side only.

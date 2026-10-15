@@ -3,8 +3,10 @@ package app
 // Docker containers: the container window lists the containers of a tab's SSH
 // server, or of this PC (Docker Desktop), and opens "docker exec" / "docker
 // logs" in new tabs. On a server those tabs are extra sessions on the tab's
-// SSH connection, so they need no login and end with it. Podman is used when
-// docker isn't installed.
+// SSH connection, so they need no login and end with it. The engine is docker
+// or podman (their command lines are the same): chosen per place in the
+// window ("" = docker, or podman when docker isn't installed), and passed
+// with every call, so the Go side keeps no state about it.
 
 import (
 	"bytes"
@@ -12,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -53,39 +56,100 @@ const dockerPsFormat = "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}
 // The shell inside a container: bash when it has one.
 const dockerShell = "command -v bash >/dev/null 2>&1 && exec bash || exec sh"
 
-// noDocker is printed by the server-side script when neither docker nor podman exists.
+// noDocker is printed by the server-side script when the engine isn't there.
 const noDocker = "__CHOBOTERM_NO_DOCKER__"
 
-var errNoDocker = errors.New("docker(또는 podman)를 찾을 수 없습니다")
+// DockerEngine is the container engine the window uses, and which one that is.
+type DockerEngine struct {
+	Name    string `json:"name"`    // "docker" or "podman": the command found
+	Version string `json:"version"` // its client version, "" if it didn't say
+}
+
+// engineNames are the commands to look for, in order, for an engine choice:
+// "" (automatic) takes docker, or podman when docker isn't installed.
+func engineNames(engine string) ([]string, error) {
+	switch engine {
+	case "":
+		return []string{"docker", "podman"}, nil
+	case "docker", "podman":
+		return []string{engine}, nil
+	}
+	return nil, fmt.Errorf("알 수 없는 엔진: %s", engine)
+}
+
+// errNoEngine says the engine chosen wasn't found. (Whole sentences: the
+// Korean particle differs, "docker를" but "podman을".)
+func errNoEngine(engine string) error {
+	switch engine {
+	case "docker":
+		return errors.New("docker를 찾을 수 없습니다")
+	case "podman":
+		return errors.New("podman을 찾을 수 없습니다")
+	}
+	return errors.New("docker(또는 podman)를 찾을 수 없습니다")
+}
+
+// errNoAnswer says the engine at exe didn't answer in time.
+func errNoAnswer(exe string) error {
+	if engineName(exe) == "podman" {
+		return errors.New("podman이 응답하지 않습니다")
+	}
+	return errors.New("docker가 응답하지 않습니다")
+}
 
 var containerID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
-// remoteDocker is a shell command running docker (or podman) with args on a server.
-func remoteDocker(args ...string) string {
+// remoteFind is the shell code that sets d to the engine's command on a server.
+func remoteFind(names []string) string {
+	find := make([]string, len(names))
+	for i, n := range names {
+		find[i] = "command -v " + n
+	}
+	return `d=$(` + strings.Join(find, " || ") + `) || { echo ` + noDocker + ` >&2; exit 127; }; `
+}
+
+// remoteDocker is a shell command running the engine with args on a server.
+func remoteDocker(names []string, args ...string) string {
 	q := make([]string, len(args))
 	for i, a := range args {
 		q[i] = localshell.ShQuote(a)
 	}
-	script := `d=$(command -v docker || command -v podman) || { echo ` + noDocker + ` >&2; exit 127; }; exec "$d" ` + strings.Join(q, " ")
-	return "sh -c " + localshell.ShQuote(script)
+	return "sh -c " + localshell.ShQuote(remoteFind(names)+`exec "$d" `+strings.Join(q, " "))
 }
 
-// localDocker finds docker (or podman) on this PC.
-func localDocker() (string, error) {
-	for _, name := range []string{"docker", "podman"} {
+// localDocker finds the engine on this PC.
+func localDocker(engine string) (string, error) {
+	names, err := engineNames(engine)
+	if err != nil {
+		return "", err
+	}
+	for _, name := range names {
 		if p, err := exec.LookPath(name); err == nil {
 			return p, nil
 		}
 	}
-	return "", errNoDocker
+	return "", errNoEngine(engine)
 }
 
-// dockerError turns docker's error output into a message for the user.
-func dockerError(stderr string, err error) error {
+// engineName is "docker" or "podman" for the command at path p.
+func engineName(p string) string {
+	return strings.TrimSuffix(strings.ToLower(filepath.Base(p)), ".exe")
+}
+
+// dockerError turns the engine's error output into a message for the user.
+func dockerError(engine, stderr string, err error) error {
 	msg := strings.TrimSpace(stderr)
 	switch low := strings.ToLower(msg); {
 	case strings.Contains(msg, noDocker):
-		return errNoDocker
+		return errNoEngine(engine)
+	// Podman on Windows and macOS runs its containers in a VM, "podman
+	// machine", which must be started; on Linux a remote connection goes
+	// through the podman socket.
+	case strings.Contains(low, "cannot connect to podman"),
+		strings.Contains(low, "podman machine") && strings.Contains(low, "start"):
+		return errors.New("podman machine이 실행 중이 아닙니다. podman machine start 로 켜세요 (처음이면 podman machine init 먼저)")
+	case strings.Contains(low, "unable to connect to podman socket"):
+		return errors.New("podman 소켓에 연결할 수 없습니다. systemctl --user start podman.socket 으로 켜거나 podman system connection list 로 확인하세요")
 	case strings.Contains(low, "permission denied") && strings.Contains(low, "docker"):
 		return errors.New("docker를 쓸 권한이 없습니다. 서버에서 sudo usermod -aG docker $USER 후 다시 로그인하세요")
 	case strings.Contains(low, "cannot connect to the docker daemon"),
@@ -103,12 +167,22 @@ func dockerError(stderr string, err error) error {
 	return errors.New(msg)
 }
 
-// runDocker runs docker with args on the server of SSH tab src, or on this PC
-// when src is 0, and returns its output.
-func (a *App) runDocker(src int, args ...string) (string, error) {
+// runDocker runs the engine with args on the server of SSH tab src, or on
+// this PC when src is 0, and returns its output.
+func (a *App) runDocker(src int, engine string, args ...string) (string, error) {
+	names, err := engineNames(engine)
+	if err != nil {
+		return "", err
+	}
+	return a.runEngine(src, engine, args, remoteDocker(names, args...))
+}
+
+// runEngine runs args with the engine on this PC (src 0), or the shell
+// command remote on the server of SSH tab src.
+func (a *App) runEngine(src int, engine string, args []string, remote string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	if src == 0 {
-		exe, err := localDocker()
+		exe, err := localDocker(engine)
 		if err != nil {
 			return "", err
 		}
@@ -119,9 +193,9 @@ func (a *App) runDocker(src int, args ...string) (string, error) {
 		luahost.HideWindow(cmd)
 		if err := cmd.Run(); err != nil {
 			if ctx.Err() != nil {
-				return "", errors.New("docker가 응답하지 않습니다")
+				return "", errNoAnswer(exe)
 			}
-			return "", dockerError(stderr.String(), err)
+			return stdout.String(), dockerError(engine, stderr.String(), err)
 		}
 		return stdout.String(), nil
 	}
@@ -137,14 +211,14 @@ func (a *App) runDocker(src int, args ...string) (string, error) {
 	defer session.Close()
 	session.Stdout, session.Stderr = &stdout, &stderr
 	done := make(chan error, 1)
-	go func() { done <- session.Run(remoteDocker(args...)) }()
+	go func() { done <- session.Run(remote) }()
 	select {
 	case err = <-done:
 	case <-time.After(dockerTimeout):
 		return "", errors.New("docker가 응답하지 않습니다")
 	}
 	if err != nil {
-		return "", dockerError(stderr.String(), err)
+		return stdout.String(), dockerError(engine, stderr.String(), err)
 	}
 	return stdout.String(), nil
 }
@@ -207,13 +281,14 @@ func parseContainers(out string) []Container {
 }
 
 // DockerList lists the containers on the server of SSH tab src, or on this PC
-// when src is 0; all includes stopped ones.
-func (a *App) DockerList(src int, all bool) ([]Container, error) {
+// when src is 0; all includes stopped ones. engine: "" (docker, else
+// podman), "docker" or "podman".
+func (a *App) DockerList(src int, all bool, engine string) ([]Container, error) {
 	args := []string{"ps", "--format", dockerPsFormat}
 	if all {
 		args = append(args, "-a")
 	}
-	out, err := a.runDocker(src, args...)
+	out, err := a.runDocker(src, engine, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +296,7 @@ func (a *App) DockerList(src int, all bool) ([]Container, error) {
 }
 
 // DockerAction starts, stops or restarts a container.
-func (a *App) DockerAction(src int, id, action string) error {
+func (a *App) DockerAction(src int, id, action, engine string) error {
 	switch action {
 	case "start", "stop", "restart":
 	default:
@@ -230,8 +305,47 @@ func (a *App) DockerAction(src int, id, action string) error {
 	if !containerID.MatchString(id) {
 		return fmt.Errorf("컨테이너 이름이 올바르지 않습니다: %s", id)
 	}
-	_, err := a.runDocker(src, action, id)
+	_, err := a.runDocker(src, engine, action, id)
 	return err
+}
+
+// engineVersion is the format both engines take for their client's version.
+const engineVersion = "{{.Client.Version}}"
+
+// DockerEngineInfo tells which engine the choice engine comes to on the
+// server of SSH tab src, or on this PC when src is 0, and its version.
+// "version" may fail with the daemon or VM down; the client part comes
+// first, so what it printed is enough.
+func (a *App) DockerEngineInfo(src int, engine string) (DockerEngine, error) {
+	names, err := engineNames(engine)
+	if err != nil {
+		return DockerEngine{}, err
+	}
+	args := []string{"version", "--format", engineVersion}
+	q := make([]string, len(args))
+	for i, s := range args {
+		q[i] = localshell.ShQuote(s)
+	}
+	// On a server the name comes first, then a tab: the script finds the command.
+	remote := "sh -c " + localshell.ShQuote(remoteFind(names)+`printf '%s\t' "${d##*/}"; exec "$d" `+strings.Join(q, " "))
+	out, err := a.runEngine(src, engine, args, remote)
+	var info DockerEngine
+	if src == 0 {
+		exe, lerr := localDocker(engine)
+		if lerr != nil {
+			return DockerEngine{}, lerr
+		}
+		info.Name = engineName(exe)
+	} else if name, rest, ok := strings.Cut(out, "\t"); ok {
+		info.Name, out = name, rest
+	}
+	if line, _, _ := strings.Cut(strings.TrimSpace(out), "\n"); line != "" && !strings.Contains(line, "{{") {
+		info.Version = strings.TrimSpace(line)
+	}
+	if info.Name == "" {
+		return DockerEngine{}, err
+	}
+	return info, nil
 }
 
 // dockerArgs is the docker command line for mode: "shell" (docker exec) or "logs".
@@ -259,8 +373,12 @@ func (d dockerExec) Close() error { return d.Session.Close() }
 // DockerOpen runs a shell in container id ("shell") or follows its log
 // ("logs") in tab tabID: on the server of SSH tab src, or on this PC when src
 // is 0. label names the tab's session in its log.
-func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int) error {
+func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int, engine string) error {
 	args, err := dockerArgs(id, mode)
+	if err != nil {
+		return err
+	}
+	names, err := engineNames(engine)
 	if err != nil {
 		return err
 	}
@@ -269,7 +387,7 @@ func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int)
 	}
 	var sess terminal.Session
 	if src == 0 {
-		exe, err := localDocker()
+		exe, err := localDocker(engine)
 		if err != nil {
 			return err
 		}
@@ -281,7 +399,7 @@ func (a *App) DockerOpen(tabID, src int, id, mode, label string, cols, rows int)
 		if err != nil {
 			return err
 		}
-		s, err := sshconn.OpenPty(client, cols, rows, remoteDocker(args...))
+		s, err := sshconn.OpenPty(client, cols, rows, remoteDocker(names, args...))
 		if err != nil {
 			return err
 		}
