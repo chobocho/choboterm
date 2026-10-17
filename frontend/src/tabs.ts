@@ -40,8 +40,11 @@ function welcome(t: Tab) {
     t.term.write(`${tr('Ctrl+Shift+E: UTF-8 ↔ EUC-KR · Ctrl+Shift+F: 파일 전송 · Ctrl+Shift+D: 연결 끊기')}\x1b[0m\r\n`);
 }
 
+// Full-screen programs (vim, nano, less... on the alternate screen) still get
+// ^V: vim's block selection, nano's next page.
 function isLocalPasteKey(t: Tab, ev: KeyboardEvent): boolean {
     return ev.type === 'keydown' && !isLinux && t.proto === 'local' && t.state === 'on' &&
+        t.term.buffer.active.type !== 'alternate' &&
         ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey && (ev.code === 'KeyV' || ev.key.toLowerCase() === 'v');
 }
 

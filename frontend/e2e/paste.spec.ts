@@ -50,12 +50,25 @@ test('nothing is pasted into a tab that is not connected', async ({app}) => {
 
 // Ctrl+V (and Win+V, which sends it) must reach the browser so it fires a paste
 // event, as in Windows Terminal; xterm would otherwise send ^V and cancel it.
-test('Ctrl+V is left to the browser in a local shell', async ({app}) => {
-    await app.connectShell();
-    const cancelled = await app.page.evaluate(() => {
+// Resolves true if the terminal took Ctrl+V itself (sending ^V).
+function ctrlV(app: App) {
+    return app.page.evaluate(() => {
         const ev = new KeyboardEvent('keydown', {key: 'v', code: 'KeyV', keyCode: 86, ctrlKey: true, bubbles: true, cancelable: true});
         document.querySelector('#terms .term.focused textarea')!.dispatchEvent(ev);
         return ev.defaultPrevented;
     });
-    expect(cancelled).toBe(false);
+}
+
+test('Ctrl+V is left to the browser in a local shell', async ({app}) => {
+    await app.connectShell();
+    expect(await ctrlV(app)).toBe(false);
+});
+
+// vim's block selection and nano's next page need ^V.
+test('Ctrl+V still sends ^V to a full-screen program', async ({app}) => {
+    await app.connectShell();
+    await app.page.keyboard.type('prompt $E[?1049hFULL$G');
+    await app.key('Enter');
+    await expect(app.screen).toContainText('FULL>');
+    expect(await ctrlV(app)).toBe(true);
 });
