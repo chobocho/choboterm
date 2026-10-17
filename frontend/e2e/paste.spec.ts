@@ -47,3 +47,15 @@ test('nothing is pasted into a tab that is not connected', async ({app}) => {
     await expect(app.page.locator('#pasteOverlay')).toBeHidden();
     await expect(app.screen).not.toContainText('echo first');
 });
+
+// Ctrl+V (and Win+V, which sends it) must reach the browser so it fires a paste
+// event, as in Windows Terminal; xterm would otherwise send ^V and cancel it.
+test('Ctrl+V is left to the browser in a local shell', async ({app}) => {
+    await app.connectShell();
+    const cancelled = await app.page.evaluate(() => {
+        const ev = new KeyboardEvent('keydown', {key: 'v', code: 'KeyV', keyCode: 86, ctrlKey: true, bubbles: true, cancelable: true});
+        document.querySelector('#terms .term.focused textarea')!.dispatchEvent(ev);
+        return ev.defaultPrevented;
+    });
+    expect(cancelled).toBe(false);
+});

@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-17 — Windows 로컬 셸에서 Ctrl+V · Win+V 붙여넣기</h2>
+<ul>
+  <li>요청: cmd·WSL 탭에서 다른 Windows 앱처럼 Ctrl+V, Win+V(클립보드 기록)로 붙여넣기</li>
+  <li>원인: xterm이 Ctrl+V를 ^V(0x16)로 보내고 기본 동작을 막아 paste 이벤트가 생기지 않음. Win+V도 선택한 항목을 Ctrl+V로 붙이므로 같은 문제</li>
+  <li>수정(<code>frontend/src/tabs.ts</code>): Windows의 로컬 셸(cmd·PowerShell·WSL) 탭이 연결된 동안 Ctrl+V를 xterm에서 빼서 브라우저가 paste 이벤트를 내게 함. 기존 paste 처리기를 그대로 거쳐 여러 줄 확인 창도 동작. SSH·Telnet·시리얼 탭과 Linux에서는 이전처럼 ^V 전송(Ctrl+Shift+V는 그대로)</li>
+  <li>도움말(한·영)에 "Ctrl+V · Win+V" 줄 추가</li>
+  <li>확인: E2E <code>paste.spec.ts</code>에 회귀 테스트 추가(수정을 끄면 실패, 켜면 통과). 프런트엔드 빌드, <code>go vet</code>·<code>go test ./...</code>, E2E 76개 중 75개 통과(고양이 기지개 테스트 1개는 병렬 부하 때 간헐 실패, 단독 반복 6/6 통과 · 이번 변경과 무관)</li>
+</ul>
+
 <h2>2026-10-16 — Windows CI 간헐 실패 수정 (v0.2.32 릴리스 중단 원인)</h2>
 <ul>
   <li>원인: release 실행 38772713188의 Windows 테스트에서 <code>TestEveryMethodWithoutWindow</code>가 "DockerEngineInfo didn't return"으로 실패. DPAPI 문제가 아님(<code>internal/store</code>는 통과). 러너에 설치된 docker의 <code>docker version</code>이 가끔 10초 감시 시간보다 오래 걸림. 같은 커밋이 CI에선 통과했고 이전 CI 실패 2건도 같은 원인</li>

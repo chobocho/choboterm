@@ -17,7 +17,7 @@ import {filesOpen, forgetFiles, showFilesFor} from './files';
 import {CloseTab, Resize} from '../wailsjs/go/app/App';
 import {terminal} from '../wailsjs/go/models';
 import {BrowserOpenURL, ClipboardSetText} from '../wailsjs/runtime/runtime';
-import {isWebKitGTK, webPage} from './platform';
+import {isLinux, isWebKitGTK, webPage} from './platform';
 import {active, fitPane, focusActive, Group, orderedTabs, panesOf, setActive, SplitDir, Tab, tabs, tabsEl, termsEl} from './tabstate';
 import {notice, reconnectHint, toast} from './notify';
 import {updateTitle, version} from './title';
@@ -38,6 +38,11 @@ function welcome(t: Tab) {
     t.term.write(`choboterm V${version}\r\n`);
     t.term.write(`\x1b[90m${tr('Enter: 접속 창 · Ctrl+Shift+T: 새 탭 · Ctrl+Tab: 탭 전환 · Ctrl+Shift+W: 탭 닫기')}\r\n`);
     t.term.write(`${tr('Ctrl+Shift+E: UTF-8 ↔ EUC-KR · Ctrl+Shift+F: 파일 전송 · Ctrl+Shift+D: 연결 끊기')}\x1b[0m\r\n`);
+}
+
+function isLocalPasteKey(t: Tab, ev: KeyboardEvent): boolean {
+    return ev.type === 'keydown' && !isLinux && t.proto === 'local' && t.state === 'on' &&
+        ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey && (ev.code === 'KeyV' || ev.key.toLowerCase() === 'v');
 }
 
 /** Creates a tab, or with split a new pane next to split.from in its tab. */
@@ -80,7 +85,11 @@ export function createTab(split?: {from: Tab; dir: SplitDir}): Tab {
     }));
     loadUnicodeWidths(term);
     term.unicode.activeVersion = NARROW;
-    term.attachCustomKeyEventHandler(ev => !isAppShortcut(ev));
+    // In a Windows local shell (cmd, WSL...) Ctrl+V pastes, as in Windows
+    // Terminal; Win+V (clipboard history) pastes by sending Ctrl+V too.
+    // Letting the key through makes the browser fire a paste event, which the
+    // listener below sends through the multi-line check.
+    term.attachCustomKeyEventHandler(ev => !isAppShortcut(ev) && !isLocalPasteKey(t, ev));
     dbg(`tab ${id} open`);
     term.open(pane);
 
