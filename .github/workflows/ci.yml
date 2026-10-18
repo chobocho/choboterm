@@ -40,3 +40,38 @@ jobs:
           go vet -tags headless ./...
       - name: Test
         run: go test ./...
+
+  # The page in a browser against a headless choboterm (frontend/e2e). Only
+  # the specs that need no shell of this PC run here, since the others type
+  # cmd commands: the Telnet stand-in, the IME, the memo pad and the file
+  # window over the tests' small FTP server.
+  e2e-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+      # The runner's Google Chrome; nothing is downloaded. global-setup.ts
+      # builds the page and the headless program first.
+      - name: E2E
+        working-directory: frontend
+        env:
+          E2E_BROWSER: chrome
+          CGO_ENABLED: "0"
+        run: npx playwright test remote ime memo files
+      - name: Keep the traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: frontend/e2e/.tmp/results
+          retention-days: 7

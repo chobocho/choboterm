@@ -44,3 +44,7 @@ opens its page in Edge.
   settings), and the touch selection of the Termux build.
 
 The shell commands in the tests are `cmd` ones, so the suite is for Windows.
+The specs that need no shell of this PC (`remote ime memo files`) also run
+on Linux, and CI runs them on Ubuntu with the runner's Chrome:
+
+    E2E_BROWSER=chrome npx playwright test remote ime memo files

@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-18 — 고양이 E2E 간헐 실패 수정, CI에 Linux E2E 추가</h2>
+<ul>
+  <li>재현: "걷던 고양이가 포인터 앞에서 기지개" 테스트가 병렬 4개로 16번 중 1번 실패(로그를 넣으면 32번 중 6번). 기대 stretch, 실제 sit:1</li>
+  <li>원인의 증거: 실패 때 기록된 프레임이 테스트가 진행시킨 가짜 시간 1.5초에 들어갈 수 없을 만큼 많음(걷기 27프레임 + 기지개 전체 + 다시 걷기). Playwright <code>clock.install()</code>은 멈추기 전까지 실제 시간을 따라 흐르고, 설치 전에 걸린 고양이 타이머는 실제 타이머로 남아 부하가 걸리면 테스트 단계 사이에 고양이가 혼자 움직였음</li>
+  <li>수정(<code>frontend/e2e/cat.spec.ts</code>): 시계를 페이지 로드 전에 설치하고, <code>observeMotion</code>에서 시계를 멈춰 <code>runFor</code>로만 진행. 확인: 기지개 테스트 64/64, 고양이 스펙 전체 3회(57개) 통과</li>
+  <li>CI(<code>.github/workflows/ci.yml</code>): Ubuntu 22.04 <code>e2e-linux</code> 작업 추가 — 셸이 필요 없는 스펙(<code>remote ime memo files</code>, 16개)을 러너의 Chrome으로 실행, 실패 시 trace를 아티팩트로 보관. 같은 명령을 로컬 Windows+Chrome에서 16개 통과 확인. Linux에서는 아직 실행해 보지 못함(WSL에 Go·Node·브라우저 없음) — 푸시 후 첫 CI에서 확인 필요</li>
+  <li>CLAUDE.md·E2E README에 반영</li>
+</ul>
+
 <h2>2026-10-18 — 옛 장비용 SSH 알고리즘 (서버별 허용)</h2>
 <ul>
   <li>문제: Go SSH 기본값에 <code>diffie-hellman-group1-sha1</code>·<code>group-exchange-sha1</code> 키 교환과 <code>aes128-cbc</code>·<code>3des-cbc</code>·arcfour 암호화가 없어 오래된 스위치·공유기·임베디드 장비에 "no common algorithm"으로 접속 실패</li>

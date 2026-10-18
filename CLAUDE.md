@@ -27,7 +27,8 @@ tools/vet_all.sh                   # Go 파일을 옮기거나 OS·빌드 태그
   스위트는 Windows 기준이지만, Telnet 대역 서버(`FakeServer`)만 쓰는 스펙(`remote`, `ime` 등)은 Linux에서도 돈다.
   설치된 브라우저를 쓰며 다운로드하지 않는다(`E2E_BROWSER`, `frontend/e2e/README.md` 참고).
 - `TestSerialSessionPty`는 root로 돌리면 실패한다(TIOCEXCL). 일반 사용자로는 통과한다.
-- CI(`.github/workflows/ci.yml`): PR과 main 푸시마다 Windows · Ubuntu 22.04에서 vet + `go test ./...`.
+- CI(`.github/workflows/ci.yml`): PR과 main 푸시마다 Windows · Ubuntu 22.04에서 vet + `go test ./...`,
+  Ubuntu에서 셸이 필요 없는 E2E(`remote ime memo files`, 러너의 Chrome). 실패하면 trace가 아티팩트로 남는다.
 
 ## 버그 수정
 
