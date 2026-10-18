@@ -5,6 +5,13 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-18 — 푸시 후 CI 실패 수정 (영어 환경에서 옛 SSH 알고리즘 테스트)</h2>
+<ul>
+  <li>증상: 푸시 후 CI(Windows · Ubuntu)와 release 워크플로의 <code>TestConnectAsksForLegacySSH</code> 실패. 러너가 영어 환경이라 질문이 영어로 번역되어 한국어 문구 비교가 맞지 않음. 이 PC는 한국어 Windows라 통과했음</li>
+  <li>재현: 테스트에서 설정 언어를 "en"으로 두자 CI와 같은 메시지로 실패. 수정: 다른 테스트(<code>app_sessionlog_test.go</code>)처럼 설정 언어를 "ko"로 고정</li>
+  <li>확인: <code>go test ./internal/app/</code> 통과. v0.2.33 릴리스는 자동 실행이 실패해 CI 통과 후 손으로 실행</li>
+</ul>
+
 <h2>2026-10-18 — V0.2.33: 버전 올림, 아키텍처 그림·README·소개 페이지 갱신</h2>
 <ul>
   <li>버전 0.2.32 → 0.2.33: <code>version.go</code>, <code>wails.json</code>, README(한·영) 제목·릴리스 예시, <code>release.yml</code> 주석</li>

@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"choboterm/internal/config"
 	"choboterm/internal/sshconn"
 	"choboterm/internal/sshconn/sshtest"
 	"choboterm/internal/store"
@@ -44,6 +45,10 @@ func TestConnectAsksForLegacySSH(t *testing.T) {
 	sshtest.UseKnownHosts(t, addr, key.PublicKey())
 	useTempHosts(t)
 	useTempSettings(t)
+	// The question is checked in Korean; CI machines would show it in English.
+	if err := config.Update(func(s *config.Settings) { s.Language = "ko" }); err != nil {
+		t.Fatal(err)
+	}
 
 	a := NewApp()
 	a.hooks.emit = func(string, ...interface{}) {}
