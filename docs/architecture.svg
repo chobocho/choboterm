@@ -20,7 +20,7 @@
 
   <rect x="0" y="0" width="1010" height="868" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.32 · <tspan class="new">NEW</tspan> = 고양이 그림 통일 · 호버 배 보이기 · 앞 커서 기지개</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.33 · <tspan class="new">NEW</tspan> = FTPS · 파일 창 즐겨찾기 · 옛 SSH 알고리즘 · ssh config Include</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="621" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>
@@ -41,8 +41,8 @@
   <text x="47" y="132" class="sub">탭 · 터미널 · main.ts를 모듈로 나눔</text>
   <text x="47" y="173" class="title">highlight.ts</text>
   <text x="47" y="190" class="sub">키워드 강조 (xterm 데코레이션)</text>
-  <text x="47" y="231" class="title">files.ts</text>
-  <text x="47" y="248" class="sub">파일 전송 창 (SFTP · SCP · FTP)</text>
+  <text x="47" y="231" class="title">files.ts <tspan class="new">NEW</tspan></text>
+  <text x="47" y="248" class="sub">파일 창 (SFTP · SCP · FTP/FTPS) · 즐겨찾기</text>
   <text x="47" y="289" class="title">viewer.ts · imageview.ts</text>
   <text x="47" y="306" class="sub">텍스트 뷰어·편집기 (CodeMirror), 이미지</text>
   <text x="47" y="347" class="title">luaconsole.ts · memo.ts</text>
@@ -55,8 +55,8 @@
   <text x="47" y="538" class="sub">영어 화면: 나타나는 문구를 사전으로 번역</text>
   <text x="47" y="579" class="title">sessions · help · search · platform</text>
   <text x="47" y="596" class="sub">세션, 도움말, 검색, Linux · 브라우저 판별</text>
-  <text x="47" y="637" class="title">cat.ts <tspan class="new">NEW</tspan></text>
-  <text x="47" y="654" class="sub">고양이: 걷기 · 호버 배 보이기 · 앞 커서 기지개</text>
+  <text x="47" y="637" class="title">cat.ts</text>
+  <text x="47" y="654" class="sub">고양이: 걷기 · 배 보이기 · 기지개 · Lua</text>
 
   <!-- Wails bridge -->
   <line x1="292" y1="160" x2="398" y2="160" class="link" marker-end="url(#arrow)"/>
@@ -101,9 +101,9 @@
     <rect x="532" y="185" width="106" height="62" rx="5"/>
     <rect x="649" y="185" width="106" height="62" rx="5"/>
   </g>
-  <text x="468" y="204" text-anchor="middle" class="title">sshconn</text>
-  <text x="468" y="220" text-anchor="middle" class="sub">sshauth · sshjump</text>
-  <text x="468" y="236" text-anchor="middle" class="sub">ssh config · PTY</text>
+  <text x="468" y="204" text-anchor="middle" class="title">sshconn <tspan class="new">NEW</tspan></text>
+  <text x="468" y="220" text-anchor="middle" class="sub">auth · jump · 옛 장비</text>
+  <text x="468" y="236" text-anchor="middle" class="sub">config Include · PTY</text>
   <text x="585" y="204" text-anchor="middle" class="title">telnet · terminal</text>
   <text x="585" y="220" text-anchor="middle" class="sub">Session · detect</text>
   <text x="585" y="236" text-anchor="middle" class="sub">(프로토콜 판별)</text>
@@ -116,8 +116,8 @@
     <rect x="588" y="262" width="79" height="62" rx="5"/>
     <rect x="676" y="262" width="79" height="62" rx="5"/>
   </g>
-  <text x="427" y="281" class="title">transfer — RemoteFS</text>
-  <text x="427" y="297" class="sub">sftp · scp · ftp · app/filexfer</text>
+  <text x="427" y="281" class="title">transfer — RemoteFS <tspan class="new">NEW</tspan></text>
+  <text x="427" y="297" class="sub">sftp · scp · ftp/ftps · filexfer</text>
   <text x="427" y="313" class="sub">진행률 · 취소 · 이어받기</text>
   <text x="627" y="281" text-anchor="middle" class="title">Zmodem</text>
   <text x="627" y="297" text-anchor="middle" class="sub">transfer · app</text>
@@ -168,7 +168,7 @@
   <rect x="810" y="150" width="180" height="222" rx="8" fill="#f1f3f4" stroke="#80868b" stroke-width="1.5"/>
   <text x="825" y="174" class="head" fill="#3c4043">원격 서버</text>
   <text x="825" y="198" class="sub">SSH (22) · Telnet (23)</text>
-  <text x="825" y="218" class="sub">SFTP · SCP · FTP</text>
+  <text x="825" y="218" class="sub">SFTP · SCP · FTP · FTPS (990)</text>
   <text x="825" y="238" class="sub">포트 포워딩 -L · -R · -D</text>
   <text x="825" y="258" class="sub">Zmodem (rz / sz)</text>
   <text x="825" y="278" class="sub">CP949 · UTF-8 서버</text>

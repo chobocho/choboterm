@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-18 — V0.2.33: 버전 올림, 아키텍처 그림·README·소개 페이지 갱신</h2>
+<ul>
+  <li>버전 0.2.32 → 0.2.33: <code>version.go</code>, <code>wails.json</code>, README(한·영) 제목·릴리스 예시, <code>release.yml</code> 주석</li>
+  <li>아키텍처 SVG(한·영): 이번 버전 변경 = FTPS · 파일 창 즐겨찾기 · 옛 SSH 알고리즘 · ssh config Include. files.ts · sshconn · transfer에 NEW, 원격 서버에 FTPS(990), cat.ts의 NEW 해제. Edge로 그려 보고 넘치던 files.ts 줄과 (원래부터 넘치던) 한국어 cat.ts 줄을 줄임</li>
+  <li><code>docs/index.html</code>: 기능 목록에 FTPS · 옛 장비 SSH 알고리즘 추가, ssh config에 Include, 파일 창에 즐겨찾기, 단축키 표에 Ctrl+D · Ctrl+B · Ctrl+1~9 (한·영)</li>
+  <li>확인: <code>go vet ./...</code> · <code>go test ./...</code> 통과, 0.2.32 남은 곳 없음</li>
+</ul>
+
 <h2>2026-10-18 — ~/.ssh/config의 Include, 지원하지 않는 Match</h2>
 <ul>
   <li>재현(실패하는 테스트 먼저): ① <code>Include</code>된 파일의 Host 이름이 ▼ 목록·별칭 인식에서 빠짐(<code>ConfigAliases</code>가 최상위 Host만 봄), Host 블록 안 Include의 값 미적용, 상대 경로를 실제 사용자 홈 기준으로만 찾음. ② <code>Match host a,b</code>의 쉼표 패턴 미적용. ③ <code>Match exec</code>·<code>Match user</code>·<code>Match final</code>처럼 라이브러리가 못 읽는 줄이 하나라도 있으면(포함 파일 포함) 파싱 오류로 config 전체가 조용히 무시됨</li>

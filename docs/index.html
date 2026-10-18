@@ -303,9 +303,11 @@ login: guest
         <h2>기능</h2>
         <ul class="features">
             <li><b>SSH · Telnet · FTP</b><span>22/23/21번 포트는 바로, 다른 포트는 서버 응답으로 자동 판별 (예: Termux 8022)</span></li>
+            <li><b>FTPS (암호화 FTP)</b><span>로그인 전에 먼저 TLS 암호화를 요청하고, 지원하지 않는 서버만 일반 FTP로. 990번 포트는 처음부터 TLS. 자체 서명 인증서는 지문을 보여 주고 서버별로 기억, 바뀌면 경고</span></li>
             <li><b>SSH 키 · 에이전트 · OTP</b><span>OpenSSH 에이전트 · Pageant의 키 자동 사용, 암호 걸린 개인키, 인증 코드(OTP) 같은 2단계 인증 질문</span></li>
             <li><b>점프 호스트 (ProxyJump)</b><span>배스천을 거쳐 내부 서버로. 접속 창의 Jump 칸, ~/.ssh/config의 ProxyJump, ssh -J 모두 지원, 여러 단계도 가능</span></li>
-            <li><b>ssh config 이름으로 접속</b><span>Host 칸에 busan 또는 ssh busan만 입력하면 ~/.ssh/config의 주소·포트·사용자·키로 접속</span></li>
+            <li><b>ssh config 이름으로 접속</b><span>Host 칸에 busan 또는 ssh busan만 입력하면 ~/.ssh/config의 주소·포트·사용자·키로 접속. Include로 나눈 파일도 읽음</span></li>
+            <li><b>옛 장비 (오래된 SSH 알고리즘)</b><span>group1-sha1 키 교환이나 aes128-cbc · 3des-cbc만 되는 오래된 스위치 · 공유기는 어떤 알고리즘인지 보여 주고 그 서버에 한해 허용할지 물어봄</span></li>
             <li><b>탭 · 분할 창</b><span>여러 접속을 탭으로, 한 탭 안을 좌우·위아래로 나눠 창마다 따로 접속. 탭마다 인코딩·파일 전송이 따로 동작</span></li>
             <li><b>웹 서버 (브라우저로 접속)</b><span>zellij처럼 choboterm 화면을 브라우저에서도. 설정 창이나 choboterm --web으로 켜고, 토큰으로 로그인. 이 PC의 브라우저는 창과 같은 파일 대화상자, 다른 PC는 업로드 · 다운로드. 다른 PC에서 접속하면 HTTPS, 네트워크가 잠깐 끊겨도 이어서 받기. 창 없이 서버만 띄우는 choboterm-headless도 제공</span></li>
             <li><b>로컬 셸</b><span>Host에 cmd · powershell · wsl(Linux는 bash · zsh)을 쓰면 이 PC의 셸을 탭에서 바로 실행 (WSL에서 sz / rz도 가능)</span></li>
@@ -325,7 +327,7 @@ login: guest
             <li><b>매크로</b><span>자주 쓰는 명령을 저장해 두고 창이나 F키로 바로 보내기</span></li>
             <li><b>세션 로그</b><span>받은 출력을 파일에 계속 저장 (접속할 때 자동 시작, 일반 텍스트 또는 원본), 줄마다 받은 시각 [2026-10-09 21:30:15.123]</span></li>
             <li><b>키워드 강조</b><span>출력의 error · fail · 오류는 빨강, warning · 경고는 노랑, success · 성공은 초록 배경. 단어는 설정에서 바꾸고, 프로그램 색과 로그는 그대로</span></li>
-            <li><b>편한 파일 창</b><span>셸의 현재 폴더에서 바로 열림. 여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더 · 새 파일, 맨 위 .. 와 Alt+↑로 상위 폴더. 끊긴 전송은 이어받기 · 이어 올리기 (SFTP · FTP)</span></li>
+            <li><b>편한 파일 창</b><span>셸의 현재 폴더에서 바로 열림. 여러 개 선택, 폴더째 받기·올리기, 탐색기에서 끌어 놓기, 삭제 · 이름 바꾸기 · 새 폴더 · 새 파일, 맨 위 .. 와 Alt+↑로 상위 폴더. 서버별 즐겨찾기(Ctrl+D · Ctrl+B · Ctrl+1~9)와 최근 폴더. 끊긴 전송은 이어받기 · 이어 올리기 (SFTP · FTP)</span></li>
             <li><b>원격 파일 보기 · 편집</b><span>F3 / F4로 받지 않고 바로 열기. UTF-8 · EUC-KR 자동 판별, 찾기·바꾸기, Ctrl+S로 서버에 저장 (인코딩·줄바꿈 유지, 충돌 확인). JPG · PNG · GIF · BMP · WebP 이미지는 F3으로 이미지 보기 (확대 · 이전/다음)</span></li>
             <li><b>영어 화면 (English UI)</b><span>설정에서 자동 / 한국어 / English. 메뉴 · 창 · 오류 메시지 · 파일 대화상자까지 영어로</span></li>
             <li><b>복사 · 붙여넣기</b><span>선택하면 복사, 우클릭으로 붙여넣기. 여러 줄은 실행 전에 확인. 마우스를 쓰는 프로그램(edit · vim · tmux)에서는 Shift+드래그, 그 프로그램이 복사한 내용(OSC 52)도 클립보드로</span></li>
@@ -339,9 +341,11 @@ login: guest
         <h2>Features</h2>
         <ul class="features">
             <li><b>SSH · Telnet · FTP</b><span>Ports 22/23/21 directly; other ports are detected from the server's greeting (e.g. Termux on 8022)</span></li>
+            <li><b>FTPS (encrypted FTP)</b><span>Asks for TLS before logging in and uses plain FTP only with servers that lack it. Port 990 is TLS from the start. Self-signed certificates show their fingerprint and are remembered per server, with a warning when one changes</span></li>
             <li><b>SSH keys · agent · OTP</b><span>Keys from the OpenSSH agent and Pageant, passphrase-protected private keys, and two-factor questions such as one-time codes</span></li>
             <li><b>Jump hosts (ProxyJump)</b><span>Reach inner servers through a bastion: the Jump field, ProxyJump in ~/.ssh/config and ssh -J, several hops too</span></li>
-            <li><b>Connect by ssh config name</b><span>Type busan or ssh busan in Host and the address, port, user and key come from ~/.ssh/config</span></li>
+            <li><b>Connect by ssh config name</b><span>Type busan or ssh busan in Host and the address, port, user and key come from ~/.ssh/config. Files split out with Include are read too</span></li>
+            <li><b>Old devices (old SSH algorithms)</b><span>Old switches and routers that only offer group1-sha1 key exchange or aes128-cbc · 3des-cbc show which ones and ask whether to allow them for that server only</span></li>
             <li><b>Tabs · split panes</b><span>Connections in tabs; split a tab left/right or top/bottom with a connection in each pane. Encoding and file transfer per tab</span></li>
             <li><b>Web server (use it in a browser)</b><span>Like zellij, choboterm's screen in a browser too. Turn it on in Settings or with choboterm --web and log in with a token. A browser on this PC gets the window's file dialogs, other PCs upload and download. HTTPS when other PCs connect; a short network drop picks up where it left off. choboterm-headless runs only the server, without a window</span></li>
             <li><b>Local shells</b><span>cmd · powershell · wsl (bash · zsh on Linux) in Host runs this PC's shell in a tab (sz / rz work in WSL too)</span></li>
@@ -361,7 +365,7 @@ login: guest
             <li><b>Macros</b><span>Save frequent commands and send them from the window or an F key</span></li>
             <li><b>Session log</b><span>Keeps writing the output to a file (starts on connect, plain text or raw), each line with the time it came [2026-10-09 21:30:15.123]</span></li>
             <li><b>Keyword highlighting</b><span>error · fail in red, warning in yellow, success in green behind the text. Words are set in Settings; program colors and logs stay as they are</span></li>
-            <li><b>Handy file window</b><span>Opens in the shell's current folder. Multiple selection, whole folders up and down, drag and drop from Explorer, delete · rename · new folder · new file, .. at the top and Alt+↑ for the parent. Interrupted transfers resume (SFTP · FTP)</span></li>
+            <li><b>Handy file window</b><span>Opens in the shell's current folder. Multiple selection, whole folders up and down, drag and drop from Explorer, delete · rename · new folder · new file, .. at the top and Alt+↑ for the parent. Bookmarks per server (Ctrl+D · Ctrl+B · Ctrl+1–9) and recent folders. Interrupted transfers resume (SFTP · FTP)</span></li>
             <li><b>View · edit remote files</b><span>F3 / F4 open files without downloading. UTF-8 · EUC-KR detected, find and replace, Ctrl+S saves to the server (keeps encoding and line endings, checks for conflicts). F3 on JPG · PNG · GIF · BMP · WebP shows the image (zoom · previous / next)</span></li>
             <li><b>English UI</b><span>Auto / 한국어 / English in Settings. Menus, windows, error messages and file dialogs in English</span></li>
             <li><b>Copy · paste</b><span>Selecting copies, right click pastes. Several lines are confirmed before they run. Shift+drag in programs that use the mouse (edit · vim · tmux); what they copy themselves (OSC 52) reaches the clipboard too</span></li>
@@ -386,7 +390,8 @@ login: guest
             <tr><td><kbd>Ctrl+Shift+W</kbd></td><td>탭 닫기 (분할된 탭에서는 지금 창만)</td></tr>
             <tr><td><kbd>Ctrl+Shift+\</kbd> / <kbd>Ctrl+Shift+-</kbd></td><td>오른쪽 / 아래로 창 분할</td></tr>
             <tr><td><kbd>Alt+←→↑↓</kbd> (분할된 탭)</td><td>옆 창으로 이동</td></tr>
-            <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>파일 전송 창 (SFTP / SCP / FTP)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>파일 전송 창 (SFTP / SCP / FTP / FTPS)</td></tr>
+            <tr><td><kbd>Ctrl+D</kbd> / <kbd>Ctrl+B</kbd> / <kbd>Ctrl+1</kbd>~<kbd>9</kbd> (파일 창)</td><td>즐겨찾기 추가·빼기 / 즐겨찾기 목록 / n번째 즐겨찾기로</td></tr>
             <tr><td><kbd>Backspace</kbd> / <kbd>Alt+↑</kbd> (파일 창)</td><td>상위 폴더 (목록 맨 위 <code>..</code> 도 같음)</td></tr>
             <tr><td><kbd>F3</kbd> / <kbd>F4</kbd> (파일 창)</td><td>원격 텍스트 파일 보기 / 편집 (<kbd>Ctrl+S</kbd> 서버에 저장)</td></tr>
             <tr><td><kbd>Ctrl+Shift+E</kbd></td><td>UTF-8 ↔ EUC-KR</td></tr>
@@ -413,7 +418,8 @@ login: guest
             <tr><td><kbd>Ctrl+Shift+W</kbd></td><td>Close the tab (only the current pane of a split tab)</td></tr>
             <tr><td><kbd>Ctrl+Shift+\</kbd> / <kbd>Ctrl+Shift+-</kbd></td><td>Split right / down</td></tr>
             <tr><td><kbd>Alt+←→↑↓</kbd> (split tab)</td><td>Move to the next pane</td></tr>
-            <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>File transfer (SFTP / SCP / FTP)</td></tr>
+            <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>File transfer (SFTP / SCP / FTP / FTPS)</td></tr>
+            <tr><td><kbd>Ctrl+D</kbd> / <kbd>Ctrl+B</kbd> / <kbd>Ctrl+1</kbd>–<kbd>9</kbd> (file window)</td><td>Bookmark or unbookmark / bookmark list / nth bookmark</td></tr>
             <tr><td><kbd>Backspace</kbd> / <kbd>Alt+↑</kbd> (file window)</td><td>Parent folder (same as <code>..</code> at the top)</td></tr>
             <tr><td><kbd>F3</kbd> / <kbd>F4</kbd> (file window)</td><td>View / edit a remote text file (<kbd>Ctrl+S</kbd> saves to the server)</td></tr>
             <tr><td><kbd>Ctrl+Shift+E</kbd></td><td>UTF-8 ↔ EUC-KR</td></tr>
