@@ -25,13 +25,17 @@ opens its page in Edge.
 - A shell on this PC (`cmd`) for terminal input and output, and the tests'
   own TCP server (`FakeServer` in `fixtures.ts`, taken for Telnet) for what
   needs a server: labels, the encoding, a connection that ends or breaks.
+- A small FTP server (`FakeFtpServer`) for the file window: it lists a fixed
+  folder tree and refuses changes, enough for moving between folders and the
+  bookmarks.
 - The browser runs without a GPU, so terminals are drawn with the DOM
   renderer and their text can be read (`app.screen`).
 
 ## What is not covered
 
-- SSH, FTP, serial ports and docker (they need real servers or devices),
-  and so the file window, port forwarding and the containers' tabs.
+- SSH, serial ports and docker (they need real servers or devices), and so
+  port forwarding and the containers' tabs. Of the file window only moving
+  between folders and the bookmarks are covered (no transfers).
 - The PC's clipboard (copy on select, right-click paste): a test would
   overwrite what the user copied. Pasting is tested with a paste event.
 - Windows written for the native window only (translucency, the web server's

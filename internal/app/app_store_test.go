@@ -79,3 +79,40 @@ func useTempHosts(t *testing.T) string {
 	t.Cleanup(func() { store.HistoryFile = orig })
 	return file
 }
+
+func TestFileBookmarksSavedPerServer(t *testing.T) {
+	useTempHosts(t)
+	a := NewApp()
+	if got := a.FileBookmarks(1); got == nil || len(got) != 0 {
+		t.Fatalf("never connected tab: %#v", got)
+	}
+	if err := a.SetFileBookmarks(1, []string{"/var/log"}); err == nil {
+		t.Fatal("saved for a tab without a server")
+	}
+	a.getTab(1).host, a.getTab(1).port = "busan", 22
+	a.getTab(2).host, a.getTab(2).port = "busan", 22
+	a.getTab(3).host, a.getTab(3).port = "busan", 2222
+
+	// Blanks and repeats are dropped; the order stays.
+	if err := a.SetFileBookmarks(1, []string{"/var/log", " ", "/etc", "/var/log", " /srv "}); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"/var/log", "/etc", "/srv"}
+	// Another tab on the same server sees them; another port does not.
+	if got := a.FileBookmarks(2); !equalList(got, want) {
+		t.Fatalf("same server: %q", got)
+	}
+	if got := a.FileBookmarks(3); len(got) != 0 {
+		t.Fatalf("other port: %q", got)
+	}
+	// Other prefs of the server are kept.
+	if _, err := a.SetTabTheme(1, "dracula"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.SetFileBookmarks(2, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.FileBookmarks(1); len(got) != 0 || a.TabTheme(1) != "dracula" {
+		t.Fatalf("after clearing: %q, theme %q", got, a.TabTheme(1))
+	}
+}

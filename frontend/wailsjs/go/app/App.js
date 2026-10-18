@@ -78,6 +78,10 @@ export function ExportSessions() {
   return window['go']['app']['App']['ExportSessions']();
 }
 
+export function FileBookmarks(arg1) {
+  return window['go']['app']['App']['FileBookmarks'](arg1);
+}
+
 export function FileCancel(arg1) {
   return window['go']['app']['App']['FileCancel'](arg1);
 }
@@ -252,6 +256,10 @@ export function SendBreak(arg1) {
 
 export function SetEncoding(arg1, arg2) {
   return window['go']['app']['App']['SetEncoding'](arg1, arg2);
+}
+
+export function SetFileBookmarks(arg1, arg2) {
+  return window['go']['app']['App']['SetFileBookmarks'](arg1, arg2);
 }
 
 export function SetTabTheme(arg1, arg2) {

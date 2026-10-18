@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
@@ -28,6 +29,37 @@ func (a *App) SetTabTheme(tabID int, theme string) (bool, error) {
 		return false, nil
 	}
 	return true, store.UpdatePrefs(host, port, func(p *store.ServerPrefs) { p.Theme = theme })
+}
+
+// FileBookmarks returns the remote folders bookmarked in the file window
+// for the server of a tab's connection.
+func (a *App) FileBookmarks(tabID int) []string {
+	host, port, ok := a.tabTarget(tabID)
+	if !ok {
+		return []string{}
+	}
+	if list := store.PrefsFor(host, port).Bookmarks; list != nil {
+		return list
+	}
+	return []string{}
+}
+
+// SetFileBookmarks saves the bookmarked folders of a tab's server. The page
+// sends the whole list, so the order is the user's.
+func (a *App) SetFileBookmarks(tabID int, list []string) error {
+	host, port, ok := a.tabTarget(tabID)
+	if !ok {
+		return errors.New("연결되어 있지 않습니다")
+	}
+	var clean []string
+	seen := map[string]bool{}
+	for _, d := range list {
+		if d = strings.TrimSpace(d); d != "" && !seen[d] {
+			seen[d] = true
+			clean = append(clean, d)
+		}
+	}
+	return store.UpdatePrefs(host, port, func(p *store.ServerPrefs) { p.Bookmarks = clean })
 }
 
 // tabTarget is where a tab's terminal session is (or was last) connected.

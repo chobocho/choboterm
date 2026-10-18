@@ -5,6 +5,21 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-18 — 파일 전송 창 즐겨찾기 · 바로가기</h2>
+<ul>
+  <li>요청: Ctrl+Shift+F 파일 전송 창에 즐겨찾기나 바로가기 기능</li>
+  <li>경로 칸 옆 ☆(Ctrl+D): 지금 폴더를 즐겨찾기에 추가·빼기. ▾(Ctrl+B): 즐겨찾기, 홈 폴더, <code>/</code>, 이 창에서 지나온 최근 폴더(8개) 목록. ↑↓ Enter로 이동, Delete·✕로 빼기. Ctrl+1~9: n번째 즐겨찾기로 이동</li>
+  <li>저장: 서버(호스트+포트)별 설정 <code>sessions.json</code>의 <code>servers[].bookmarks</code>. 같은 서버의 다른 탭과 다음 접속에서도 쓰임. 바인딩 <code>FileBookmarks</code> · <code>SetFileBookmarks</code>(빈 값·중복 제거), FTP 탭도 서버 주소를 기억하도록 함(<code>internal/app/app.go</code>)</li>
+  <li>버그 발견·수정: 목록을 마우스로 누르면 포커스가 창 밖으로 나가 Esc·화살표가 안 먹음 → mousedown에서 포커스 유지(E2E가 수정 전 실패)</li>
+  <li>테스트: Go <code>TestFileBookmarksSavedPerServer</code>, E2E에 가짜 FTP 서버(<code>FakeFtpServer</code>, EPSV+MLSD)와 <code>files.spec.ts</code> 2개 추가 — 파일 창 첫 E2E. wire.golden·wailsjs 갱신, 도움말·README(한·영)·영어 사전 추가</li>
+  <li>확인: <code>go vet</code>·<code>go test ./...</code> 통과, 프런트엔드 빌드, E2E 79개 모두 통과</li>
+</ul>
+
+<h2>2026-10-18 — 보완 사항 검토 (코드 변경 없음)</h2>
+<ul>
+  <li>README·소스 구성·테스트·CI를 훑어 보완 후보 정리: E2E·프런트엔드 빌드 외 테스트가 CI에 없음, TypeScript 4.5, <code>~/.ssh/config</code>의 Include·ProxyCommand·Match 미지원, 옛 장비용 SSH 알고리즘(diffie-hellman-group1, CBC) 미지원, 테스트 없는 패키지(secret·localshell·terminal·config), Linux 키링 없을 때 비밀번호 저장 불가, X11 포워딩·FTPS·SCP 이어받기·macOS 미지원, 코드 서명 없음</li>
+</ul>
+
 <h2>2026-10-17 — Windows 로컬 셸에서 Ctrl+V · Win+V 붙여넣기</h2>
 <ul>
   <li>요청: cmd·WSL 탭에서 다른 Windows 앱처럼 Ctrl+V, Win+V(클립보드 기록)로 붙여넣기</li>

@@ -19,6 +19,7 @@ DockerList(int, bool, string) ([]Container, error)
 DockerOpen(int, int, string, string, string, int, int, string) (error)
 EvalLua(string) (LuaResult, error)
 ExportSessions() (string, error)
+FileBookmarks(int) ([]string)
 FileCancel(int)
 FileClose(int)
 FileCreate(int, string, string) (error)
@@ -63,6 +64,7 @@ ScriptScreen(int, int, string)
 Send(int, string)
 SendBreak(int) (error)
 SetEncoding(int, string) (string)
+SetFileBookmarks(int, []string) (error)
 SetTabTheme(int, string) (bool, error)
 ShowLogs(int) (error)
 ShowScripts() (error)
@@ -294,6 +296,7 @@ serverPrefs {
     "port" int
     "forwards,omitempty" []forward
     "theme,omitempty" string
+    "bookmarks,omitempty" []string
 }
 
 sessionsDoc {

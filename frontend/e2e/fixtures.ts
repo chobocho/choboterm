@@ -110,6 +110,114 @@ export class FakeServer {
     }
 }
 
+/**
+ * A small FTP server standing in for a real one, for the file window: it logs
+ * anyone in, lists the folders of `tree` (MLSD over EPSV) and refuses changes.
+ */
+export class FakeFtpServer {
+    private server = net.createServer();
+    private sockets = new Set<net.Socket>();
+    port = 0;
+    /** The folder PWD reports right after login. */
+    home = '/home/e2e';
+    /** Folder -> its subfolders. Every folder in a path must be listed. */
+    tree: Record<string, string[]> = {
+        '/': ['home', 'var'],
+        '/home': ['e2e'],
+        '/home/e2e': ['projects', 'logs'],
+        '/home/e2e/projects': ['app'],
+        '/home/e2e/projects/app': [],
+        '/home/e2e/logs': [],
+        '/var': ['log'],
+        '/var/log': [],
+    };
+
+    async start(): Promise<this> {
+        this.server.on('connection', s => this.serve(s));
+        await new Promise<void>(resolve => this.server.listen(0, '127.0.0.1', resolve));
+        this.port = (this.server.address() as net.AddressInfo).port;
+        return this;
+    }
+
+    private serve(s: net.Socket) {
+        this.sockets.add(s);
+        s.on('close', () => this.sockets.delete(s));
+        s.on('error', () => undefined);
+        const reply = (line: string) => s.write(`${line}\r\n`);
+        let data: Promise<net.Socket> | undefined;
+        let buf = '';
+        reply('220 fake FTP ready');
+        s.on('data', d => {
+            buf += d.toString('utf8');
+            let i: number;
+            while ((i = buf.indexOf('\r\n')) >= 0) {
+                const line = buf.slice(0, i);
+                buf = buf.slice(i + 2);
+                const sp = line.indexOf(' ');
+                const cmd = (sp < 0 ? line : line.slice(0, sp)).toUpperCase();
+                const arg = sp < 0 ? '' : line.slice(sp + 1);
+                switch (cmd) {
+                    case 'USER':
+                        reply('331 Password please');
+                        break;
+                    case 'PASS':
+                        reply('230 Logged in');
+                        break;
+                    case 'FEAT':
+                        s.write('211-Features:\r\n MLST type*;size*;modify*;\r\n UTF8\r\n211 End\r\n');
+                        break;
+                    case 'TYPE':
+                    case 'OPTS':
+                    case 'NOOP':
+                        reply('200 OK');
+                        break;
+                    case 'PWD':
+                        reply(`257 "${this.home}"`);
+                        break;
+                    case 'EPSV': {
+                        const l = net.createServer();
+                        data = new Promise(resolve => l.once('connection', c => {
+                            l.close();
+                            resolve(c);
+                        }));
+                        l.listen(0, '127.0.0.1', () => reply(`229 Entering Extended Passive Mode (|||${(l.address() as net.AddressInfo).port}|)`));
+                        break;
+                    }
+                    case 'MLSD': {
+                        const dir = arg.replace(/\/+$/, '') || '/';
+                        const subs = this.tree[dir];
+                        const conn = data;
+                        data = undefined;
+                        if (!subs || !conn) {
+                            conn?.then(c => c.destroy());
+                            reply('550 No such directory');
+                            break;
+                        }
+                        reply('150 Here it comes');
+                        conn.then(c => {
+                            const lines = subs.map(n => `type=dir;modify=20261018120000; ${n}\r\n`).join('') +
+                                'type=file;size=5;modify=20261018120000; readme.txt\r\n';
+                            c.end(lines, () => reply('226 Done'));
+                        });
+                        break;
+                    }
+                    case 'QUIT':
+                        reply('221 Bye');
+                        s.end();
+                        break;
+                    default:
+                        reply('502 Not implemented');
+                }
+            }
+        });
+    }
+
+    async close() {
+        for (const s of this.sockets) s.destroy();
+        await new Promise(resolve => this.server.close(resolve));
+    }
+}
+
 /** The page of one running choboterm, with the parts the tests look at. */
 export class App {
     readonly tabs: Locator;
@@ -190,7 +298,7 @@ export class App {
     }
 }
 
-export const test = base.extend<{app: App; server: FakeServer}>({
+export const test = base.extend<{app: App; server: FakeServer; ftp: FakeFtpServer}>({
     app: async ({page}, use, testInfo) => {
         // Its own settings, history, sessions and home folder: nothing of the user's is read or changed.
         // No cat: it would walk over what the tests click (cat.spec.ts turns it on).
@@ -227,6 +335,12 @@ export const test = base.extend<{app: App; server: FakeServer}>({
         const server = await new FakeServer().start();
         await use(server);
         await server.close();
+    },
+
+    ftp: async ({}, use) => {
+        const ftp = await new FakeFtpServer().start();
+        await use(ftp);
+        await ftp.close();
     },
 });
 

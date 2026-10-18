@@ -49,6 +49,8 @@ export function EvalLua(arg1:string):Promise<app.LuaResult>;
 
 export function ExportSessions():Promise<string>;
 
+export function FileBookmarks(arg1:number):Promise<Array<string>>;
+
 export function FileCancel(arg1:number):Promise<void>;
 
 export function FileClose(arg1:number):Promise<void>;
@@ -136,6 +138,8 @@ export function Send(arg1:number,arg2:string):Promise<void>;
 export function SendBreak(arg1:number):Promise<void>;
 
 export function SetEncoding(arg1:number,arg2:string):Promise<string>;
+
+export function SetFileBookmarks(arg1:number,arg2:Array<string>):Promise<void>;
 
 export function SetTabTheme(arg1:number,arg2:string):Promise<boolean>;
 

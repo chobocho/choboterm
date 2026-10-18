@@ -346,6 +346,10 @@ func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 		t.files.mu.Lock()
 		t.files.fs, t.files.proto = fs, "FTP"
 		t.files.mu.Unlock()
+		// No terminal session, but the server is known for its prefs (bookmarks).
+		t.mu.Lock()
+		t.host, t.port = req.Host, req.Port
+		t.mu.Unlock()
 		enc := t.codec.Set(req.Encoding)
 		_ = store.AddHistory(store.HostEntry{Host: req.Host, Port: req.Port, Login: req.Login, Encoding: enc}, nil)
 		return proto, nil

@@ -1,4 +1,5 @@
 import {
+    FileBookmarks,
     FileCancel,
     FileDelete,
     FileDownload,
@@ -13,6 +14,7 @@ import {
     FileUploadPaths,
     FileImage,
     FileView,
+    SetFileBookmarks,
 } from '../wailsjs/go/app/App';
 import {transfer} from '../wailsjs/go/models';
 import {EventsOn, OnFileDrop} from '../wailsjs/runtime/runtime';
@@ -39,6 +41,9 @@ const newFileBtn = $<HTMLButtonElement>('fNewFile');
 const renameBtn = $<HTMLButtonElement>('fRename');
 const deleteBtn = $<HTMLButtonElement>('fDelete');
 const menu = $<HTMLUListElement>('fMenu');
+const starBtn = $<HTMLButtonElement>('fStar');
+const marksBtn = $<HTMLButtonElement>('fMarks');
+const marksMenu = $<HTMLUListElement>('fMarksMenu');
 
 // One file window per tab. Only the active tab's window is shown; the others
 // keep their folder, selection and running transfer in the background.
@@ -53,6 +58,9 @@ interface View {
     busy: boolean;
     status: string;
     statusOk: boolean;
+    home: string;
+    marks: string[]; // the server's bookmarked folders (shared with its other tabs)
+    recent: string[]; // folders left in this window, newest first
     onClose?: () => void;
 }
 
@@ -142,6 +150,7 @@ function paintSelection(v: View) {
 function paintList(v: View) {
     if (v !== current) return;
     pathInput.value = v.cwd;
+    paintStar(v);
     body.innerHTML = '';
     v.entries.forEach((e, i) => {
         const tr = body.insertRow();
@@ -176,6 +185,7 @@ function hide() {
     current = undefined;
     overlay.hidden = true;
     hideMenu();
+    hideMarks();
     placeXfer();
 }
 
@@ -225,6 +235,7 @@ async function load(v: View, dir: string, names?: string[]) {
     try {
         const list = (await FileList(v.tabId, dir)) ?? [];
         v.entries = dir === '/' ? list : [UP, ...list];
+        if (folderKey(v.cwd) !== folderKey(dir)) remember(v, v.cwd);
         v.cwd = dir;
         v.picked = new Set();
         // The first real entry, as before ".." was added; ".." only in an empty folder.
@@ -288,6 +299,197 @@ function download(v: View) {
 function viewable(v: View): transfer.FileEntry | undefined {
     const list = pickedEntries(v);
     return list.length === 1 && !list[0].isDir ? list[0] : undefined;
+}
+
+// ---- Bookmarks and shortcuts ----
+
+const MAX_RECENT = 8;
+
+/** A folder as it is compared and saved: without a trailing slash (but "/"). */
+function folderKey(dir: string) {
+    return dir.replace(/\/+$/, '') || '/';
+}
+
+function remember(v: View, dir: string) {
+    const key = folderKey(dir);
+    v.recent = [key, ...v.recent.filter(d => d !== key)].slice(0, MAX_RECENT);
+}
+
+function paintStar(v: View) {
+    if (v !== current) return;
+    const on = v.marks.includes(folderKey(v.cwd));
+    starBtn.textContent = on ? '★' : '☆';
+    starBtn.classList.toggle('on', on);
+    starBtn.title = on ? '즐겨찾기에서 빼기 (Ctrl+D)' : '즐겨찾기에 추가 (Ctrl+D)';
+}
+
+/** Reads the bookmarks again: a tab on the same server may have changed them. */
+async function reloadMarks(v: View) {
+    try {
+        v.marks = (await FileBookmarks(v.tabId)) ?? [];
+    } catch {
+        // keep the list we have
+    }
+    paintStar(v);
+}
+
+async function saveMarks(v: View, list: string[]): Promise<boolean> {
+    try {
+        await SetFileBookmarks(v.tabId, list);
+        v.marks = list;
+        return true;
+    } catch (e) {
+        setStatus(v, String(e));
+        return false;
+    } finally {
+        paintStar(v);
+    }
+}
+
+/** ☆ / Ctrl+D: bookmarks the current folder, or takes it out of the bookmarks. */
+async function toggleMark(v: View) {
+    await reloadMarks(v);
+    const dir = folderKey(v.cwd);
+    const had = v.marks.includes(dir);
+    if (await saveMarks(v, had ? v.marks.filter(d => d !== dir) : [...v.marks, dir])) {
+        setStatus(v, had ? `즐겨찾기에서 뺐습니다: ${dir}` : `즐겨찾기에 추가했습니다: ${dir}`, true);
+    }
+}
+
+function goTo(v: View, dir: string) {
+    hideMarks();
+    if (v === current) panel.focus();
+    if (!v.busy && folderKey(dir) !== folderKey(v.cwd)) load(v, dir);
+}
+
+/** Ctrl+1 ~ Ctrl+9: the nth bookmark. */
+async function goToMark(v: View, n: number) {
+    await reloadMarks(v);
+    const dir = v.marks[n - 1];
+    if (dir) goTo(v, dir);
+    else setStatus(v, `${n}번 즐겨찾기가 없습니다`);
+}
+
+// The rows of the bookmark menu that go to a folder, for the arrow keys.
+let markItems: HTMLLIElement[] = [];
+let markSel = -1;
+
+function marksOpen() {
+    return !marksMenu.hidden;
+}
+
+function hideMarks() {
+    marksMenu.hidden = true;
+}
+
+function addMarkLabel(text: string) {
+    const li = document.createElement('li');
+    li.className = 'label disabled';
+    li.textContent = text;
+    marksMenu.append(li);
+}
+
+function addMarkSep() {
+    const li = document.createElement('li');
+    li.className = 'sep';
+    marksMenu.append(li);
+}
+
+function addMarkItem(v: View, text: string, dir: string, hint = '', removable = false) {
+    const li = document.createElement('li');
+    li.dataset.dir = dir;
+    li.title = dir;
+    if (removable) li.dataset.mark = dir;
+    if (folderKey(dir) === folderKey(v.cwd)) li.classList.add('here');
+    const name = document.createElement('span');
+    name.className = 'dir';
+    name.textContent = text;
+    li.append(name);
+    if (hint) {
+        const h = document.createElement('span');
+        h.className = 'hint';
+        h.textContent = hint;
+        li.append(h);
+    }
+    if (removable) {
+        const x = document.createElement('span');
+        x.className = 'remove';
+        x.textContent = '✕';
+        x.title = '즐겨찾기에서 빼기 (Delete)';
+        li.append(x);
+    }
+    marksMenu.append(li);
+    markItems.push(li);
+}
+
+/** ▾ / Ctrl+B: the bookmarks, the home and top folders, and the folders visited before. */
+async function showMarks(v: View) {
+    await reloadMarks(v);
+    if (v !== current) return;
+    hideMenu();
+    marksMenu.innerHTML = '';
+    markItems = [];
+    addMarkLabel('즐겨찾기');
+    if (v.marks.length === 0) addMarkLabel('없음: ☆ 또는 Ctrl+D로 지금 폴더를 추가합니다');
+    v.marks.forEach((d, i) => addMarkItem(v, d, d, i < 9 ? `Ctrl+${i + 1}` : '', true));
+    addMarkSep();
+    addMarkLabel('바로가기');
+    addMarkItem(v, `홈 폴더 (${v.home})`, v.home);
+    if (folderKey(v.home) !== '/') addMarkItem(v, '/ (최상위 폴더)', '/');
+    const recent = v.recent.filter(d => !v.marks.includes(d));
+    if (recent.length > 0) {
+        addMarkSep();
+        addMarkLabel('최근 폴더');
+        recent.forEach(d => addMarkItem(v, d, d));
+    }
+    marksMenu.hidden = false;
+    panel.focus(); // the list keys go to the window, also when the path box had the focus
+    const b = marksBtn.getBoundingClientRect();
+    const m = marksMenu.getBoundingClientRect();
+    marksMenu.style.left = `${Math.max(4, Math.min(b.right - m.width, window.innerWidth - m.width - 4))}px`;
+    marksMenu.style.top = `${b.bottom + m.height + 4 <= window.innerHeight ? b.bottom + 2 : Math.max(4, b.top - m.height - 2)}px`;
+    selectMark(markItems.findIndex(li => li.classList.contains('here')));
+}
+
+function selectMark(i: number) {
+    markSel = i;
+    markItems.forEach((li, j) => li.classList.toggle('active', j === i));
+    markItems[i]?.scrollIntoView({block: 'nearest'});
+}
+
+async function removeMark(v: View, dir: string) {
+    await reloadMarks(v);
+    if (await saveMarks(v, v.marks.filter(d => d !== dir))) {
+        setStatus(v, `즐겨찾기에서 뺐습니다: ${dir}`, true);
+        if (marksOpen()) await showMarks(v);
+    }
+}
+
+/** Keys while the bookmark menu is open; false lets the file window have the key. */
+function marksKey(v: View, ev: KeyboardEvent): boolean {
+    switch (ev.key) {
+        case 'ArrowDown':
+            selectMark(markSel + 1 >= markItems.length ? 0 : markSel + 1);
+            return true;
+        case 'ArrowUp':
+            selectMark(markSel <= 0 ? markItems.length - 1 : markSel - 1);
+            return true;
+        case 'Enter': {
+            const dir = markItems[markSel]?.dataset.dir;
+            if (dir) goTo(v, dir);
+            return true;
+        }
+        case 'Delete': {
+            const dir = markItems[markSel]?.dataset.mark;
+            if (dir) removeMark(v, dir);
+            return true;
+        }
+        case 'Escape':
+            hideMarks();
+            return true;
+    }
+    hideMarks();
+    return false;
 }
 
 /** Opens the selected file in the text viewer (edit: in edit mode), or an image in the image viewer. */
@@ -435,6 +637,9 @@ export async function openFiles(tabId: number, host: string, opts: {startDir?: s
         busy: false,
         status: '',
         statusOk: false,
+        home: res.home || '/',
+        marks: [],
+        recent: [],
         onClose: opts.onClose,
     };
     views.set(tabId, v);
@@ -442,6 +647,7 @@ export async function openFiles(tabId: number, host: string, opts: {startDir?: s
         show(v);
         panel.focus();
     }
+    await reloadMarks(v);
     await load(v, v.cwd);
     if (opts.startDir && !start && !v.status) setStatus(v, `터미널의 현재 폴더(${opts.startDir})를 열 수 없어 홈 폴더를 엽니다`);
 }
@@ -484,6 +690,28 @@ mkdirBtn.addEventListener('click', () => current && mkdir(current));
 newFileBtn.addEventListener('click', () => current && newFile(current));
 renameBtn.addEventListener('click', () => current && rename(current));
 deleteBtn.addEventListener('click', () => current && remove(current));
+starBtn.addEventListener('click', () => current && toggleMark(current));
+// The button's own mousedown must not close the menu it is about to toggle.
+// Neither it nor the menu takes the focus, so the list keys keep working.
+const keepFocus = (ev: MouseEvent) => {
+    ev.stopPropagation();
+    ev.preventDefault();
+};
+marksBtn.addEventListener('mousedown', keepFocus);
+marksBtn.addEventListener('click', () => {
+    if (!current) return;
+    if (marksOpen()) hideMarks();
+    else showMarks(current);
+});
+marksMenu.addEventListener('mousedown', keepFocus);
+marksMenu.addEventListener('click', ev => {
+    const target = ev.target as HTMLElement;
+    const li = target.closest('li');
+    const v = current;
+    if (!li || !v || !li.dataset.dir) return;
+    if (target.classList.contains('remove') && li.dataset.mark) removeMark(v, li.dataset.mark);
+    else goTo(v, li.dataset.dir);
+});
 $<HTMLButtonElement>('fClose').addEventListener('click', () => closeFiles());
 $<HTMLButtonElement>('filesX').addEventListener('click', () => closeFiles());
 
@@ -499,6 +727,11 @@ pathInput.addEventListener('keydown', ev => {
 panel.addEventListener('keydown', ev => {
     const v = current;
     if (!v || ev.target === pathInput) return;
+    if (marksOpen() && marksKey(v, ev)) return ev.preventDefault();
+    if (ev.ctrlKey && !ev.shiftKey && !ev.altKey && /^[1-9]$/.test(ev.key)) {
+        goToMark(v, Number(ev.key));
+        return ev.preventDefault();
+    }
     const mode = ev.shiftKey ? 'range' : 'one';
     switch (ev.key) {
         case 'Escape':
@@ -552,6 +785,16 @@ panel.addEventListener('keydown', ev => {
         case 'A':
             if (!ev.ctrlKey) return;
             selectAll(v);
+            break;
+        case 'd':
+        case 'D':
+            if (!ev.ctrlKey || ev.shiftKey) return;
+            toggleMark(v);
+            break;
+        case 'b':
+        case 'B':
+            if (!ev.ctrlKey || ev.shiftKey) return;
+            showMarks(v);
             break;
         default:
             return;
@@ -630,8 +873,12 @@ menu.addEventListener('click', ev => {
             break;
     }
 });
-window.addEventListener('mousedown', hideMenu);
-window.addEventListener('blur', hideMenu);
+for (const ev of ['mousedown', 'blur']) {
+    window.addEventListener(ev, () => {
+        hideMenu();
+        hideMarks();
+    });
+}
 
 // ---- Drag and drop from Explorer ----
 

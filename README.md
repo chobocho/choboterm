@@ -78,6 +78,7 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
   - When downloading several items or folders, pick a destination folder and subfolders are downloaded too. If a file with the same name exists, it is saved as `name (1)`.
   - Drag files and folders from Windows Explorer onto the list to upload them (folders including their contents).
   - `Delete` to delete (folders including their contents, after confirmation), `F2` rename, `F7` new folder, `Shift+F4` new file (empty; not created if the name exists), context menu
+  - **Bookmarks and shortcuts**: ☆ next to the path (`Ctrl+D`) bookmarks the current folder or removes it; ▾ (`Ctrl+B`) lists the bookmarks, the home folder, `/` and the folders visited in this window (`↑` `↓` `Enter`; `Delete` or ✕ removes a bookmark). `Ctrl+1`–`9` go to the nth bookmark. Bookmarks are saved per server (host + port), so other tabs on that server and later connections use them too.
   - `F3` view / `F4` edit: Opens a remote text file directly without downloading it (up to the first 10MB; larger files are view-only). UTF-8 / EUC-KR (CP949) is detected automatically, and if characters are garbled you can pick an encoding to reload it. `Ctrl+F` find and replace, word wrap on/off, and you can save what you see to your PC converted to UTF-8 or EUC-KR.
   - Images (JPG · PNG · GIF · BMP · WebP · SVG · ICO, up to 30MB) open in the image viewer with `F3`. They are fitted to the window at first; `←` `→` (`PgUp` `PgDn`, `Space`) for the previous / next image in the same folder, `0` fit, `1` actual size (toggle with a double-click), `+` `-` · `Ctrl+wheel` to zoom in and out, drag to pan large images, `Esc` to close. Transparent areas are shown as a checkerboard.
   - Edits are saved straight to the server with `Ctrl+S`. The encoding, line endings (CRLF/LF) and BOM are preserved. If the file changed on the server after you opened it (size · modification time), you are asked before overwriting, and if there are characters the encoding cannot represent or garbled characters, you are told before saving.
@@ -190,7 +191,7 @@ X11 forwarding is not supported.
 | `Ctrl+C` / `Ctrl+X` (during a Zmodem transfer) | Cancel the transfer |
 | `F1` | Open / close help (in the help window, `Alt+L` toggles 한국어 ↔ English) |
 
-File transfer window: `↑` `↓` `Home` `End` to select (`Shift` for a range), `Ctrl+click` · `Ctrl+A` to select multiple, `Enter` / double-click to open a folder or download, `Backspace` · `Alt+↑` · `..` at the top of the list for the parent folder, `F3` view, `F4` edit, `F5` refresh, `Delete` delete, `F2` rename, `F7` new folder, `Shift+F4` new file, `Esc` close
+File transfer window: `↑` `↓` `Home` `End` to select (`Shift` for a range), `Ctrl+click` · `Ctrl+A` to select multiple, `Enter` / double-click to open a folder or download, `Backspace` · `Alt+↑` · `..` at the top of the list for the parent folder, `F3` view, `F4` edit, `F5` refresh, `Delete` delete, `F2` rename, `F7` new folder, `Shift+F4` new file, `Ctrl+D` bookmark or unbookmark, `Ctrl+B` bookmark list, `Ctrl+1`–`9` nth bookmark, `Esc` close
 
 ## Where files are stored
 

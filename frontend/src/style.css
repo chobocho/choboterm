@@ -991,6 +991,70 @@ body.resizing-col #terms .term {
     cursor: pointer;
 }
 
+.files .toolbar #fStar.on {
+    color: #d08a00;
+}
+
+/* The bookmark menu under ▾: bookmarks, home and top folders, recent folders. */
+.menu.marks {
+    min-width: 260px;
+    max-width: min(520px, calc(100vw - 8px));
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+
+.menu.marks li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 10px 5px 14px;
+}
+
+.menu.marks li.label {
+    padding: 4px 10px 2px;
+    font-size: 11px;
+}
+
+.menu.marks li.active {
+    background: #0078d7;
+    color: #fff;
+}
+
+.menu.marks .dir {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.menu.marks li.here .dir {
+    font-weight: bold;
+}
+
+.menu.marks .hint {
+    color: #777;
+}
+
+.menu.marks li:hover .hint,
+.menu.marks li.active .hint {
+    color: inherit;
+}
+
+.menu.marks .remove {
+    padding: 0 4px;
+    border-radius: 2px;
+    opacity: 0.4;
+}
+
+.menu.marks li:hover .remove,
+.menu.marks li.active .remove {
+    opacity: 1;
+}
+
+.menu.marks .remove:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
 .files .flist {
     height: min(320px, calc(100vh - 200px));
     overflow: auto;

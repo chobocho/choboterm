@@ -48,6 +48,8 @@ type ServerPrefs struct {
 	Port     int       `json:"port"`
 	Forwards []Forward `json:"forwards,omitempty"` // SSH port forwarding rules
 	Theme    string    `json:"theme,omitempty"`    // "" = the theme in Settings
+	// Remote folders bookmarked in the file window, in the user's order.
+	Bookmarks []string `json:"bookmarks,omitempty"`
 }
 
 type sessionsDoc struct {

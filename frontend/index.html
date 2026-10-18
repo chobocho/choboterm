@@ -111,6 +111,8 @@
             <div class="toolbar">
                 <button type="button" id="fUp" title="상위 폴더 (Backspace · Alt+↑)">↑</button>
                 <input id="fPath" spellcheck="false"/>
+                <button type="button" id="fStar" title="즐겨찾기에 추가 (Ctrl+D)">☆</button>
+                <button type="button" id="fMarks" title="즐겨찾기 · 바로가기 (Ctrl+B)">▾</button>
                 <button type="button" id="fRefresh" title="새로 고침 (F5)">⟳</button>
             </div>
             <div class="flist" id="fList" title="파일이나 폴더를 여기로 끌어 놓으면 업로드합니다">
@@ -453,6 +455,8 @@
         </div>
     </div>
 </div>
+
+<ul id="fMarksMenu" class="menu marks" hidden></ul>
 
 <ul id="fMenu" class="menu" hidden>
     <li data-act="open">다운로드</li>
