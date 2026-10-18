@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-18 — 옛 장비용 SSH 알고리즘 (서버별 허용)</h2>
+<ul>
+  <li>문제: Go SSH 기본값에 <code>diffie-hellman-group1-sha1</code>·<code>group-exchange-sha1</code> 키 교환과 <code>aes128-cbc</code>·<code>3des-cbc</code>·arcfour 암호화가 없어 오래된 스위치·공유기·임베디드 장비에 "no common algorithm"으로 접속 실패</li>
+  <li>수정: 협상 실패가 옛 알고리즘으로 풀리는 경우만 <code>sshconn.LegacyError</code>(서버·항목·옛 알고리즘 목록)로 돌려주고, 앱이 "이 서버에 한해 허용하고 접속할까요?"를 물어 예면 서버별 <code>servers[].legacySSH</code>에 저장 후 다시 접속. 다음부터 바로 접속. 허용해도 안전한 알고리즘을 먼저 제시. 점프 호스트도 같은 경로(오류가 %w로 감싸져 전달)</li>
+  <li><code>Connect</code>의 원격 접속 부분을 <code>connectRemote</code>로 분리(재시도용), 질문 창 공통 함수 <code>askYesNo</code> 사용</li>
+  <li>테스트: <code>ssh_legacy_test.go</code>(group1-sha1 / aes128-cbc / 3des-cbc 서버: 허용 전 LegacyError, 허용 후 접속 · 옛 알고리즘으로 안 풀리는 실패(group16-sha512 전용)는 묻지 않음 · 허용해도 안전한 것 우선), <code>app_legacy_test.go</code>(거절 시 실패·기억 안 함, 허용 시 접속·기억, 다음엔 묻지 않음), 번역 테스트. 실제 옛 장비로는 확인하지 못함(같은 x/crypto 구현의 테스트 서버로 확인)</li>
+  <li>확인: <code>go vet</code>·<code>go test ./...</code>·프런트엔드 빌드 통과</li>
+</ul>
+
 <h2>2026-10-18 — FTPS (FTP over TLS)</h2>
 <ul>
   <li>FTP 접속 시 로그인 전에 <code>AUTH TLS</code>를 먼저 요청. 서버가 지원하면 명령·데이터 연결 모두 TLS(창 제목 <code>FTPS</code>), 거부하거나 TLS 핸드셰이크가 인증서 확인 전에 실패하면 예전처럼 일반 FTP. 포트 990은 implicit FTPS(되돌아가지 않음). 로그인 실패는 일반 FTP로 다시 시도하지 않음(비밀번호 평문 전송 방지)</li>

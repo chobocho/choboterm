@@ -298,6 +298,7 @@ serverPrefs {
     "theme,omitempty" string
     "bookmarks,omitempty" []string
     "ftpsCert,omitempty" string
+    "legacySSH,omitempty" bool
 }
 
 sessionsDoc {

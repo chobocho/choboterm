@@ -7,8 +7,13 @@ import (
 
 	"choboterm/internal/dialog"
 	"choboterm/internal/i18n"
+	"choboterm/internal/sshconn"
 	"choboterm/internal/store"
 )
+
+func init() {
+	sshconn.LegacyAllowed = func(host string, port int) bool { return store.PrefsFor(host, port).LegacySSH }
+}
 
 // TabTheme returns the color theme saved for the server of a tab's
 // connection ("" = the theme in Settings).

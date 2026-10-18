@@ -58,6 +58,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - **점프 호스트 (ProxyJump)**: 배스천 서버를 거쳐 내부 서버에 접속합니다. 접속 창(과 세션 관리 창)의 `Jump` 칸에 `user@bastion` 또는 `bastion:2222`를 쓰고, 여러 단계는 `a,b`처럼 쉼표로 잇습니다. 비워 두면 `~/.ssh/config`의 `ProxyJump`를 쓰고(칸에 흐리게 표시), Host 칸에 `ssh -J bastion web`을 써도 됩니다. `none`이면 config에 있어도 쓰지 않습니다.
     - 점프 호스트 이름이 config의 Host면 그 HostName·User·Port·IdentityFile을 씁니다. 로그인은 키·에이전트로 하고, 비밀번호가 필요하면 "(점프 호스트 user@bastion)"이라고 붙여 따로 묻습니다. 호스트 키도 단계마다 known_hosts로 확인합니다.
     - 파일 전송(SFTP)·포트 포워딩도 같은 경로로 됩니다. Jump 값은 접속 기록과 세션에 함께 저장됩니다.
+  - **옛 장비 (오래된 알고리즘)**: 오래된 스위치·공유기·임베디드 장비처럼 `diffie-hellman-group1-sha1`, `diffie-hellman-group-exchange-sha1` 키 교환이나 `aes128-cbc`, `3des-cbc` 암호화만 지원하는 서버는 처음 접속할 때 어떤 알고리즘인지 보여 주고 이 서버에 한해 허용할지 묻습니다. 허용하면 서버별로 기억해 다음부터 바로 접속하며, 그래도 더 안전한 알고리즘이 있으면 그것을 먼저 씁니다. 점프 호스트도 같습니다.
   - `~/.ssh/known_hosts`로 호스트 키 확인. 처음 접속하는 호스트는 지문을 보여 주고 신뢰할지 묻고, 키가 바뀐 호스트는 차단합니다.
 - **로컬 셸 (cmd / PowerShell / WSL)**: 접속 창의 Host에 `cmd`, `powershell`, `pwsh`, `wsl`(또는 `wsl -d Ubuntu`처럼 인자 포함)을 쓰면 이 PC의 셸을 탭에서 엽니다. ▼ 목록에도 설치된 셸이 `로컬 셸`로 나옵니다. 이때 Port / Login / Pass / Code 칸은 쓰지 않으므로 비활성화됩니다.
   - Windows의 의사 콘솔(ConPTY)을 쓰므로 Windows 10 1809 이상이 필요합니다. 사용자 폴더에서 시작하며 항상 UTF-8입니다.

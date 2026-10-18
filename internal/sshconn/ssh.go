@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -121,12 +122,94 @@ func sshLogin(addr, login, pass string, confirm hostKeyConfirmer, ask terminal.A
 	// server may offer e.g. its ECDSA key while known_hosts holds its Ed25519
 	// key, which would look like a changed key.
 	cfg.HostKeyAlgorithms = kh.algorithmsFor(addr, conn.RemoteAddr())
+	host, port := splitAddr(addr)
+	legacy := LegacyAllowed != nil && LegacyAllowed(host, port)
+	if legacy {
+		cfg.Config = legacyConfig()
+	}
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, cfg)
 	if err != nil {
 		conn.Close()
+		if le := legacyNeeded(err, host, port); le != nil && !legacy {
+			return nil, le
+		}
 		return nil, fmt.Errorf("SSH 접속 실패: %w", err)
 	}
 	return ssh.NewClient(c, chans, reqs), nil
+}
+
+// LegacyAllowed reports whether old algorithms with known weaknesses
+// (diffie-hellman-group1-sha1, CBC ciphers and the like) may be used with
+// host:port, as OpenSSH's "KexAlgorithms +..." would. The app sets it from
+// the server's prefs; nil allows them for no server.
+var LegacyAllowed func(host string, port int) bool
+
+// LegacyError is a server that only speaks such old algorithms: old
+// switches, routers and embedded boards. Connecting again with
+// LegacyAllowed true for Host:Port can work.
+type LegacyError struct {
+	Host  string
+	Port  int
+	What  string   // what couldn't be agreed on: "key exchange", "client to server cipher", ...
+	Algos []string // the old algorithms the server offered for it
+	err   error
+}
+
+func (e *LegacyError) Error() string {
+	return fmt.Sprintf("SSH 접속 실패: %s 서버는 안전하지 않은 옛 알고리즘만 지원합니다 (%s)",
+		net.JoinHostPort(e.Host, strconv.Itoa(e.Port)), strings.Join(e.Algos, ", "))
+}
+
+func (e *LegacyError) Unwrap() error { return e.err }
+
+// legacyConfig offers the old algorithms after the usual ones, so a server
+// that also has a good one still gets that.
+func legacyConfig() ssh.Config {
+	ok, old := ssh.SupportedAlgorithms(), ssh.InsecureAlgorithms()
+	return ssh.Config{
+		KeyExchanges: append(ok.KeyExchanges, old.KeyExchanges...),
+		Ciphers:      append(ok.Ciphers, old.Ciphers...),
+		MACs:         append(ok.MACs, old.MACs...),
+	}
+}
+
+// legacyNeeded returns a LegacyError if err is a failed negotiation that the
+// old algorithms would get past.
+func legacyNeeded(err error, host string, port int) *LegacyError {
+	var ne *ssh.AlgorithmNegotiationError
+	if !errors.As(err, &ne) {
+		return nil
+	}
+	old := ssh.InsecureAlgorithms()
+	var known []string
+	switch {
+	case ne.What == "key exchange":
+		known = old.KeyExchanges
+	case strings.HasSuffix(ne.What, "cipher"):
+		known = old.Ciphers
+	case strings.HasSuffix(ne.What, "MAC"):
+		known = old.MACs
+	}
+	var algos []string
+	for _, a := range ne.RequestedAlgorithms {
+		if slices.Contains(known, a) {
+			algos = append(algos, a)
+		}
+	}
+	if len(algos) == 0 {
+		return nil
+	}
+	return &LegacyError{Host: host, Port: port, What: ne.What, Algos: algos, err: err}
+}
+
+// splitAddr splits "host:port"; the port is 0 if there is none.
+func splitAddr(addr string) (string, int) {
+	host, p, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr, 0
+	}
+	port, _ := strconv.Atoi(p)
+	return host, port
 }
 
 // Dial opens an SSH shell (see sshLogin for conn, keys and ask).

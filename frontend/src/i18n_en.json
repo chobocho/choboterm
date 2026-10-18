@@ -659,5 +659,12 @@
   "믿을 수 있는 기관이 발급하지 않았습니다 (자체 서명 등)": "Not issued by a trusted authority (self-signed or the like)",
   "유효 기간이 지났거나 아직 시작되지 않았습니다": "Expired or not valid yet",
   "인증서의 이름이 접속한 주소와 다릅니다": "The certificate is made for another name than the address connected to",
-  "인증서를 신뢰하지 않아 접속하지 않았습니다": "Not connected: the certificate was not trusted"
+  "인증서를 신뢰하지 않아 접속하지 않았습니다": "Not connected: the certificate was not trusted",
+  "옛 SSH 알고리즘": "Old SSH algorithms",
+  "{} 서버는 안전하지 않은 옛 알고리즘만 지원합니다.": "The server {} only supports old, insecure algorithms.",
+  "키 교환: {}": "Key exchange: {}",
+  "암호화: {}": "Cipher: {}",
+  "메시지 인증(MAC): {}": "MAC: {}",
+  "오래된 스위치·공유기·임베디드 장비에서 흔합니다. 이 서버에 한해 허용하고 접속할까요?": "This is common with old switches, routers and embedded devices. Allow them for this server only and connect?",
+  "SSH 접속 실패: {} 서버는 안전하지 않은 옛 알고리즘만 지원합니다 ({})": "SSH connection failed: the server {} only supports old, insecure algorithms ({})"
 }

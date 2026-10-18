@@ -53,6 +53,9 @@ type ServerPrefs struct {
 	// The FTPS certificate the user trusted although the system doesn't
 	// (SHA256:base64 fingerprint).
 	FTPSCert string `json:"ftpsCert,omitempty"`
+	// SSH may use old algorithms with this server (it speaks nothing else).
+	// Unlike the rest, the host is the address dialed, as for jump hosts.
+	LegacySSH bool `json:"legacySSH,omitempty"`
 }
 
 type sessionsDoc struct {

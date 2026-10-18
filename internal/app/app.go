@@ -290,7 +290,18 @@ func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 	if req.Port <= 0 || req.Port > 65535 {
 		return "", errors.New("Port가 올바르지 않습니다")
 	}
+	proto, err := a.connectRemote(tabID, req)
+	// A server (or jump host) that only speaks old algorithms: once the user
+	// allows them for it, connect again.
+	var legacy *sshconn.LegacyError
+	if errors.As(err, &legacy) && a.allowLegacy(tabID, legacy) {
+		proto, err = a.connectRemote(tabID, req)
+	}
+	return proto, err
+}
 
+// connectRemote connects a tab to a server over the network: SSH, Telnet or FTP.
+func (a *App) connectRemote(tabID int, req terminal.ConnectRequest) (string, error) {
 	// "ssh [-p port] [user@]name" and names from ~/.ssh/config: req keeps
 	// the name (tab title, history), dial holds the address to connect to.
 	cfg := sshconn.LoadConfig()
@@ -725,6 +736,25 @@ func (a *App) certTrust(tabID int, host string, port int) transfer.CertTrust {
 		}
 		return ok
 	}
+}
+
+// allowLegacy asks whether to use old SSH algorithms with a server that
+// speaks nothing else, and remembers a yes for the server.
+func (a *App) allowLegacy(tabID int, e *sshconn.LegacyError) bool {
+	where := net.JoinHostPort(e.Host, strconv.Itoa(e.Port))
+	what := map[string]string{"key exchange": "키 교환"}[e.What]
+	switch {
+	case strings.HasSuffix(e.What, "cipher"):
+		what = "암호화"
+	case strings.HasSuffix(e.What, "MAC"):
+		what = "메시지 인증(MAC)"
+	}
+	if !a.askYesNo(tabID, i18n.Tr("옛 SSH 알고리즘"), i18n.Tr(fmt.Sprintf(
+		"%s 서버는 안전하지 않은 옛 알고리즘만 지원합니다.\n\n%s: %s\n\n오래된 스위치·공유기·임베디드 장비에서 흔합니다. 이 서버에 한해 허용하고 접속할까요?",
+		where, what, strings.Join(e.Algos, ", ")))) {
+		return false
+	}
+	return store.UpdatePrefs(e.Host, e.Port, func(p *store.ServerPrefs) { p.LegacySSH = true }) == nil
 }
 
 // askYesNo asks a question while connecting: in the page for a browser,
