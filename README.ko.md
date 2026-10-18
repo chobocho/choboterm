@@ -47,7 +47,7 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - 세션으로 연 탭에는 세션 이름이 붙습니다.
   - **세션 관리 창**: `Ctrl+Shift+H` 또는 탭 바 오른쪽 ★ 버튼. 세션을 고치기·추가·복제·삭제·찾기 하고, `Enter`로 접속합니다. "그룹 전체 열기"는 그룹의 세션을 모두 탭으로 엽니다. 고친 내용은 바로 저장됩니다.
   - **가져오기 · 내보내기**: PuTTY에 저장된 SSH·Telnet 세션을 `PuTTY` 그룹으로 가져옵니다. 다른 PC로 옮길 때는 파일로 내보내고 가져옵니다(비밀번호는 내보내지 않음).
-- **프로토콜 선택**: 22 = SSH, 21 = FTP, 23 = Telnet. 그 밖의 포트(예: Termux의 8022)는 접속하자마자 서버의 첫 인사말로 자동 판별합니다(`SSH-` → SSH, `220` → FTP, 그 외 → Telnet). 먼저 말을 걸지 않는 Telnet 서버는 판별에 2초가 걸립니다.
+- **프로토콜 선택**: 22 = SSH, 21 = FTP, 990 = FTPS, 23 = Telnet. 그 밖의 포트(예: Termux의 8022)는 접속하자마자 서버의 첫 인사말로 자동 판별합니다(`SSH-` → SSH, `220` → FTP, 그 외 → Telnet). 먼저 말을 걸지 않는 Telnet 서버는 판별에 2초가 걸립니다.
 - **SSH**: 비밀번호, keyboard-interactive, `~/.ssh` 개인키(id_ed25519 / id_ecdsa / id_rsa), SSH 에이전트 인증
   - **2단계 인증(OTP)**: 서버가 keyboard-interactive로 묻는 `Verification code:`, `One-time password:`, Duo 같은 질문은 서버가 보낸 그대로 창에 보여 주고 답을 보냅니다. 첫 `Password:` 질문은 접속 창의 Pass로 자동으로 답합니다. Pass를 비워 두면 비밀번호도 창에서 묻습니다.
   - **SSH 에이전트**: Windows용 OpenSSH 에이전트(`ssh-agent` 서비스), PuTTY의 Pageant, `SSH_AUTH_SOCK`에 올려 둔 키를 먼저 씁니다. 따로 설정할 것은 없습니다.
@@ -71,6 +71,8 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
 - **Telnet**: NAWS / TTYPE / ECHO / SGA / BINARY 협상, `login:` / `password:` 프롬프트 자동 로그인
   - 비밀번호를 기억해 두었다가 Host를 고르면 자동으로 채웁니다. Windows DPAPI로 암호화해 저장하므로 현재 Windows 사용자만 풀 수 있습니다. Pass를 비우고 접속하면 저장된 비밀번호를 지웁니다.
 - **FTP**: 접속하면 파일 전송 창이 바로 열립니다. 창을 닫아도 탭을 닫기 전까지 연결이 유지되며 `Ctrl+Shift+F`로 다시 엽니다. Login을 비워 두면 anonymous로 로그인합니다.
+  - **FTPS (TLS)**: 로그인하기 전에 먼저 암호화(`AUTH TLS`)를 요청하고, 서버가 지원하면 명령과 파일 전송을 모두 암호화합니다(창 제목에 `FTPS`). 서버가 지원하지 않으면 예전처럼 일반 FTP로 접속합니다(창 제목에 `FTP`). 포트 990은 처음부터 TLS로 접속하는 implicit FTPS입니다.
+  - 인증서를 확인할 수 없으면(자체 서명, 기간 만료, 다른 이름) 이유·발급 대상·유효 기간·지문을 보여 주고 신뢰할지 묻습니다. 신뢰한 인증서는 서버별로 기억해 다시 묻지 않고, 나중에 인증서가 바뀌면 경고와 함께 다시 묻습니다. 신뢰하지 않으면 비밀번호를 보내지 않고 접속을 그만둡니다.
 - **SFTP / SCP**: SSH 접속 중 `Ctrl+Shift+F`로 파일 전송 창을 엽니다. 다시 로그인할 필요가 없습니다.
   - 터미널의 현재 폴더에서 열립니다. 커서 줄의 프롬프트(`user@host:~/src$`, `~/src $` 등), 셸이 보내는 OSC 7, 창 제목 순으로 폴더를 찾고, 찾지 못하면 홈 폴더에서 엽니다.
 - **파일 전송 창** (SFTP / SCP / FTP 공통)
@@ -378,7 +380,6 @@ npm run test:e2e
 ## 아직 지원하지 않는 기능
 
 - X11 포워딩
-- FTPS(TLS)
 - SCP의 이어받기 (SFTP·FTP만 지원)
 - macOS
 

@@ -297,6 +297,7 @@ serverPrefs {
     "forwards,omitempty" []forward
     "theme,omitempty" string
     "bookmarks,omitempty" []string
+    "ftpsCert,omitempty" string
 }
 
 sessionsDoc {

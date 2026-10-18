@@ -105,7 +105,7 @@ function updateProto() {
         return;
     }
     // Other ports are detected from the server greeting when connecting.
-    proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : p === 23 ? 'Telnet' : '자동 감지';
+    proto.textContent = p === 22 ? 'SSH' : p === 21 ? 'FTP' : p === 990 ? 'FTPS' : p === 23 ? 'Telnet' : '자동 감지';
 }
 
 /** Reads what the Host list offers: saved sessions, history, ~/.ssh/config names, local shells. */

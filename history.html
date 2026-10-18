@@ -5,6 +5,15 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-18 — FTPS (FTP over TLS)</h2>
+<ul>
+  <li>FTP 접속 시 로그인 전에 <code>AUTH TLS</code>를 먼저 요청. 서버가 지원하면 명령·데이터 연결 모두 TLS(창 제목 <code>FTPS</code>), 거부하거나 TLS 핸드셰이크가 인증서 확인 전에 실패하면 예전처럼 일반 FTP. 포트 990은 implicit FTPS(되돌아가지 않음). 로그인 실패는 일반 FTP로 다시 시도하지 않음(비밀번호 평문 전송 방지)</li>
+  <li>시스템이 신뢰하지 않는 인증서(자체 서명·만료·이름 다름)는 이유·발급 대상·발급자·유효 기간·SHA256 지문을 보여 주고 질문(창: 메시지 상자, 브라우저: 페이지 안 질문). 신뢰하면 서버별 <code>servers[].ftpsCert</code>에 저장해 다시 묻지 않고, 바뀌면 경고와 함께 다시 질문. 거부하면 USER/PASS를 보내지 않음</li>
+  <li>실서버(pyftpdlib TLS_FTPHandler, 스크래치 가상환경)로 확인하다 발견·수정: ① TLS 1.3에서 업로드 후 응답(226)이 오지 않아 멈춤 — 업로드 중 읽지 않은 세션 티켓 때문에 소켓을 닫을 때 RST가 나가고 서버가 응답 없이 끊음(TLS 1.2로 제한하면 통과해 원인 확인). ② 보기 창처럼 다운로드를 중간에 멈추면 같은 이유로 멈춤. → 업로드했거나 끝까지 읽지 않은 TLS 데이터 연결은 close_notify 후 서버가 닫을 때까지(최대 10초) 읽고 닫음. ③ 응답 없는 명령 중에 <code>Close</code>가 잠금을 기다리며 멈춤 → 잠금을 못 얻으면 제어 소켓을 바로 닫음</li>
+  <li>테스트: <code>internal/transfer/ftps_test.go</code>(Go 가짜 FTPS 서버: explicit·implicit·자체 서명·시스템 신뢰·거부·AUTH 미지원·깨진 TLS·로그인 실패·다운로드 중단 — 중단 테스트는 수정을 끄면 15초 만에 실패), <code>app_ftps_test.go</code>(서버별 기억·변경 시 재질문), i18n 번역 테스트, 실서버용 <code>TestFTPRoundTrip</code>(CHOBOTERM_FTP_TLS)과 E2E <code>ftps.spec.ts</code>(E2E_FTPS 있을 때만)</li>
+  <li>확인: pyftpdlib FTPS·일반 FTP 왕복(목록·업로드·다운로드·중단·이어받기·이어 올리기) 각 3회 통과, 실서버 E2E 통과, <code>go vet</code>·<code>go test ./...</code>·프런트엔드 빌드·파일 창 E2E 통과. 창(Wails)의 메시지 상자 경로는 직접 확인하지 못함</li>
+</ul>
+
 <h2>2026-10-18 — 파일 전송 창 즐겨찾기 · 바로가기</h2>
 <ul>
   <li>요청: Ctrl+Shift+F 파일 전송 창에 즐겨찾기나 바로가기 기능</li>

@@ -2,6 +2,7 @@ package transfer
 
 import (
 	"bytes"
+	"crypto/x509"
 	"net"
 	"os"
 	"strconv"
@@ -15,7 +16,8 @@ import (
 //
 //	CHOBOTERM_FTP_TEST=127.0.0.1:2121 CHOBOTERM_FTP_ENCODING=EUC-KR go test -run FTP
 //
-// Login is user / pass. Skipped when the variable isn't set.
+// Login is user / pass. Skipped when the variable isn't set. Any certificate
+// is trusted; CHOBOTERM_FTP_TLS=1 requires FTPS, 0 plain FTP.
 func TestFTPRoundTrip(t *testing.T) {
 	addr := os.Getenv("CHOBOTERM_FTP_TEST")
 	if addr == "" {
@@ -27,11 +29,16 @@ func TestFTPRoundTrip(t *testing.T) {
 	}
 	port, _ := strconv.Atoi(portStr)
 
-	fs, err := DialFTP(terminal.ConnectRequest{Host: host, Port: port, Login: "user", Pass: "pass", Encoding: os.Getenv("CHOBOTERM_FTP_ENCODING")}, nil)
+	fs, err := DialFTP(terminal.ConnectRequest{Host: host, Port: port, Login: "user", Pass: "pass", Encoding: os.Getenv("CHOBOTERM_FTP_ENCODING")}, nil,
+		func(*x509.Certificate, error) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer fs.Close()
+	t.Logf("FTPS: %v", fs.Secure())
+	if want := os.Getenv("CHOBOTERM_FTP_TLS"); want != "" && fs.Secure() != (want == "1") {
+		t.Fatalf("FTPS = %v, want %s", fs.Secure(), want)
+	}
 
 	wd, err := fs.Getwd()
 	if err != nil {

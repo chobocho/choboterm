@@ -47,7 +47,7 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
   - Tabs opened from a session are named after the session.
   - **Sessions window**: `Ctrl+Shift+H` or the ★ button at the right of the tab bar. Edit, add, duplicate, delete and search sessions, and connect with `Enter`. "Open the whole group" opens every session in the group as tabs. Changes are saved immediately.
   - **Import · export**: Import SSH and Telnet sessions saved in PuTTY into a `PuTTY` group. To move to another PC, export to a file and import it there (passwords are not exported).
-- **Protocol selection**: 22 = SSH, 21 = FTP, 23 = Telnet. For other ports (e.g. Termux's 8022), the protocol is detected automatically from the server's first greeting right after connecting (`SSH-` → SSH, `220` → FTP, anything else → Telnet). Telnet servers that do not speak first take 2 seconds to detect.
+- **Protocol selection**: 22 = SSH, 21 = FTP, 990 = FTPS, 23 = Telnet. For other ports (e.g. Termux's 8022), the protocol is detected automatically from the server's first greeting right after connecting (`SSH-` → SSH, `220` → FTP, anything else → Telnet). Telnet servers that do not speak first take 2 seconds to detect.
 - **SSH**: Password, keyboard-interactive, private keys in `~/.ssh` (id_ed25519 / id_ecdsa / id_rsa), and SSH agent authentication
   - **Two-factor authentication (OTP)**: Questions the server asks via keyboard-interactive, such as `Verification code:`, `One-time password:` or Duo, are shown in a window exactly as the server sent them, and your answer is sent back. The first `Password:` question is answered automatically with Pass from the connect window. If Pass is left empty, the password is asked in the window too.
   - **SSH agent**: Keys loaded in the OpenSSH agent for Windows (the `ssh-agent` service), PuTTY's Pageant, or `SSH_AUTH_SOCK` are tried first. Nothing to configure.
@@ -71,6 +71,8 @@ Built with Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org). 
 - **Telnet**: NAWS / TTYPE / ECHO / SGA / BINARY negotiation, automatic login at `login:` / `password:` prompts
   - The password is remembered and filled in automatically when you pick the Host. It is stored encrypted with Windows DPAPI, so only the current Windows user can decrypt it. Connecting with Pass empty deletes the saved password.
 - **FTP**: The file transfer window opens as soon as you connect. Closing the window keeps the connection until the tab is closed; reopen it with `Ctrl+Shift+F`. If Login is left empty, you log in as anonymous.
+  - **FTPS (TLS)**: before logging in, encryption is requested (`AUTH TLS`); if the server supports it, commands and file transfers are all encrypted (`FTPS` in the window title). Servers without it are reached with plain FTP as before (`FTP` in the title). Port 990 is implicit FTPS, with TLS from the start.
+  - A certificate that can't be verified (self-signed, expired, made for another name) is shown with the reason, who it was issued to, its validity and fingerprint, and you are asked whether to trust it. A trusted certificate is remembered per server and not asked about again; if it changes later, you are asked again with a warning. If you don't trust it, the password is not sent and the connection stops.
 - **SFTP / SCP**: While connected via SSH, open the file transfer window with `Ctrl+Shift+F`. No need to log in again.
   - It opens in the terminal's current folder. The folder is found from the prompt on the cursor line (`user@host:~/src$`, `~/src $`, etc.), the OSC 7 sent by the shell, and the window title, in that order; if none is found, it opens in the home folder.
 - **File transfer window** (common to SFTP / SCP / FTP)
@@ -378,7 +380,6 @@ Tests that need a real server run only when the environment variables are set.
 ## Not supported yet
 
 - X11 forwarding
-- FTPS (TLS)
 - Resume for SCP (SFTP · FTP only)
 - macOS
 

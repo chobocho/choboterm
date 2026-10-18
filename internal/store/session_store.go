@@ -50,6 +50,9 @@ type ServerPrefs struct {
 	Theme    string    `json:"theme,omitempty"`    // "" = the theme in Settings
 	// Remote folders bookmarked in the file window, in the user's order.
 	Bookmarks []string `json:"bookmarks,omitempty"`
+	// The FTPS certificate the user trusted although the system doesn't
+	// (SHA256:base64 fingerprint).
+	FTPSCert string `json:"ftpsCert,omitempty"`
 }
 
 type sessionsDoc struct {

@@ -6,6 +6,7 @@ package app
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -339,12 +340,15 @@ func (a *App) Connect(tabID int, req terminal.ConnectRequest) (string, error) {
 	}
 
 	if proto == "ftp" {
-		fs, err := transfer.DialFTP(dial, conn)
+		fs, err := transfer.DialFTP(dial, conn, a.certTrust(tabID, req.Host, req.Port))
 		if err != nil {
 			return "", err
 		}
 		t.files.mu.Lock()
 		t.files.fs, t.files.proto = fs, "FTP"
+		if fs.Secure() {
+			t.files.proto = "FTPS"
+		}
 		t.files.mu.Unlock()
 		// No terminal session, but the server is known for its prefs (bookmarks).
 		t.mu.Lock()
@@ -686,17 +690,54 @@ func (a *App) confirmHostKey(tabID int, host, fingerprint string) bool {
 	if a.hooks.confirmKey != nil {
 		return a.hooks.confirmKey(host, fingerprint)
 	}
+	return a.askYesNo(tabID, i18n.Tr("알 수 없는 호스트"),
+		i18n.Tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
+			host, fingerprint)))
+}
+
+// certTrust returns the question for an FTPS certificate the system doesn't
+// trust (most FTP servers have a self-signed one). A certificate the user
+// trusted is remembered for the server and not asked about again; another
+// one later is asked about with a warning.
+func (a *App) certTrust(tabID int, host string, port int) transfer.CertTrust {
+	return func(cert *x509.Certificate, why error) bool {
+		fp := transfer.CertFingerprint(cert)
+		saved := store.PrefsFor(host, port).FTPSCert
+		if saved == fp {
+			return true
+		}
+		where := net.JoinHostPort(host, strconv.Itoa(port))
+		var ok bool
+		if a.hooks.confirmKey != nil {
+			ok = a.hooks.confirmKey(where, fp)
+		} else {
+			head := fmt.Sprintf("%s 서버의 인증서를 확인할 수 없습니다.", where)
+			if saved != "" {
+				head = fmt.Sprintf("%s 서버의 인증서가 전에 신뢰한 것과 다릅니다.\n누군가 연결을 가로채고 있을 수도 있으니, 서버를 바꾼 것이 아니면 접속하지 마세요.", where)
+			}
+			ok = a.askYesNo(tabID, i18n.Tr("확인할 수 없는 인증서"), i18n.Tr(fmt.Sprintf(
+				"%s\n\n이유: %s\n발급 대상: %s\n발급자: %s\n유효 기간: %s ~ %s\n지문: %s\n\n이 인증서를 신뢰하고 계속하시겠습니까?",
+				head, transfer.CertProblem(why), transfer.CertName(cert), transfer.CertName(&x509.Certificate{Subject: cert.Issuer}),
+				cert.NotBefore.Local().Format("2006-01-02"), cert.NotAfter.Local().Format("2006-01-02"), fp)))
+		}
+		if ok {
+			_ = store.UpdatePrefs(host, port, func(p *store.ServerPrefs) { p.FTPSCert = fp })
+		}
+		return ok
+	}
+}
+
+// askYesNo asks a question while connecting: in the page for a browser,
+// otherwise in a dialog of the window.
+func (a *App) askYesNo(tabID int, title, message string) bool {
 	if a.caller != nil || a.ctx == nil {
 		// A web page: ask in the page, like other questions while connecting.
-		return a.choose(tabID, i18n.Tr("알 수 없는 호스트"),
-			i18n.Tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
-				host, fingerprint)), "Yes", "No")
+		return a.choose(tabID, title, message, "Yes", "No")
 	}
 	res, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-		Type:  runtime.QuestionDialog,
-		Title: i18n.Tr("알 수 없는 호스트"),
-		Message: i18n.Tr(fmt.Sprintf("%s 호스트를 처음 접속합니다.\n\n키 지문: %s\n\n이 호스트를 신뢰하고 계속하시겠습니까?",
-			host, fingerprint)),
+		Type:          runtime.QuestionDialog,
+		Title:         title,
+		Message:       message,
 		Buttons:       []string{"Yes", "No"},
 		DefaultButton: "No",
 	})

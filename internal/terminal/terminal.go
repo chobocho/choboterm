@@ -45,13 +45,14 @@ type ConnectRequest struct {
 	Rows     int    `json:"rows"`
 }
 
-// Protocol returns the protocol of a well-known port ("ssh" 22, "ftp" 21,
-// "telnet" 23), or "" when it must be detected from the server greeting.
+// Protocol returns the protocol of a well-known port ("ssh" 22, "ftp" 21 and
+// 990 (implicit FTPS), "telnet" 23), or "" when it must be detected from the
+// server greeting.
 func Protocol(port int) string {
 	switch port {
 	case 22:
 		return "ssh"
-	case 21:
+	case 21, 990:
 		return "ftp"
 	case 23:
 		return "telnet"

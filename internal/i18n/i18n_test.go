@@ -14,6 +14,8 @@ func TestEnTranslate(t *testing.T) {
 		"3개 항목을(를) 서버에서 삭제할까요? 되돌릴 수 없습니다.":     "Delete 3 items on the server? This can't be undone.",
 		// line by line when the whole text has no entry
 		"x 호스트를 처음 접속합니다.\n\n키 지문: SHA256:abc\n\n이 호스트를 신뢰하고 계속하시겠습니까?": "First connection to the host x.\n\nKey fingerprint: SHA256:abc\n\nTrust this host and continue?",
+		// the FTPS certificate question: each line, and the reason inside a line
+		"x:21 서버의 인증서를 확인할 수 없습니다.\n\n이유: 믿을 수 있는 기관이 발급하지 않았습니다 (자체 서명 등)\n발급 대상: ftp\n유효 기간: 2026-01-01 ~ 2027-01-01\n지문: SHA256:abc\n\n이 인증서를 신뢰하고 계속하시겠습니까?": "The certificate of the server x:21 can't be verified.\n\nReason: Not issued by a trusted authority (self-signed or the like)\nIssued to: ftp\nValid: 2026-01-01 to 2027-01-01\nFingerprint: SHA256:abc\n\nTrust this certificate and continue?",
 		// a Lua error: the place ("console:1:") and the function ("send:") stay, the message is translated
 		"console:1: send: 탭 없이 실행할 때는 send()를 쓸 수 없습니다":     "console:1: send: send() can't be used when running without a tab",
 		"오류: console:1: send: 탭 없이 실행할 때는 send()를 쓸 수 없습니다": "Error: console:1: send: send() can't be used when running without a tab",

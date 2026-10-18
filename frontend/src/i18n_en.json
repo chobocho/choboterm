@@ -645,5 +645,19 @@
   "홈 폴더 ({})": "Home folder ({})",
   "/ (최상위 폴더)": "/ (top folder)",
   "최근 폴더": "Recent folders",
-  "즐겨찾기에서 빼기 (Delete)": "Remove from bookmarks (Delete)"
+  "즐겨찾기에서 빼기 (Delete)": "Remove from bookmarks (Delete)",
+  "{} 서버의 인증서를 확인할 수 없습니다.": "The certificate of the server {} can't be verified.",
+  "{} 서버의 인증서가 전에 신뢰한 것과 다릅니다.": "The certificate of the server {} is not the one you trusted before.",
+  "누군가 연결을 가로채고 있을 수도 있으니, 서버를 바꾼 것이 아니면 접속하지 마세요.": "Someone may be intercepting the connection. Don't connect unless the server was changed.",
+  "이유: {}": "Reason: {}",
+  "발급 대상: {}": "Issued to: {}",
+  "발급자: {}": "Issued by: {}",
+  "유효 기간: {} ~ {}": "Valid: {} to {}",
+  "지문: {}": "Fingerprint: {}",
+  "이 인증서를 신뢰하고 계속하시겠습니까?": "Trust this certificate and continue?",
+  "확인할 수 없는 인증서": "Unverified certificate",
+  "믿을 수 있는 기관이 발급하지 않았습니다 (자체 서명 등)": "Not issued by a trusted authority (self-signed or the like)",
+  "유효 기간이 지났거나 아직 시작되지 않았습니다": "Expired or not valid yet",
+  "인증서의 이름이 접속한 주소와 다릅니다": "The certificate is made for another name than the address connected to",
+  "인증서를 신뢰하지 않아 접속하지 않았습니다": "Not connected: the certificate was not trusted"
 }

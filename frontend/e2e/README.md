@@ -28,6 +28,8 @@ opens its page in Edge.
 - A small FTP server (`FakeFtpServer`) for the file window: it lists a fixed
   folder tree and refuses changes, enough for moving between folders and the
   bookmarks.
+- `ftps.spec.ts` needs a real FTPS server with a self-signed certificate and
+  runs only with `E2E_FTPS=host:port` (see the file).
 - The browser runs without a GPU, so terminals are drawn with the DOM
   renderer and their text can be read (`app.screen`).
 

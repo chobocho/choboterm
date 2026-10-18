@@ -13,6 +13,8 @@ async function openFtp(app: App, ftp: FakeFtpServer) {
     await expect(app.page.locator('#filesOverlay')).toBeVisible();
     await expect(app.page.locator('#fPath')).toHaveValue(ftp.home);
     await expect(app.page.locator('#fBody')).toContainText('projects');
+    // The fake server has no AUTH TLS, so this is plain FTP after the FTPS attempt.
+    await expect(app.page.locator('#filesTitle')).toHaveText(`파일 전송 (FTP) - 127.0.0.1`);
 }
 
 /** Types a folder into the path box and goes there. */
