@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-10-18 — ~/.ssh/config의 Include, 지원하지 않는 Match</h2>
+<ul>
+  <li>재현(실패하는 테스트 먼저): ① <code>Include</code>된 파일의 Host 이름이 ▼ 목록·별칭 인식에서 빠짐(<code>ConfigAliases</code>가 최상위 Host만 봄), Host 블록 안 Include의 값 미적용, 상대 경로를 실제 사용자 홈 기준으로만 찾음. ② <code>Match host a,b</code>의 쉼표 패턴 미적용. ③ <code>Match exec</code>·<code>Match user</code>·<code>Match final</code>처럼 라이브러리가 못 읽는 줄이 하나라도 있으면(포함 파일 포함) 파싱 오류로 config 전체가 조용히 무시됨</li>
+  <li>수정(<code>internal/sshconn/sshconfig.go</code>): 라이브러리에 넘기기 전에 Include를 그 자리에 펼침(~/.ssh 기준 상대 경로, <code>~/</code>, 따옴표, glob, 최대 16단계 — 자기 자신을 포함해도 멈추지 않음). 포함 파일의 Host/Match는 그 파일에서 끝나고 원래 블록이 이어짐(OpenSSH와 같음). <code>Match all</code>→<code>Host *</code>, <code>Match host a,b</code>→<code>Host a b</code>, 그 밖의 Match→아무 호스트에도 맞지 않는 <code>Host !*</code></li>
+  <li>테스트: <code>sshconfig_include_test.go</code> 2개(수정 전 실패 확인). 사용자 PC의 실제 config로 예전·새 방식의 이름과 HostName·User·Port·ProxyJump가 같음을 읽기만 하는 임시 테스트로 확인 후 삭제</li>
+  <li>확인: <code>go vet</code>·<code>go test ./...</code> 통과. README(한·영) 반영</li>
+</ul>
+
 <h2>2026-10-18 — 고양이 E2E 간헐 실패 수정, CI에 Linux E2E 추가</h2>
 <ul>
   <li>재현: "걷던 고양이가 포인터 앞에서 기지개" 테스트가 병렬 4개로 16번 중 1번 실패(로그를 넣으면 32번 중 6번). 기대 stretch, 실제 sit:1</li>

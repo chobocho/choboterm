@@ -37,16 +37,139 @@ func LoadConfig() *ssh_config.Config {
 	if p == "" {
 		return nil
 	}
-	f, err := os.Open(p)
-	if err != nil {
+	if _, err := os.Stat(p); err != nil {
 		return nil
 	}
-	defer f.Close()
-	cfg, err := ssh_config.Decode(f)
+	cfg, err := ssh_config.Decode(strings.NewReader(expandConfig(p, 0)))
 	if err != nil {
 		return nil
 	}
 	return cfg
+}
+
+// maxIncludeDepth is how deep Include files may nest, as in OpenSSH.
+const maxIncludeDepth = 16
+
+// expandConfig returns an ssh config file as the parser can read it:
+//
+//   - Include files are put in place, so their Host names are listed and
+//     used like the others. A Host or Match in an included file ends with
+//     it, as in OpenSSH: the block the Include stood in goes on afterwards.
+//   - A Match the parser can't read (exec, user, final, several criteria)
+//     would make it fail on the whole file, losing every name in it. Such a
+//     block becomes one that matches no host, and the rest still works.
+func expandConfig(path string, depth int) string {
+	data, err := os.ReadFile(path)
+	if err != nil || depth > maxIncludeDepth {
+		return ""
+	}
+	var out strings.Builder
+	block := "" // the Host or Match line in effect; "" = before the first (all hosts)
+	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+		key, val := configLine(line)
+		switch key {
+		case "include":
+			for _, f := range includeFiles(val) {
+				out.WriteString(expandConfig(f, depth+1))
+				out.WriteString("\n")
+			}
+			if block == "" {
+				out.WriteString("Host *\n")
+			} else {
+				out.WriteString(block + "\n")
+			}
+			continue
+		case "match":
+			line = matchAsHost(val)
+			block = line
+		case "host":
+			block = strings.TrimSpace(line)
+		}
+		out.WriteString(line + "\n")
+	}
+	return out.String()
+}
+
+// configLine splits a config line into its lower-case keyword and its value
+// ("Key value" or "Key=value"); comments and empty lines have no keyword.
+func configLine(line string) (string, string) {
+	line = strings.TrimSpace(line)
+	if line == "" || line[0] == '#' {
+		return "", ""
+	}
+	i := strings.IndexAny(line, " \t=")
+	if i < 0 {
+		return strings.ToLower(line), ""
+	}
+	val := strings.TrimLeft(line[i:], " \t")
+	val = strings.TrimSpace(strings.TrimPrefix(val, "="))
+	return strings.ToLower(line[:i]), val
+}
+
+// includeFiles returns the files an Include names: patterns (quoted when they
+// have spaces) relative to ~/.ssh unless absolute or starting with ~/, each
+// pattern's files in name order.
+func includeFiles(val string) []string {
+	var files []string
+	base := filepath.Dir(ConfigPath())
+	for _, pat := range splitQuoted(val) {
+		if strings.HasPrefix(pat, "~/") || strings.HasPrefix(pat, `~\`) {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				continue
+			}
+			pat = filepath.Join(home, pat[2:])
+		} else if !filepath.IsAbs(pat) {
+			pat = filepath.Join(base, pat)
+		}
+		matches, _ := filepath.Glob(pat)
+		for _, m := range matches {
+			if st, err := os.Stat(m); err == nil && !st.IsDir() {
+				files = append(files, m)
+			}
+		}
+	}
+	return files
+}
+
+// splitQuoted splits on spaces, keeping "quoted parts" together.
+func splitQuoted(s string) []string {
+	var (
+		out    []string
+		cur    strings.Builder
+		quoted bool
+	)
+	for _, r := range s {
+		switch {
+		case r == '"':
+			quoted = !quoted
+		case (r == ' ' || r == '\t') && !quoted:
+			if cur.Len() > 0 {
+				out = append(out, cur.String())
+				cur.Reset()
+			}
+		default:
+			cur.WriteRune(r)
+		}
+	}
+	if cur.Len() > 0 {
+		out = append(out, cur.String())
+	}
+	return out
+}
+
+// matchAsHost turns a Match line into the Host line that means the same:
+// "Match all" and "Match host a,b" are kept; anything else can't be decided
+// here (exec, user, canonical, ...), so its block applies to no host.
+func matchAsHost(val string) string {
+	f := strings.Fields(val)
+	switch {
+	case len(f) == 1 && strings.EqualFold(f[0], "all"):
+		return "Host *"
+	case len(f) == 2 && strings.EqualFold(f[0], "host"):
+		return "Host " + strings.Join(strings.FieldsFunc(f[1], func(r rune) bool { return r == ',' }), " ")
+	}
+	return "Host !*"
 }
 
 // ConfigAliases returns the plain names of the Host entries (not patterns

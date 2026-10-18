@@ -54,7 +54,8 @@ Go + [Wails v2](https://wails.io) + [xterm.js](https://xtermjs.org)로 만들었
   - **암호 걸린 개인키**: 서버가 그 키를 받아들일 때만 암호를 묻습니다(맞지 않는 서버에서는 묻지 않음). 한 번 푼 키는 choboterm을 끌 때까지 기억해 다시 연결·분할 창·자동 재접속 때 다시 묻지 않습니다. 공개키가 들어 있지 않은 옛 PEM 키는 옆의 `.pub` 파일을 쓰고, 그것도 없으면 접속할 때 바로 묻습니다(취소하면 그 키는 건너뜀).
   - **`~/.ssh/config` 이름으로 접속**: Host 칸에 config에 적어 둔 이름(예: `busan`)이나 명령처럼 `ssh busan`, `ssh -p 2222 user@busan`을 입력하면 `HostName` / `Port` / `User` / `IdentityFile`을 읽어 Port와 Login을 채우고 접속합니다. 탭 이름과 접속 기록에는 `busan`이 남습니다.
     - Host 칸에 포커스를 두면 툴팁으로 입력 예와 등록된 이름을 보여 주고, config 이름을 입력하면 실제 접속할 `user@주소:포트`를 보여 줍니다. config의 이름들은 ▼ 목록에도 `ssh config`로 표시됩니다.
-    - `IdentityFile`의 키를 먼저 시도하고, 안 되면 기본 키와 비밀번호를 씁니다. `Host *.corp` 같은 패턴 항목도 적용합니다. `Match`는 아직 지원하지 않습니다.
+    - `IdentityFile`의 키를 먼저 시도하고, 안 되면 기본 키와 비밀번호를 씁니다. `Host *.corp` 같은 패턴 항목도 적용합니다.
+    - `Include`(예: `Include config.d/*`)로 나눈 파일도 읽어, 그 안의 이름도 목록에 나오고 똑같이 접속됩니다. `Match`는 `Match host a,b`와 `Match all`만 적용하고, 그 밖의 `Match` 블록(`exec`, `user` 등)은 건너뜁니다. 예전에는 이런 줄이 하나만 있어도 config 전체를 읽지 못했습니다.
   - **점프 호스트 (ProxyJump)**: 배스천 서버를 거쳐 내부 서버에 접속합니다. 접속 창(과 세션 관리 창)의 `Jump` 칸에 `user@bastion` 또는 `bastion:2222`를 쓰고, 여러 단계는 `a,b`처럼 쉼표로 잇습니다. 비워 두면 `~/.ssh/config`의 `ProxyJump`를 쓰고(칸에 흐리게 표시), Host 칸에 `ssh -J bastion web`을 써도 됩니다. `none`이면 config에 있어도 쓰지 않습니다.
     - 점프 호스트 이름이 config의 Host면 그 HostName·User·Port·IdentityFile을 씁니다. 로그인은 키·에이전트로 하고, 비밀번호가 필요하면 "(점프 호스트 user@bastion)"이라고 붙여 따로 묻습니다. 호스트 키도 단계마다 known_hosts로 확인합니다.
     - 파일 전송(SFTP)·포트 포워딩도 같은 경로로 됩니다. Jump 값은 접속 기록과 세션에 함께 저장됩니다.
