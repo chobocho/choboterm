@@ -25,10 +25,13 @@ function saved(app: App): Record<string, unknown> {
 }
 
 // The other tests run without the cat; here it is on, as at a first start.
+// The clock is faked from the page's start, so that every timer of the cat is
+// one observeMotion can stop; it runs at the real pace until then.
 test.beforeEach(async ({app}) => {
     const file = path.join(app.configDir, 'settings.json');
     const s = JSON.parse(fs.readFileSync(file, 'utf8'));
     fs.writeFileSync(file, JSON.stringify({...s, cat: true, catIntro: false}));
+    await app.page.clock.install();
     await app.page.reload();
 });
 
@@ -41,8 +44,19 @@ async function dismissGuide(app: App) {
 
 // Observe the rendered frames, including their actual height above the floor.
 // Fake time lets us exercise whole routines without waiting for random idle choices.
+// The clock stops here and moves only with runFor: an installed clock keeps
+// following real time, so a slow machine let the cat walk on between steps
+// (a stretch already over when the test looked for it).
 async function observeMotion(page: Page, random: number) {
-    await page.clock.install();
+    for (let tries = 0; ; tries++) {
+        const now = await page.evaluate(() => Date.now());
+        try {
+            await page.clock.pauseAt(now + 1000);
+            break;
+        } catch (e) {
+            if (tries >= 3) throw e; // more than a second went by before pausing
+        }
+    }
     await page.evaluate(value => {
         Math.random = () => value;
         const frames: {act: string; lift: number}[] = [];
