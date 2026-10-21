@@ -20,7 +20,7 @@
 
   <rect x="0" y="0" width="1010" height="868" rx="10" fill="#ffffff"/>
   <text x="20" y="36" font-size="18" font-weight="bold">choboterm 아키텍처</text>
-  <text x="990" y="36" text-anchor="end" class="note">V0.2.33 · <tspan class="new">NEW</tspan> = FTPS · 파일 창 즐겨찾기 · 옛 SSH 알고리즘 · ssh config Include</text>
+  <text x="990" y="36" text-anchor="end" class="note">V0.2.34 · <tspan class="new">NEW</tspan> = 매크로 · 파일 창 버튼</text>
 
   <!-- Frontend -->
   <rect x="20" y="60" width="270" height="621" rx="8" fill="#e8f0fe" stroke="#4a7bd0" stroke-width="1.5"/>

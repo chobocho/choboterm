@@ -62,6 +62,8 @@ EventsOn('app:close', async () => {
 
 $<HTMLButtonElement>('newTab').addEventListener('click', () => openDialog(null));
 $<HTMLButtonElement>('memoBtn').addEventListener('click', () => showMemo());
+$<HTMLButtonElement>('macroBtn').addEventListener('click', showMacros);
+$<HTMLButtonElement>('filesBtn').addEventListener('click', () => active && openFilesFor(active));
 tabsEl.addEventListener('dblclick', ev => {
     if (ev.target === tabsEl) openDialog(null); // double-click empty tab bar: new tab
 });

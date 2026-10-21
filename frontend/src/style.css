@@ -389,6 +389,8 @@ html, body {
 }
 
 #newTab:hover,
+#macroBtn:hover,
+#filesBtn:hover,
 #sessBtn:hover,
 #prefsBtn:hover {
     background: #34363b;
@@ -396,12 +398,14 @@ html, body {
 }
 
 /* Pushed to the right end of the tab bar. */
+#macroBtn,
+#filesBtn,
 #sessBtn,
 #prefsBtn {
     flex: 0 0 auto;
     width: 28px;
     height: 24px;
-    margin: 0 0 3px auto;
+    margin: 0 0 3px 0;
     border: 0;
     border-radius: 4px;
     background: transparent;
@@ -409,6 +413,10 @@ html, body {
     font-size: 15px;
     line-height: 22px;
     cursor: pointer;
+}
+
+#macroBtn {
+    margin-left: auto;
 }
 
 #prefsBtn {
