@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>2026-11-10 — 웹 서버 탭에 앱 아이콘(favicon)</h2>
+<ul>
+  <li>원인: <code>index.html</code>에 아이콘 링크가 없고, 웹 서버는 <code>/</code> 밖의 파일을 토큰 없이 주지 않아 <code>/favicon.ico</code>가 401(로그인 후엔 404)</li>
+  <li>수정: <code>frontend/public/favicon.png</code>(64px 앱 아이콘)를 dist에 그대로 넣고, <code>internal/web/server.go</code>가 <code>/favicon.png</code>·<code>/favicon.ico</code>를 토큰 없이 PNG로 줌. 로그인 페이지와 <code>frontend/index.html</code>에 <code>&lt;link rel="icon"&gt;</code></li>
+  <li>테스트: <code>TestWebFavicon</code>(토큰 없이 200 · image/png, 로그인 페이지에 아이콘 링크, 다른 파일은 여전히 401)</li>
+  <li>확인: <code>go vet ./...</code>, <code>go test ./...</code>(root로 돌려 알려진 <code>TestSerialSessionPty</code>만 실패), 프론트엔드 빌드, headless를 띄워 curl로 확인</li>
+</ul>
+
 <h2>2026-10-18 — 푸시 후 CI 실패 수정 (영어 환경에서 옛 SSH 알고리즘 테스트)</h2>
 <ul>
   <li>증상: 푸시 후 CI(Windows · Ubuntu)와 release 워크플로의 <code>TestConnectAsksForLegacySSH</code> 실패. 러너가 영어 환경이라 질문이 영어로 번역되어 한국어 문구 비교가 맞지 않음. 이 PC는 한국어 Windows라 통과했음</li>

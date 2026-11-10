@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
@@ -47,7 +48,11 @@ func (p *pipeSession) input() string {
 var testPage = fstest.MapFS{
 	"index.html":    {Data: []byte("<!doctype html><html><head><title>t</title></head><body>page</body></html>")},
 	"assets/app.js": {Data: []byte("console.log(1)")},
+	"favicon.png":   {Data: testFavicon},
 }
+
+// testFavicon is a PNG header, enough to tell the icon from other files.
+var testFavicon = []byte("\x89PNG\r\n\x1a\nicon")
 
 // webFixture is a web server on a random port with a logged-in browser.
 type webFixture struct {
@@ -266,6 +271,33 @@ func TestWebNeedsToken(t *testing.T) {
 	}
 	if code, body := f.get("/web/shim.js"); code != 200 || !strings.Contains(body, "window.go") {
 		t.Fatalf("shim: %d", code)
+	}
+}
+
+// The tab icon is served before login too: the login page shows it, and
+// browsers ask for /favicon.ico on their own.
+func TestWebFavicon(t *testing.T) {
+	f := startTestWeb(t, web.Options{})
+	for _, p := range []string{"/favicon.ico", "/favicon.png"} {
+		r, err := f.hc.Get(f.base + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := io.ReadAll(r.Body)
+		r.Body.Close()
+		if r.StatusCode != 200 || !bytes.Equal(b, testFavicon) {
+			t.Errorf("%s without token: %d %q", p, r.StatusCode, b)
+		}
+		if ct := r.Header.Get("Content-Type"); ct != "image/png" {
+			t.Errorf("%s content type: %q", p, ct)
+		}
+	}
+	if code, body := f.get("/"); code != http.StatusUnauthorized || !strings.Contains(body, `rel="icon"`) {
+		t.Errorf("login page has no icon: %d", code)
+	}
+	// Other files still need the token.
+	if code, _ := f.get("/assets/app.js"); code != http.StatusUnauthorized {
+		t.Errorf("asset without token: %d", code)
 	}
 }
 

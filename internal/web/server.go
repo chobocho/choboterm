@@ -324,6 +324,8 @@ func (w *Server) routes() http.Handler {
 	mux.HandleFunc("/web/stage", w.auth(w.handleStageNew))
 	mux.HandleFunc("/web/stage/", w.auth(w.handleStage))
 	mux.HandleFunc("/web/dl/", w.auth(w.handleDownload))
+	mux.HandleFunc("/favicon.png", w.handleFavicon)
+	mux.HandleFunc("/favicon.ico", w.handleFavicon)
 	mux.HandleFunc("/", w.handleRoot)
 	return securityHeaders(mux)
 }
@@ -386,6 +388,19 @@ func (w *Server) setCookie(rw http.ResponseWriter, name, value string) {
 		HttpOnly: true, Secure: w.tls, SameSite: http.SameSiteStrictMode,
 		MaxAge: 400 * 24 * 3600,
 	})
+}
+
+// handleFavicon serves the app icon without the token, so the login page has
+// it too. Browsers ask for /favicon.ico on their own; they take a PNG there.
+func (w *Server) handleFavicon(rw http.ResponseWriter, r *http.Request) {
+	b, err := fs.ReadFile(w.page, "favicon.png")
+	if err != nil {
+		http.NotFound(rw, r)
+		return
+	}
+	rw.Header().Set("Content-Type", "image/png")
+	rw.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = rw.Write(b)
 }
 
 // handleRoot serves the page (a new client each time it is loaded), takes
@@ -480,7 +495,7 @@ func (w *Server) loginPage(rw http.ResponseWriter, status int, wrong bool) {
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.WriteHeader(status)
 	fmt.Fprintf(rw, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>choboterm</title><style>
+<title>choboterm</title><link rel="icon" type="image/png" href="/favicon.png"><style>
 body{font:15px system-ui,sans-serif;background:#1e1e1e;color:#ddd;display:grid;place-items:center;min-height:100vh;margin:0}
 form{background:#2b2b2b;padding:24px;border-radius:8px;width:min(360px,90vw)}
 input{width:100%%;box-sizing:border-box;padding:8px;margin:12px 0;background:#111;color:#eee;border:1px solid #555;border-radius:4px}
