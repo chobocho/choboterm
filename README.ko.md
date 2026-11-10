@@ -376,7 +376,7 @@ npm run test:e2e
 | `frontend/src/highlight.ts` | 키워드 강조 (xterm 데코레이션) |
 | `frontend/src/imageview.ts` | 이미지 보기 창 |
 | `frontend/src/cjkwidth.ts` | EUC-KR 모드의 2칸 폭 문자 처리 |
-| `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`) |
+| `tools/make_icon.py` | 앱 아이콘 생성 (`build/appicon.png`, `build/windows/icon.ico`, `frontend/public/favicon.png`) |
 | `tools/make_cat.py` · `cat_style.py` · `preview_cat.py` | 고양이 스프라이트 생성·색감/크기/눈 보정·영상 비교. 걷기는 영상의 24프레임을 사용하고, 뒤돌아보기·구르기는 `tools/cat_keep.png`(v0.2.31 그림)에서 가져옵니다. [제작·검토 방법](docs/cat-artwork.md) |
 
 ## 아직 지원하지 않는 기능

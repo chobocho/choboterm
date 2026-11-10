@@ -1,9 +1,10 @@
-"""Renders the choboterm app icon (1024px PNG + multi-size ICO).
+"""Renders the choboterm app icon (1024px PNG + multi-size ICO + 64px favicon).
 
 The mark is a "CT" monogram: a bold sky-blue gradient "C" (Chobo) wrapping a
 "T" (Term) whose stem is a terminal block cursor.
 
-Usage: python tools/make_icon.py build/appicon.png build/windows/icon.ico preview.png
+Usage: python tools/make_icon.py build/appicon.png build/windows/icon.ico preview.png \
+           [frontend/public/favicon.png]
 Requires Pillow.
 """
 import math
@@ -122,6 +123,10 @@ if __name__ == "__main__":
     frames += [icon.resize((s, s), Image.LANCZOS) for s in (48, 64, 128, 256)]
     frames[-1].save(ico, format="ICO", sizes=[f.size for f in frames], append_images=frames[:-1])
     pick = {f.size[0]: f for f in frames}
+    # The web server's tab icon is the same drawing: written here so it cannot
+    # be left behind when the icon changes.
+    if len(sys.argv) > 4:
+        pick[64].save(sys.argv[4])
 
     # Preview sheet: large icon plus small sizes on light and dark backgrounds.
     sheet = Image.new("RGBA", (900, 420), (240, 240, 240, 255))

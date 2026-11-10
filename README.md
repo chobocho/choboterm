@@ -376,7 +376,7 @@ Tests that need a real server run only when the environment variables are set.
 | `frontend/src/highlight.ts` | Keyword highlighting (xterm decorations) |
 | `frontend/src/imageview.ts` | Image viewer window |
 | `frontend/src/cjkwidth.ts` | Double-width character handling in EUC-KR mode |
-| `tools/make_icon.py` | App icon generation (`build/appicon.png`, `build/windows/icon.ico`) |
+| `tools/make_icon.py` | App icon generation (`build/appicon.png`, `build/windows/icon.ico`, `frontend/public/favicon.png`) |
 | `tools/make_cat.py` · `cat_style.py` · `preview_cat.py` | Builds the sprites, matches colour/size/eyes and renders comparison videos. Walking uses 24 filmed frames; looking back and rolling over use `tools/cat_keep.png` (the v0.2.31 drawings). [Artwork and review workflow](docs/cat-artwork.md) |
 
 ## Not supported yet

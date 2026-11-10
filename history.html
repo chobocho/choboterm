@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>[2026-11-10 14:36] favicon.png을 make_icon.py가 함께 만들게 함</h2>
+<ul>
+  <li><b>기획:</b> 코드 리뷰 지적. <code>frontend/public/favicon.png</code>이 손으로 줄인 사본이라 앱 아이콘을 다시 만들면 탭 아이콘만 옛 그림으로 남음. 넷째 인자(선택)를 주면 64px 아이콘을 그 경로에 저장</li>
+  <li><b>TC:</b> 단위 테스트 없음(그림 생성 스크립트). 임시 폴더에 생성해 커밋된 파일과 비교, 인자 3개 호출도 확인</li>
+  <li><b>개발:</b> <code>tools/make_icon.py</code>, <code>README.md</code>, <code>README.ko.md</code></li>
+  <li><b>검증:</b> 생성한 <code>favicon.png</code> · <code>appicon.png</code>이 커밋된 파일과 바이트 단위로 같음(Pillow 13.0.0), 인자 3개 호출 정상</li>
+</ul>
+
 <h2>[2026-11-10 14:33] favicon 응답 정리 (ETag 재검증, 시작 시 한 번 읽기, GET/HEAD만)</h2>
 <ul>
   <li><b>기획:</b> 코드 리뷰 지적. 토큰 없이 열린 경로가 요청마다 파일을 읽고 메서드를 가리지 않으며, <code>max-age=86400</code>만 있어 새 아이콘이 하루 늦게 보임</li>
