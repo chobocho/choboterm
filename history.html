@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>[2026-11-10 14:40] 버전 0.2.35 (웹 서버 탭 아이콘)</h2>
+<ul>
+  <li><b>기획:</b> favicon 추가와 그 정리(ETag 재검증)를 릴리스하려고 버전을 0.2.34에서 0.2.35로 올림. main에 푸시되면 release 워크플로가 태그와 릴리스를 만듦</li>
+  <li><b>TC:</b> 새 테스트 없음(버전 표기만 변경). 소스에 0.2.34가 남지 않았는지 grep으로 확인</li>
+  <li><b>개발:</b> <code>internal/version/version.go</code>, <code>wails.json</code>, <code>README.md</code>, <code>README.ko.md</code>, <code>.github/workflows/release.yml</code>, <code>docs/architecture.svg</code>, <code>docs/architecture_en.svg</code></li>
+  <li><b>검증:</b> <code>go vet ./...</code> 경고 없음, <code>go test ./...</code> 통과(root라 알려진 <code>TestSerialSessionPty</code>만 실패)</li>
+</ul>
+
 <h2>[2026-11-10 14:36] favicon.png을 make_icon.py가 함께 만들게 함</h2>
 <ul>
   <li><b>기획:</b> 코드 리뷰 지적. <code>frontend/public/favicon.png</code>이 손으로 줄인 사본이라 앱 아이콘을 다시 만들면 탭 아이콘만 옛 그림으로 남음. 넷째 인자(선택)를 주면 64px 아이콘을 그 경로에 저장</li>
