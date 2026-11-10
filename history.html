@@ -5,6 +5,14 @@
 <h1>choboterm 작업 기록</h1>
 <p>이전 기록: <a href="history_20261012_233456.html">history_20261012_233456.html</a></p>
 
+<h2>[2026-11-10 14:33] favicon 응답 정리 (ETag 재검증, 시작 시 한 번 읽기, GET/HEAD만)</h2>
+<ul>
+  <li><b>기획:</b> 코드 리뷰 지적. 토큰 없이 열린 경로가 요청마다 파일을 읽고 메서드를 가리지 않으며, <code>max-age=86400</code>만 있어 새 아이콘이 하루 늦게 보임</li>
+  <li><b>TC:</b> 정상: 로그인 전·후 200 · image/png, 같은 ETag면 304, HEAD. 경계: 다른 ETag는 200, POST/PUT/DELETE는 405, 아이콘 없는 dist는 로그인 전·후 404</li>
+  <li><b>개발:</b> <code>internal/web/server.go</code>, <code>internal/app/web_test.go</code></li>
+  <li><b>검증:</b> <code>go vet ./...</code> 경고 없음, <code>go test ./...</code> 통과(root라 알려진 <code>TestSerialSessionPty</code>만 실패)</li>
+</ul>
+
 <h2>2026-11-10 — 웹 서버 탭에 앱 아이콘(favicon)</h2>
 <ul>
   <li>원인: <code>index.html</code>에 아이콘 링크가 없고, 웹 서버는 <code>/</code> 밖의 파일을 토큰 없이 주지 않아 <code>/favicon.ico</code>가 401(로그인 후엔 404)</li>

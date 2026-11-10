@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/tls"
 	"encoding/hex"
@@ -91,6 +92,12 @@ type Server struct {
 	localKey             string // the local cookie's value
 	stageRoot            string // temporary files of uploads and downloads
 
+	// favicon is the page's favicon.png (nil if it has none) and faviconTag
+	// its ETag. Read once: the path is open without the token, so a request
+	// should cost no more than a write.
+	favicon    []byte
+	faviconTag string
+
 	mu        sync.Mutex
 	clients   map[int]*Client
 	nextID    int
@@ -143,6 +150,7 @@ func Start(h Host, page fs.FS, opts Options) (*Server, error) {
 		downloads: map[string]*webDownload{},
 	}
 	w.indexHead, w.indexRest = splitIndex(index)
+	w.loadFavicon()
 
 	// Other PCs may connect: the token travels in the clear without TLS.
 	var tlsCfg *tls.Config
@@ -390,17 +398,38 @@ func (w *Server) setCookie(rw http.ResponseWriter, name, value string) {
 	})
 }
 
+// loadFavicon reads the page's icon and names it by its content, so a browser
+// that has it gets 304 and one that has an older icon gets the new one.
+func (w *Server) loadFavicon() {
+	b, err := fs.ReadFile(w.page, "favicon.png")
+	if err != nil {
+		return
+	}
+	sum := sha256.Sum256(b)
+	w.favicon = b
+	w.faviconTag = `"` + hex.EncodeToString(sum[:8]) + `"`
+}
+
 // handleFavicon serves the app icon without the token, so the login page has
 // it too. Browsers ask for /favicon.ico on their own; they take a PNG there.
 func (w *Server) handleFavicon(rw http.ResponseWriter, r *http.Request) {
-	b, err := fs.ReadFile(w.page, "favicon.png")
-	if err != nil {
+	if w.favicon == nil {
 		http.NotFound(rw, r)
 		return
 	}
-	rw.Header().Set("Content-Type", "image/png")
-	rw.Header().Set("Cache-Control", "public, max-age=86400")
-	_, _ = rw.Write(b)
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		rw.Header().Set("Allow", "GET, HEAD")
+		http.Error(rw, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	h := rw.Header()
+	h.Set("Content-Type", "image/png")
+	h.Set("ETag", w.faviconTag)
+	// no-cache: keep it, but ask each time. The answer is a 304, and a new
+	// version's icon shows at once instead of after a max-age.
+	h.Set("Cache-Control", "no-cache")
+	// ServeContent answers If-None-Match from the ETag above, and HEAD.
+	http.ServeContent(rw, r, "favicon.png", time.Time{}, bytes.NewReader(w.favicon))
 }
 
 // handleRoot serves the page (a new client each time it is loaded), takes

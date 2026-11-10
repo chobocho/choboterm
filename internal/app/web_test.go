@@ -275,29 +275,112 @@ func TestWebNeedsToken(t *testing.T) {
 }
 
 // The tab icon is served before login too: the login page shows it, and
-// browsers ask for /favicon.ico on their own.
+// browsers ask for /favicon.ico on their own. After login it is the same icon
+// (it used to fall through to the page's files and 404 for /favicon.ico).
 func TestWebFavicon(t *testing.T) {
 	f := startTestWeb(t, web.Options{})
-	for _, p := range []string{"/favicon.ico", "/favicon.png"} {
-		r, err := f.hc.Get(f.base + p)
-		if err != nil {
-			t.Fatal(err)
-		}
-		b, _ := io.ReadAll(r.Body)
-		r.Body.Close()
-		if r.StatusCode != 200 || !bytes.Equal(b, testFavicon) {
-			t.Errorf("%s without token: %d %q", p, r.StatusCode, b)
-		}
-		if ct := r.Header.Get("Content-Type"); ct != "image/png" {
-			t.Errorf("%s content type: %q", p, ct)
+	check := func(when string) {
+		t.Helper()
+		for _, p := range []string{"/favicon.ico", "/favicon.png"} {
+			r, err := f.hc.Get(f.base + p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b, _ := io.ReadAll(r.Body)
+			r.Body.Close()
+			if r.StatusCode != 200 || !bytes.Equal(b, testFavicon) {
+				t.Errorf("%s %s: %d %q", p, when, r.StatusCode, b)
+			}
+			if ct := r.Header.Get("Content-Type"); ct != "image/png" {
+				t.Errorf("%s %s content type: %q", p, when, ct)
+			}
 		}
 	}
-	if code, body := f.get("/"); code != http.StatusUnauthorized || !strings.Contains(body, `rel="icon"`) {
-		t.Errorf("login page has no icon: %d", code)
+	check("without token")
+	code, body := f.get("/")
+	if code != http.StatusUnauthorized {
+		t.Errorf("page without token: %d", code)
+	}
+	if !strings.Contains(body, `rel="icon"`) {
+		t.Errorf("login page has no icon link: %s", body)
 	}
 	// Other files still need the token.
 	if code, _ := f.get("/assets/app.js"); code != http.StatusUnauthorized {
 		t.Errorf("asset without token: %d", code)
+	}
+	f.login()
+	check("after login")
+}
+
+// A browser that has the icon asks again with its ETag and gets 304, and a
+// new icon (a new ETag) replaces the old one without waiting out a max-age.
+func TestWebFaviconRevalidates(t *testing.T) {
+	f := startTestWeb(t, web.Options{})
+	r, err := f.hc.Get(f.base + "/favicon.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	tag := r.Header.Get("ETag")
+	if tag == "" {
+		t.Fatal("no ETag")
+	}
+	if cc := r.Header.Get("Cache-Control"); cc != "no-cache" {
+		t.Errorf("Cache-Control: %q", cc)
+	}
+	do := func(method, etag string) (int, []byte) {
+		t.Helper()
+		req, _ := http.NewRequest(method, f.base+"/favicon.png", nil)
+		if etag != "" {
+			req.Header.Set("If-None-Match", etag)
+		}
+		r, err := f.hc.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer r.Body.Close()
+		b, _ := io.ReadAll(r.Body)
+		return r.StatusCode, b
+	}
+	if code, b := do("GET", tag); code != http.StatusNotModified || len(b) != 0 {
+		t.Errorf("same ETag: %d %q", code, b)
+	}
+	if code, b := do("GET", `"other"`); code != 200 || !bytes.Equal(b, testFavicon) {
+		t.Errorf("other ETag: %d %q", code, b)
+	}
+	if code, b := do("HEAD", ""); code != 200 || len(b) != 0 {
+		t.Errorf("HEAD: %d %q", code, b)
+	}
+	// The path is open to anyone, so it takes nothing but reads.
+	for _, m := range []string{"POST", "PUT", "DELETE"} {
+		if code, _ := do(m, ""); code != http.StatusMethodNotAllowed {
+			t.Errorf("%s: %d", m, code)
+		}
+	}
+}
+
+// A page without the icon file (an old or partial dist) answers 404, with or
+// without the token, rather than the login page or an empty image.
+func TestWebFaviconMissing(t *testing.T) {
+	isolateSettings(t)
+	page := fstest.MapFS{"index.html": testPage["index.html"]}
+	a := NewApp()
+	w, err := startWeb(a, page, web.Options{Addr: "127.0.0.1:0", Grace: 5 * time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(w.Stop)
+	f := fixtureFor(t, a, w)
+	for _, p := range []string{"/favicon.ico", "/favicon.png"} {
+		if code, _ := f.get(p); code != http.StatusNotFound {
+			t.Errorf("%s without token: %d", p, code)
+		}
+	}
+	f.login()
+	for _, p := range []string{"/favicon.ico", "/favicon.png"} {
+		if code, _ := f.get(p); code != http.StatusNotFound {
+			t.Errorf("%s after login: %d", p, code)
+		}
 	}
 }
 
